@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-text": "#111111",
+                        "secondary-text": "#444444",
+                        "tertiary-fixed": "#5f5e5e",
+                        "error-container": "#93000a",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#1c1b1b",
+                        "primary-fixed": "#5d5f5f",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-fixed-dim": "#474746",
+                        "surface-bright": "#3a3939",
+                        "on-surface-variant": "#444444",
+                        "surface-tint": "#c6c6c7",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "primary-fixed-dim": "#454747",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-primary": "#5d5f5f",
+                        "secondary-container": "#f1f1f1",
+                        "on-secondary-fixed": "#111111",
+                        "secondary-fixed": "#c8c6c5",
+                        "on-tertiary-fixed": "#ffffff",
+                        "on-background": "#111111",
+                        "on-surface": "#111111",
+                        "surface-container-low": "#f8f8f8",
+                        "secondary": "#c8c6c5",
+                        "outline-variant": "#e5e2e1",
+                        "on-secondary": "#111111",
+                        "surface-variant": "#f1f1f1",
+                        "surface": "#ffffff",
+                        "on-primary-container": "#111111",
+                        "inverse-on-surface": "#313030",
+                        "tertiary": "#e5e2e1",
+                        "primary": "#111111",
+                        "on-secondary-fixed-variant": "#3c3b3b",
+                        "primary-container": "#d4d4d4",
+                        "on-secondary-container": "#111111",
+                        "surface-container-highest": "#e0e0e0",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#929090",
+                        "surface-container-high": "#f1f1f1",
+                        "outline": "#919191",
+                        "on-primary-fixed": "#ffffff",
+                        "surface-dim": "#f8f8f8",
+                        "on-tertiary-fixed-variant": "#444444",
+                        "surface-container": "#f1f1f1",
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#111111",
+                        "background": "#ffffff",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#adabaa"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #ffffff;
+            color: #111111;
+        }
+        .text-primary { color: #111111 !important; }
+        .text-secondary { color: #444444 !important; }
+        .border-primary { border-color: #111111 !important; }
+        .bg-accent { background-color: #ccff00 !important; }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="antialiased font-body bg-white text-[#111111]">
+<!-- Top Navigation Bar (Fixed) -->
+<header class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl h-16 flex items-center px-6 justify-between border-b border-neutral-100">
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center p-2 hover:bg-neutral-100 transition-colors">
+<span class="material-symbols-outlined text-[#111111]" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline font-black tracking-tighter text-xl uppercase text-[#111111]">Profile Settings</h1>
+</div>
+<div class="w-10 h-10 rounded-full overflow-hidden bg-neutral-200 border border-neutral-100">
+<img class="w-full h-full object-cover" data-alt="portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5tgPExaWQsv-dwrmQj2EeD6cMRwW9p9d7B_Iky2HjIWBWHCwBbsjiOTqHbHS-N_c5XCLsOE7DElXGKl6eNda4AYg-2z66_8HwEAtyla-7PvoLsiSSnQ3Q_beX8dKXpHG1VgTeIr1CnSv-8oLvR8D4HSg9VK2YuEhDHKbSVOph4bLBebj4BDmFzJSlL-Fr7jUmYhh5WM3gmT9U7o6ylvig4c78TCWYClqZ1Ptu5YQ1zh488gAnjjL7CQrGsKdwtxffCU2Gab6gU9w"/>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-4xl mx-auto">
+<!-- Profile Header Section -->
+<section class="mb-12">
+<div class="flex flex-col md:flex-row md:items-end gap-6">
+<div class="relative group w-32 h-32 md:w-40 md:h-40 bg-neutral-100">
+<img class="w-full h-full object-cover grayscale brightness-105" data-alt="profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgYv0KP38XBMbDVSYmNvghbeoS_F3-0qd4fTHauxr5ZAW2MFemLHQkqG8pGd6iEwOmw6bixsJhVU2TJFKnIp9A_Z58O-H8wY0Tvs0lNG6DhHpm4yE-aoi03rGCABGAzqNKR0_s3JNwtTDSn5ei0w15Zy8fCZSgMnvV0rttIYB_IHMG7Ag5ubgIH0BAz2o9CIi1kau-sIU648yI4ekxB1yE4sSBByB4bS-SEX2uRpHg1PV3V1vLGbB0qDRlHE-FW5d32nruYlyONpc"/>
+<button class="absolute bottom-0 right-0 bg-white p-2 border border-neutral-200 hover:bg-neutral-50 transition-all shadow-sm">
+<span class="material-symbols-outlined text-sm text-[#111111]" data-icon="edit">edit</span>
+</button>
+</div>
+<div class="flex-1">
+<span class="font-label text-[10px] tracking-[0.2em] text-[#444444] uppercase font-bold">User Identification</span>
+<h2 class="font-headline text-4xl md:text-6xl font-black tracking-tighter uppercase leading-none text-[#111111]">Alex Sterling</h2>
+<p class="text-[#444444] font-body text-sm mt-2">Member since October 2023</p>
+</div>
+</div>
+</section>
+<!-- Biometrics Bento Grid -->
+<section class="mb-12">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-extrabold text-2xl tracking-tight uppercase text-[#111111]">Biometrics</h3>
+<span class="font-label text-[10px] tracking-widest text-[#444444] uppercase">Vital Statistics</span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<!-- Height -->
+<div class="bg-neutral-50 border border-neutral-100 p-6 flex flex-col justify-between aspect-square">
+<span class="font-label text-[10px] tracking-widest text-[#444444] uppercase">Height</span>
+<div>
+<span class="font-headline text-4xl font-black tracking-tighter text-[#111111]">184</span>
+<span class="font-label text-xs ml-1 text-[#444444]">CM</span>
+</div>
+</div>
+<!-- Weight -->
+<div class="bg-neutral-50 border border-neutral-100 p-6 flex flex-col justify-between aspect-square">
+<span class="font-label text-[10px] tracking-widest text-[#444444] uppercase">Weight</span>
+<div>
+<span class="font-headline text-4xl font-black tracking-tighter text-[#111111]">82.5</span>
+<span class="font-label text-xs ml-1 text-[#444444]">KG</span>
+</div>
+</div>
+<!-- Activity Level -->
+<div class="bg-neutral-50 border border-neutral-100 p-6 flex flex-col justify-between aspect-square">
+<span class="font-label text-[10px] tracking-widest text-[#444444] uppercase">Activity</span>
+<div>
+<span class="font-headline text-xl font-black tracking-tighter uppercase leading-tight text-[#111111]">Athletic Elite</span>
+</div>
+</div>
+<!-- Goal -->
+<div class="bg-[#111111] text-white p-6 flex flex-col justify-between aspect-square">
+<span class="font-label text-[10px] tracking-widest text-neutral-400 uppercase">Goal</span>
+<div>
+<span class="font-headline text-xl font-black tracking-tighter uppercase leading-tight">Hypertrophy Focus</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Account Details Form -->
+<section class="mb-12">
+<div class="flex items-center justify-between mb-8 border-b border-neutral-100 pb-2">
+<h3 class="font-headline font-extrabold text-2xl tracking-tight uppercase text-[#111111]">Account Details</h3>
+<span class="font-label text-[10px] tracking-widest text-[#444444] uppercase">Security &amp; Core</span>
+</div>
+<div class="space-y-12">
+<div class="grid md:grid-cols-2 gap-x-12 gap-y-10">
+<div class="relative group">
+<label class="font-label text-[10px] tracking-widest text-[#444444] uppercase mb-2 block">First Name</label>
+<input class="w-full bg-transparent border-b border-neutral-200 py-2 focus:outline-none focus:border-[#111111] transition-colors font-headline font-bold text-lg text-[#111111]" type="text" value="Alex"/>
+</div>
+<div class="relative group">
+<label class="font-label text-[10px] tracking-widest text-[#444444] uppercase mb-2 block">Last Name</label>
+<input class="w-full bg-transparent border-b border-neutral-200 py-2 focus:outline-none focus:border-[#111111] transition-colors font-headline font-bold text-lg text-[#111111]" type="text" value="Sterling"/>
+</div>
+<div class="relative group">
+<label class="font-label text-[10px] tracking-widest text-[#444444] uppercase mb-2 block">Email Address</label>
+<input class="w-full bg-transparent border-b border-neutral-200 py-2 focus:outline-none focus:border-[#111111] transition-colors font-headline font-bold text-lg text-[#111111]" type="email" value="alex.sterling@monolith.com"/>
+</div>
+<div class="relative group">
+<label class="font-label text-[10px] tracking-widest text-[#444444] uppercase mb-2 block">Mobile Phone</label>
+<input class="w-full bg-transparent border-b border-neutral-200 py-2 focus:outline-none focus:border-[#111111] transition-colors font-headline font-bold text-lg text-[#111111]" type="tel" value="+1 (555) 012-3456"/>
+</div>
+</div>
+<div class="pt-8 border-t border-neutral-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div>
+<p class="font-headline font-bold text-lg uppercase tracking-tight text-[#111111]">System Preferences</p>
+<p class="text-[#444444] text-sm mt-1">Manage notifications and display metrics.</p>
+</div>
+<div class="flex gap-4">
+<button class="bg-neutral-100 border border-neutral-200 text-[#111111] px-6 py-3 font-label text-xs tracking-widest font-bold uppercase hover:bg-neutral-200 transition-all">Notifications</button>
+<button class="bg-neutral-100 border border-neutral-200 text-[#111111] px-6 py-3 font-label text-xs tracking-widest font-bold uppercase hover:bg-neutral-200 transition-all">Privacy</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Save Button -->
+<div class="mt-16">
+<button class="w-full bg-[#ccff00] py-6 text-[#111111] font-headline font-black text-xl tracking-tighter uppercase hover:bg-[#b8e600] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(204,255,0,0.2)] border border-[#b8e600]">
+            SAVE CHANGES
+        </button>
+</div>
+</main>
+<!-- Floating Pill Navigation -->
+<nav class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center w-[94%] bg-white/90 backdrop-blur-2xl rounded-full py-2.5 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-neutral-100 max-w-xl">
+<button class="flex flex-col items-center justify-center hover:opacity-70 transition-all active:scale-90 text-[#444444]">
+<span class="material-symbols-outlined text-2xl">fitness_center</span>
+<span class="font-inter text-[8px] tracking-widest uppercase mt-0.5">Workouts</span>
+</button>
+<button class="flex flex-col items-center justify-center hover:opacity-70 transition-all active:scale-90 text-[#444444]">
+<span class="material-symbols-outlined text-2xl">calendar_today</span>
+<span class="font-inter text-[8px] tracking-widest uppercase mt-0.5">Calendar</span>
+</button>
+<button class="flex items-center justify-center bg-[#111111] text-white rounded-full h-11 w-11 hover:scale-110 transition-all active:scale-95 shadow-lg">
+<span class="material-symbols-outlined text-2xl font-bold">add</span>
+</button>
+<button class="flex flex-col items-center justify-center hover:opacity-70 transition-all active:scale-90 text-[#444444]">
+<span class="material-symbols-outlined text-2xl">scale</span>
+<span class="font-inter text-[8px] tracking-widest uppercase mt-0.5">Weight Log</span>
+</button>
+<button class="flex flex-col items-center justify-center hover:opacity-70 transition-all active:scale-90 text-[#444444]">
+<span class="material-symbols-outlined text-2xl">nutrition</span>
+<span class="font-inter text-[8px] tracking-widest uppercase mt-0.5">Calories</span>
+</button>
+<button class="flex flex-col items-center justify-center transition-all text-[#111111] bg-neutral-100 px-4 py-2 rounded-full border border-neutral-200">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-inter text-[8px] tracking-widest uppercase mt-0.5 font-bold">Settings</span>
+</button>
+</nav>
+</body></html>

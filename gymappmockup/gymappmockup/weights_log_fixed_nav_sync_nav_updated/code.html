@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KINETIC | Weights Log</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "on-secondary": "#1c1b1b",
+                        "surface-dim": "#131313",
+                        "primary-fixed": "#5d5f5f",
+                        "inverse-primary": "#5d5f5f",
+                        "on-surface-variant": "#c6c6c6",
+                        "secondary": "#c8c6c5",
+                        "on-secondary-container": "#e5e2e1",
+                        "on-background": "#e5e2e1",
+                        "outline-variant": "#474747",
+                        "inverse-on-surface": "#313030",
+                        "on-secondary-fixed-variant": "#3c3b3b",
+                        "on-tertiary-container": "#000000",
+                        "surface-bright": "#3a3939",
+                        "tertiary-container": "#929090",
+                        "surface-tint": "#c6c6c7",
+                        "primary-fixed-dim": "#454747",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-surface": "#e5e2e1",
+                        "secondary-fixed": "#c8c6c5",
+                        "on-error": "#690005",
+                        "surface": "#131313",
+                        "primary": "#ffffff",
+                        "on-tertiary-fixed": "#ffffff",
+                        "surface-variant": "#353534",
+                        "secondary-fixed-dim": "#adabaa",
+                        "surface-container-high": "#2a2a2a",
+                        "error-container": "#93000a",
+                        "outline": "#919191",
+                        "tertiary": "#e5e2e1",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "on-primary-container": "#000000",
+                        "surface-container-low": "#1c1b1b",
+                        "primary-container": "#d4d4d4",
+                        "on-tertiary": "#1c1b1b",
+                        "on-primary": "#1a1c1c",
+                        "secondary-container": "#474646",
+                        "surface-container": "#201f1f",
+                        "on-primary-fixed": "#ffffff",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#e5e2e1",
+                        "tertiary-fixed-dim": "#474746",
+                        "surface-container-highest": "#353534",
+                        "inverse-surface": "#e5e2e1",
+                        "error": "#ffb4ab",
+                        "background": "#131313",
+                        "tertiary-fixed": "#5f5e5e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0e0e0e;
+            color: #FAFAFA;
+            font-family: 'Inter', sans-serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .editorial-gradient {
+            background: radial-gradient(circle at top left, #3a3939 0%, #131313 100%);
+        }
+    </style>
+<style>
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="dark bg-surface-container-lowest min-h-screen">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-zinc-950/70 backdrop-blur-xl flex items-center justify-between px-6 h-16">
+<div class="flex items-center">
+<span class="material-symbols-outlined text-white active:scale-95 duration-200 transition-opacity hover:opacity-80" data-icon="menu">menu</span>
+</div>
+<h1 class="text-xl font-manrope font-black tracking-tighter uppercase text-white">KINETIC</h1>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 active:scale-95 duration-200 transition-opacity hover:opacity-80">
+<img class="w-full h-full object-cover" data-alt="close-up portrait of a focused athlete" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTw4l2QY2W8riSjYZkCdJ15J8oOgGPrKtAgnYwX8XMW_kqoqLfme98_J-qxZLx_D2xgmfqHvT3U3nv1YqjzxVsHpdLIjY0pa8XRvR200nskZ8u6DjGFe0sXvlzUwWEIduh2pTi9LCWGCOXykfZec7RDXAfCU3RNdUJjDMtG6zstIStyq88UjQ19-6ai7DCheFFfNfwtMyt4DArsrhQCYkH6srcuuVlPo6LtuqY-pkoJqpzgUfdGBe-hn-nlCpZtJN0oktMhiZNUUA"/>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-2xl mx-auto">
+<!-- Hero Section / Context -->
+<section class="mb-12">
+<span class="font-label uppercase tracking-[0.2em] text-[10px] text-on-surface-variant mb-2 block">Journal / Log</span>
+<h2 class="font-headline font-extrabold text-5xl tracking-tighter text-white mb-4">WEIGHTS</h2>
+<div class="flex justify-between items-end border-b border-outline-variant/20 pb-4">
+<div class="flex gap-8">
+<div>
+<span class="font-label uppercase tracking-widest text-[8px] text-on-surface-variant block mb-1">TOTAL LIFTED</span>
+<span class="font-headline font-bold text-2xl text-white">12,450<span class="text-xs ml-1 font-normal text-on-surface-variant">KG</span></span>
+</div>
+<div>
+<span class="font-label uppercase tracking-widest text-[8px] text-on-surface-variant block mb-1">STREAK</span>
+<span class="font-headline font-bold text-2xl text-white">14<span class="text-xs ml-1 font-normal text-on-surface-variant">DAYS</span></span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-label uppercase tracking-widest text-[10px] text-primary">OCT 24, 2023</span>
+</div>
+</div>
+</section>
+<!-- Chronological Log -->
+<div class="space-y-6">
+<!-- Log Entry 01 -->
+<div class="bg-neutral-900/40 backdrop-blur-md p-6 rounded-none relative overflow-hidden group transition-all duration-500 hover:bg-neutral-900/60">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="font-headline font-bold text-2xl tracking-tight text-white mb-1">BARBELL BACK SQUAT</h3>
+<span class="font-label uppercase tracking-[0.1em] text-[10px] text-on-surface-variant">Compound / Lower Body</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-white transition-colors" data-icon="history">history</span>
+</div>
+<div class="grid grid-cols-12 gap-4">
+<div class="col-span-3">
+<span class="font-label uppercase tracking-widest text-[9px] text-on-surface-variant block mb-2">PREVIOUS</span>
+<span class="font-headline font-bold text-lg text-on-surface-variant">140<span class="text-[10px] ml-1">KG</span></span>
+</div>
+<div class="col-span-9 grid grid-cols-2 gap-4">
+<div class="relative">
+<span class="font-label uppercase tracking-widest text-[9px] text-white block mb-2">CURRENT WEIGHT</span>
+<input class="w-full bg-transparent border-b border-outline-variant focus:border-white transition-colors text-2xl font-headline font-bold p-0 text-white outline-none" type="text" value="145"/>
+<span class="absolute right-0 bottom-2 text-[10px] font-label text-on-surface-variant">KG</span>
+</div>
+<div class="relative">
+<span class="font-label uppercase tracking-widest text-[9px] text-white block mb-2">REPETITIONS</span>
+<input class="w-full bg-transparent border-b border-outline-variant focus:border-white transition-colors text-2xl font-headline font-bold p-0 text-white outline-none" type="text" value="8"/>
+<span class="absolute right-0 bottom-2 text-[10px] font-label text-on-surface-variant">REPS</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Log Entry 02 -->
+<div class="bg-neutral-900/40 backdrop-blur-md p-6 rounded-none relative overflow-hidden group transition-all duration-500 hover:bg-neutral-900/60">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="font-headline font-bold text-2xl tracking-tight text-white mb-1">BENCH PRESS</h3>
+<span class="font-label uppercase tracking-[0.1em] text-[10px] text-on-surface-variant">Compound / Upper Body</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-white transition-colors" data-icon="history">history</span>
+</div>
+<div class="grid grid-cols-12 gap-4">
+<div class="col-span-3">
+<span class="font-label uppercase tracking-widest text-[9px] text-on-surface-variant block mb-2">PREVIOUS</span>
+<span class="font-headline font-bold text-lg text-on-surface-variant">100<span class="text-[10px] ml-1">KG</span></span>
+</div>
+<div class="col-span-9 grid grid-cols-2 gap-4">
+<div class="relative">
+<span class="font-label uppercase tracking-widest text-[9px] text-white block mb-2">CURRENT WEIGHT</span>
+<input class="w-full bg-transparent border-b border-outline-variant focus:border-white transition-colors text-2xl font-headline font-bold p-0 text-white outline-none" placeholder="--" type="text"/>
+<span class="absolute right-0 bottom-2 text-[10px] font-label text-on-surface-variant">KG</span>
+</div>
+<div class="relative">
+<span class="font-label uppercase tracking-widest text-[9px] text-white block mb-2">REPETITIONS</span>
+<input class="w-full bg-transparent border-b border-outline-variant focus:border-white transition-colors text-2xl font-headline font-bold p-0 text-white outline-none" placeholder="--" type="text"/>
+<span class="absolute right-0 bottom-2 text-[10px] font-label text-on-surface-variant">REPS</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Set Tracker Visualization -->
+<div class="py-12">
+<span class="font-label uppercase tracking-widest text-[10px] text-on-surface-variant block mb-6">PROGRESSION GRID (WEEK 42)</span>
+<div class="grid grid-cols-7 gap-2">
+<div class="aspect-square bg-primary"></div>
+<div class="aspect-square bg-primary"></div>
+<div class="aspect-square bg-primary"></div>
+<div class="aspect-square bg-primary"></div>
+<div class="aspect-square bg-surface-container-highest border border-outline-variant"></div>
+<div class="aspect-square bg-surface-container-highest border border-outline-variant"></div>
+<div class="aspect-square bg-surface-container-highest border border-outline-variant"></div>
+</div>
+</div>
+<!-- Log Entry 03 -->
+<div class="bg-neutral-900/40 backdrop-blur-md p-6 rounded-none relative overflow-hidden group transition-all duration-500 hover:bg-neutral-900/60">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="font-headline font-bold text-2xl tracking-tight text-white mb-1">ROMANIAN DEADLIFT</h3>
+<span class="font-label uppercase tracking-[0.1em] text-[10px] text-on-surface-variant">Isolation / Posterior Chain</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-white transition-colors" data-icon="history">history</span>
+</div>
+<div class="grid grid-cols-12 gap-4">
+<div class="col-span-3">
+<span class="font-label uppercase tracking-widest text-[9px] text-on-surface-variant block mb-2">PREVIOUS</span>
+<span class="font-headline font-bold text-lg text-on-surface-variant">110<span class="text-[10px] ml-1">KG</span></span>
+</div>
+<div class="col-span-9 grid grid-cols-2 gap-4">
+<div class="relative">
+<span class="font-label uppercase tracking-widest text-[9px] text-white block mb-2">CURRENT WEIGHT</span>
+<input class="w-full bg-transparent border-b border-outline-variant focus:border-white transition-colors text-2xl font-headline font-bold p-0 text-white outline-none" placeholder="--" type="text"/>
+<span class="absolute right-0 bottom-2 text-[10px] font-label text-on-surface-variant">KG</span>
+</div>
+<div class="relative">
+<span class="font-label uppercase tracking-widest text-[9px] text-white block mb-2">REPETITIONS</span>
+<input class="w-full bg-transparent border-b border-outline-variant focus:border-white transition-colors text-2xl font-headline font-bold p-0 text-white outline-none" placeholder="--" type="text"/>
+<span class="absolute right-0 bottom-2 text-[10px] font-label text-on-surface-variant">REPS</span>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full bg-white text-black font-headline font-bold text-sm tracking-widest py-6 mt-12 transition-transform active:scale-95">
+                COMPLETE LOG ENTRY
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center px-2 py-2 bg-zinc-800/60 backdrop-blur-2xl rounded-full border border-white/5 shadow-2xl">
+<a class="p-3 text-white hover:opacity-70 transition-all active:scale-90 duration-150" href="#" title="Workouts Library">
+<span class="material-symbols-outlined" data-icon="fitness_center">fitness_center</span>
+</a>
+<a class="p-3 text-white hover:opacity-70 transition-all active:scale-90 duration-150" href="#" title="Gym Calendar">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+</a>
+<button class="p-3 text-white hover:opacity-70 transition-all active:scale-90 duration-150" title="Add Workout">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+<a class="bg-zinc-600 rounded-full p-3 text-white shadow-lg active:scale-90 duration-150 transition-all mx-1" href="#" title="Weights Log">
+<span class="material-symbols-outlined" data-icon="assessment" style="font-variation-settings: 'FILL' 1;">assessment</span>
+</a>
+<a class="p-3 text-white hover:opacity-70 transition-all active:scale-90 duration-150" href="#" title="Calorie Calculator">
+<span class="material-symbols-outlined" data-icon="local_fire_department">local_fire_department</span>
+</a>
+<a class="p-3 text-white hover:opacity-70 transition-all active:scale-90 duration-150" href="#" title="Settings">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</a>
+</nav>
+</body></html>

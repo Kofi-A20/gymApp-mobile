@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MONOLITH | Weights Log</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;700;800&amp;family=Inter:wght@300;400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-text": "#111111",
+            "secondary-text": "#444444",
+            "tertiary-fixed": "#5f5e5e",
+            "error-container": "#93000a",
+            "error": "#ffb4ab",
+            "on-tertiary": "#1c1b1b",
+            "primary-fixed": "#5d5f5f",
+            "inverse-surface": "#e5e2e1",
+            "tertiary-fixed-dim": "#474746",
+            "surface-bright": "#3a3939",
+            "on-surface-variant": "#c6c6c6",
+            "surface-tint": "#c6c6c7",
+            "on-primary-fixed-variant": "#e2e2e2",
+            "primary-fixed-dim": "#454747",
+            "surface-container-lowest": "#0e0e0e",
+            "inverse-primary": "#5d5f5f",
+            "secondary-container": "#474646",
+            "on-secondary-fixed": "#1c1b1b",
+            "secondary-fixed": "#c8c6c5",
+            "on-tertiary-fixed": "#ffffff",
+            "on-background": "#111111",
+            "on-surface": "#111111",
+            "surface-container-low": "#f5f5f5",
+            "secondary": "#444444",
+            "outline-variant": "#e5e5e5",
+            "on-secondary": "#ffffff",
+            "surface-variant": "#f0f0f0",
+            "surface": "#ffffff",
+            "on-primary-container": "#000000",
+            "inverse-on-surface": "#313030",
+            "tertiary": "#444444",
+            "primary": "#111111",
+            "on-secondary-fixed-variant": "#3c3b3b",
+            "primary-container": "#d4d4d4",
+            "on-secondary-container": "#111111",
+            "surface-container-highest": "#e5e5e5",
+            "on-primary": "#ffffff",
+            "tertiary-container": "#929090",
+            "surface-container-high": "#ebebeb",
+            "outline": "#919191",
+            "on-primary-fixed": "#ffffff",
+            "surface-dim": "#f5f5f5",
+            "on-tertiary-fixed-variant": "#111111",
+            "surface-container": "#f0f0f0",
+            "on-error": "#ffffff",
+            "on-tertiary-container": "#000000",
+            "background": "#ffffff",
+            "on-error-container": "#ffdad6",
+            "secondary-fixed-dim": "#adabaa"
+          },
+          "borderRadius": {
+            "DEFAULT": "0px",
+            "lg": "0px",
+            "xl": "0px",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          }
+        },
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      background-color: #ffffff;
+      color: #111111;
+      min-height: max(884px, 100dvh);
+    }
+    h1, h2, h3, h4, .primary-text {
+      color: #111111 !important;
+    }
+    .secondary-text, .font-label {
+      color: #444444 !important;
+    }
+  </style>
+</head>
+<body class="font-body antialiased selection:bg-lime-400 selection:text-black">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-neutral-100 flex justify-between items-center px-6 h-16 w-full">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#111111] cursor-pointer">menu</span>
+</div>
+<h1 class="font-headline tracking-tighter uppercase font-black text-2xl text-[#111111]">MONOLITH</h1>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-neutral-200">
+<img class="w-full h-full object-cover" data-alt="Close-up portrait of a determined fitness professional" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcP2N6y4Om_BpQWJD8pDdZTT2AdWASO-j_ZlAGN1vVP78lloGe0lXlY5k1uhYhYWdaYuxsVJTpsB8Kt3cH8bSyVtB0Y3QnYrCj1ROLKuE6RnLFf_UndEogbhga7nn36jWtubwzP4LhmB2M_mvr-DD9BG_qowftb1X3kXFutdvaf2TfoM9W107NlfMIaZ4-VrMfeALOs292ep9CBKQ5raFo3srGkqhNE0docwCf-cH4EySx1EZse-gzkUHzYrVo3wly-j0V238sraA"/>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-4xl mx-auto min-h-screen bg-white">
+<!-- Hero Section -->
+<section class="mb-16">
+<p class="font-label text-[10px] tracking-[0.2em] text-[#444444] uppercase mb-2">Current Session</p>
+<h2 class="font-headline text-6xl md:text-8xl font-extrabold tracking-tighter leading-none mb-6 text-[#111111]">HYPERTROPHY<br/>B.</h2>
+<div class="flex items-center gap-8 border-l-4 border-lime-400 pl-6">
+<div>
+<span class="block font-label text-[10px] tracking-widest text-[#444444] uppercase">Duration</span>
+<span class="font-headline text-2xl font-bold text-[#111111]">54:12</span>
+</div>
+<div>
+<span class="block font-label text-[10px] tracking-widest text-[#444444] uppercase">Volume</span>
+<span class="font-headline text-2xl font-bold text-[#111111]">12,450 KG</span>
+</div>
+</div>
+</section>
+<!-- Exercise Log -->
+<div class="space-y-12">
+<!-- Exercise Item 1 -->
+<article class="group">
+<div class="flex justify-between items-end mb-6">
+<div class="max-w-[70%]">
+<span class="font-label text-[10px] tracking-widest text-[#444444] uppercase">01 / Chest</span>
+<h3 class="font-headline text-3xl font-extrabold tracking-tight text-[#111111]">BARBELL BENCH PRESS</h3>
+</div>
+<button class="bg-black text-lime-400 border border-black px-4 py-2 font-label text-[10px] font-bold tracking-widest uppercase hover:bg-lime-400 hover:text-black transition-colors">
+            ADD NOTE
+          </button>
+</div>
+<div class="space-y-px">
+<!-- Table Header -->
+<div class="grid grid-cols-4 py-2 px-4 bg-neutral-100 border-b border-neutral-200">
+<span class="font-label text-[9px] tracking-widest text-[#444444] uppercase">Set</span>
+<span class="font-label text-[9px] tracking-widest text-[#444444] uppercase text-center">Previous</span>
+<span class="font-label text-[9px] tracking-widest text-[#444444] uppercase text-center">KG</span>
+<span class="font-label text-[9px] tracking-widest text-[#444444] uppercase text-right">Reps</span>
+</div>
+<!-- Rows -->
+<div class="grid grid-cols-4 py-4 px-4 bg-white border-b border-neutral-100 hover:bg-neutral-50 transition-colors items-center">
+<span class="font-headline font-bold text-lg text-[#111111]">1</span>
+<span class="text-center font-body text-[#444444] text-sm italic">100 x 8</span>
+<input class="bg-transparent border-b border-neutral-300 focus:border-black focus:ring-0 text-center font-headline font-bold text-lg mx-auto w-16 text-[#111111]" placeholder="105" type="number"/>
+<input class="bg-transparent border-b border-neutral-300 focus:border-black focus:ring-0 text-right font-headline font-bold text-lg ml-auto w-12 text-[#111111]" placeholder="8" type="number"/>
+</div>
+<div class="grid grid-cols-4 py-4 px-4 bg-white border-b border-neutral-100 hover:bg-neutral-50 transition-colors items-center">
+<span class="font-headline font-bold text-lg text-[#111111]">2</span>
+<span class="text-center font-body text-[#444444] text-sm italic">100 x 8</span>
+<input class="bg-transparent border-b border-neutral-300 focus:border-black focus:ring-0 text-center font-headline font-bold text-lg mx-auto w-16 text-[#111111]" placeholder="105" type="number"/>
+<input class="bg-transparent border-b border-neutral-300 focus:border-black focus:ring-0 text-right font-headline font-bold text-lg ml-auto w-12 text-[#111111]" placeholder="6" type="number"/>
+</div>
+</div>
+</article>
+<!-- Exercise Item 2 -->
+<article class="group">
+<div class="flex justify-between items-end mb-6">
+<div class="max-w-[70%]">
+<span class="font-label text-[10px] tracking-widest text-[#444444] uppercase">02 / Back</span>
+<h3 class="font-headline text-3xl font-extrabold tracking-tight text-[#111111]">WEIGHTED PULL UPS</h3>
+</div>
+<button class="bg-black text-lime-400 border border-black px-4 py-2 font-label text-[10px] font-bold tracking-widest uppercase hover:bg-lime-400 hover:text-black transition-colors">
+            ADD NOTE
+          </button>
+</div>
+<div class="space-y-px">
+<div class="grid grid-cols-4 py-2 px-4 bg-neutral-100 border-b border-neutral-200">
+<span class="font-label text-[9px] tracking-widest text-[#444444] uppercase">Set</span>
+<span class="font-label text-[9px] tracking-widest text-[#444444] uppercase text-center">Previous</span>
+<span class="font-label text-[9px] tracking-widest text-[#444444] uppercase text-center">KG</span>
+<span class="font-label text-[9px] tracking-widest text-[#444444] uppercase text-right">Reps</span>
+</div>
+<div class="grid grid-cols-4 py-4 px-4 bg-white border-b border-neutral-100 hover:bg-neutral-50 transition-colors items-center">
+<span class="font-headline font-bold text-lg text-[#111111]">1</span>
+<span class="text-center font-body text-[#444444] text-sm italic">20 x 10</span>
+<input class="bg-transparent border-b border-neutral-300 focus:border-black focus:ring-0 text-center font-headline font-bold text-lg mx-auto w-16 text-[#111111]" placeholder="25" type="number"/>
+<input class="bg-transparent border-b border-neutral-300 focus:border-black focus:ring-0 text-right font-headline font-bold text-lg ml-auto w-12 text-[#111111]" placeholder="10" type="number"/>
+</div>
+<div class="grid grid-cols-4 py-4 px-4 bg-white border-b border-neutral-100 hover:bg-neutral-50 transition-colors items-center">
+<span class="font-headline font-bold text-lg text-[#111111]">2</span>
+<span class="text-center font-body text-[#444444] text-sm italic">20 x 10</span>
+<input class="bg-transparent border-b border-neutral-300 focus:border-black focus:ring-0 text-center font-headline font-bold text-lg mx-auto w-16 text-[#111111]" placeholder="25" type="number"/>
+<input class="bg-transparent border-b border-neutral-300 focus:border-black focus:ring-0 text-right font-headline font-bold text-lg ml-auto w-12 text-[#111111]" placeholder="8" type="number"/>
+</div>
+</div>
+</article>
+<!-- Asymmetric Bento-style Summary -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
+<div class="md:col-span-2 bg-neutral-50 border border-neutral-100 p-8 flex flex-col justify-between min-h-[200px]">
+<span class="font-label text-[10px] tracking-widest text-[#444444] uppercase">PR Milestone</span>
+<h4 class="font-headline text-4xl font-extrabold tracking-tight text-[#111111]">YOU ARE 5% STRONGER THAN LAST WEEK.</h4>
+<p class="font-body text-[#444444] text-sm max-w-sm">Consistency in the hypertrophy phase is showing significant neural adaptation in compound movements.</p>
+</div>
+<div class="bg-black text-white p-8 flex flex-col justify-center items-center text-center">
+<span class="material-symbols-outlined text-4xl text-lime-400 mb-4">bolt</span>
+<span class="font-label text-[10px] tracking-widest text-neutral-400 uppercase">Intensity</span>
+<span class="font-headline text-5xl font-black italic">HIGH</span>
+</div>
+</section>
+</div>
+<!-- Finish Button -->
+<div class="mt-20 flex justify-center">
+<button class="w-full md:w-auto px-12 py-5 bg-[#111111] text-white font-headline font-black text-xl tracking-tighter uppercase hover:bg-lime-400 hover:text-black transition-all border-2 border-[#111111]">
+        FINISH WORKOUT
+      </button>
+</div>
+</main>
+<!-- BottomNavBar (Pill Navigation) -->
+<nav class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center w-auto gap-2 bg-white/90 backdrop-blur-2xl rounded-full p-2 shadow-2xl border border-neutral-200">
+<!-- Workouts -->
+<a class="flex items-center justify-center p-3 text-[#111111] hover:bg-neutral-100 rounded-full transition-all duration-200" href="#" title="Workouts Library">
+<span class="material-symbols-outlined">fitness_center</span>
+</a>
+<!-- Calendar -->
+<a class="flex items-center justify-center p-3 text-[#111111] hover:bg-neutral-100 rounded-full transition-all duration-200" href="#" title="Gym Calendar">
+<span class="material-symbols-outlined">calendar_today</span>
+</a>
+<!-- Add -->
+<a class="flex items-center justify-center p-3 text-[#111111] hover:bg-neutral-100 rounded-full transition-all duration-200" href="#" title="Add Workout">
+<span class="material-symbols-outlined">add</span>
+</a>
+<!-- Weight Log (Active) -->
+<a class="flex items-center justify-center p-3 bg-black text-white rounded-full shadow-sm" href="#" title="Weights Log">
+<span class="material-symbols-outlined">assessment</span>
+</a>
+<!-- Calories -->
+<a class="flex items-center justify-center p-3 text-[#111111] hover:bg-neutral-100 rounded-full transition-all duration-200" href="#" title="Calorie Calculator">
+<span class="material-symbols-outlined">local_fire_department</span>
+</a>
+<!-- Settings -->
+<a class="flex items-center justify-center p-3 text-[#111111] hover:bg-neutral-100 rounded-full transition-all duration-200" href="#" title="Settings">
+<span class="material-symbols-outlined">settings</span>
+</a>
+</nav>
+</body></html>

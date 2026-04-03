@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MONOLITH | Workouts Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;700;800&amp;family=Inter:wght@300;400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-text": "#111111",
+                        "secondary-text": "#444444",
+                        "accent-green": "#00C288",
+                        "tertiary-fixed": "#5f5e5e",
+                        "error-container": "#93000a",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#1c1b1b",
+                        "primary-fixed": "#5d5f5f",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-fixed-dim": "#474746",
+                        "surface-bright": "#3a3939",
+                        "on-surface-variant": "#c6c6c6",
+                        "surface-tint": "#c6c6c7",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "primary-fixed-dim": "#454747",
+                        "surface-container-lowest": "#0e0e0e",
+                        "inverse-primary": "#5d5f5f",
+                        "secondary-container": "#474646",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "secondary-fixed": "#c8c6c5",
+                        "on-tertiary-fixed": "#ffffff",
+                        "on-background": "#111111",
+                        "on-surface": "#111111",
+                        "surface-container-low": "#f5f5f5",
+                        "secondary": "#444444",
+                        "outline-variant": "#e5e5e5",
+                        "on-secondary": "#ffffff",
+                        "surface-variant": "#f0f0f0",
+                        "surface": "#ffffff",
+                        "on-primary-container": "#000000",
+                        "inverse-on-surface": "#313030",
+                        "tertiary": "#444444",
+                        "primary": "#111111",
+                        "on-secondary-fixed-variant": "#3c3b3b",
+                        "primary-container": "#d4d4d4",
+                        "on-secondary-container": "#111111",
+                        "surface-container-highest": "#e5e5e5",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#929090",
+                        "surface-container-high": "#f0f0f0",
+                        "outline": "#919191",
+                        "on-primary-fixed": "#000000",
+                        "surface-dim": "#f5f5f5",
+                        "on-tertiary-fixed-variant": "#111111",
+                        "surface-container": "#fcfcfc",
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#000000",
+                        "background": "#ffffff",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#adabaa"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #ffffff;
+            color: #111111;
+        }
+        .editorial-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+    </style>
+<style>
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="font-body selection:bg-lime-400 selection:text-black">
+<!-- TopAppBar -->
+<header class="bg-white/80 backdrop-blur-xl border-b border-neutral-100 fixed top-0 w-full z-50">
+<div class="flex items-center justify-between px-6 h-16 w-full max-w-7xl mx-auto">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#111111] cursor-pointer hover:opacity-80 transition-opacity active:scale-95 duration-200">menu</span>
+<span class="font-manrope font-black tracking-tighter uppercase text-xl text-[#111111]">MONOLITH</span>
+</div>
+<div class="flex items-center gap-6">
+<nav class="hidden md:flex gap-8">
+<a class="text-[#111111] font-inter font-bold text-[10px] tracking-widest uppercase hover:opacity-80 transition-opacity" href="#">Training</a>
+<a class="text-[#444444] font-inter font-bold text-[10px] tracking-widest uppercase hover:opacity-80 transition-opacity" href="#">Analytics</a>
+<a class="text-[#444444] font-inter font-bold text-[10px] tracking-widest uppercase hover:opacity-80 transition-opacity" href="#">Schedule</a>
+</nav>
+<div class="w-8 h-8 bg-neutral-100 flex items-center justify-center overflow-hidden rounded-full cursor-pointer hover:ring-2 hover:ring-neutral-200 transition-all active:scale-95 duration-200">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwQD-0Y8kd-bmTDkHzF84XtiNL2EoGqNKGCKd4bDFv-_qNaOzQQx-TZ2K6hy1NNuvBu9EAuCYNdy7K2m5alYoR4iFMdNDIlir7yBI2GtJgrWepIeriDc_1Ks21CAiey_I21jTQh5dNIA_UI9h8u3HnVFFrHTqK-DWFO81SCu9o2E7qrp_uB3EyRbSXRc-Ikbk2QXZlgCVHNEvZTW86IRdw8sUnH1aByAy1-Ws2uFjt2TivMB3w4ih4GhE5JV9aRnSsxgx4TLfx9u4"/>
+</div>
+</div>
+</div>
+</header>
+<main class="pt-32 pb-48 px-6 max-w-7xl mx-auto">
+<!-- Editorial Header -->
+<div class="mb-24 flex flex-col md:flex-row md:items-end justify-between gap-8">
+<div class="max-w-2xl">
+<p class="font-inter text-[10px] tracking-[0.2em] uppercase text-[#444444] mb-4">Workout Library / Q3 Cycle</p>
+<h1 class="font-headline font-black text-6xl md:text-8xl tracking-tighter text-[#111111] leading-[0.9]">STRENGTH<br/>ARCHIVE.</h1>
+</div>
+<div class="md:text-right">
+<p class="font-inter text-sm text-[#444444] max-w-xs md:ml-auto leading-relaxed">
+                    A curated selection of high-intensity protocols designed for structural hypertrophy and neurological adaptation.
+                </p>
+</div>
+</div>
+<!-- Bento Workout Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Workout 1 -->
+<div class="group relative bg-neutral-50 p-8 flex flex-col justify-between aspect-[4/5] hover:bg-neutral-100 transition-colors duration-500 border border-neutral-100">
+<div>
+<div class="flex justify-between items-start mb-12">
+<span class="font-inter text-[10px] tracking-widest uppercase text-[#444444]">Sequence 01</span>
+<span class="material-symbols-outlined text-neutral-300">bolt</span>
+</div>
+<h2 class="font-headline font-extrabold text-4xl tracking-tighter text-[#111111] mb-2">Push 1</h2>
+<p class="font-inter text-xs text-[#444444] uppercase tracking-widest">Chest / Shoulders / Triceps</p>
+</div>
+<div class="mt-auto">
+<div class="flex gap-2 mb-8">
+<div class="h-[2px] w-8 bg-[#111111]"></div>
+<div class="h-[2px] w-8 bg-neutral-200"></div>
+<div class="h-[2px] w-8 bg-neutral-200"></div>
+</div>
+<a class="inline-block font-inter font-black text-[11px] tracking-[0.15em] uppercase text-[#00A372] hover:translate-x-2 transition-transform duration-300" href="#">START SESSION</a>
+</div>
+</div>
+<!-- Workout 2 -->
+<div class="group relative bg-neutral-50 p-8 flex flex-col justify-between aspect-[4/5] hover:bg-neutral-100 transition-colors duration-500 border border-neutral-100">
+<div>
+<div class="flex justify-between items-start mb-12">
+<span class="font-inter text-[10px] tracking-widest uppercase text-[#444444]">Sequence 02</span>
+<span class="material-symbols-outlined text-neutral-300">waves</span>
+</div>
+<h2 class="font-headline font-extrabold text-4xl tracking-tighter text-[#111111] mb-2">Pull 1</h2>
+<p class="font-inter text-xs text-[#444444] uppercase tracking-widest">Back / Rear Delts / Biceps</p>
+</div>
+<div class="mt-auto">
+<div class="flex gap-2 mb-8">
+<div class="h-[2px] w-8 bg-[#111111]"></div>
+<div class="h-[2px] w-8 bg-neutral-200"></div>
+<div class="h-[2px] w-8 bg-neutral-200"></div>
+</div>
+<a class="inline-block font-inter font-black text-[11px] tracking-[0.15em] uppercase text-[#00A372] hover:translate-x-2 transition-transform duration-300" href="#">START SESSION</a>
+</div>
+</div>
+<!-- Workout 3 -->
+<div class="group relative bg-neutral-50 p-8 flex flex-col justify-between aspect-[4/5] hover:bg-neutral-100 transition-colors duration-500 border border-neutral-100">
+<div>
+<div class="flex justify-between items-start mb-12">
+<span class="font-inter text-[10px] tracking-widest uppercase text-[#444444]">Sequence 03</span>
+<span class="material-symbols-outlined text-neutral-300">foundation</span>
+</div>
+<h2 class="font-headline font-extrabold text-4xl tracking-tighter text-[#111111] mb-2">Legs 1</h2>
+<p class="font-inter text-xs text-[#444444] uppercase tracking-widest">Quads / Hamstrings / Calves</p>
+</div>
+<div class="mt-auto">
+<div class="flex gap-2 mb-8">
+<div class="h-[2px] w-8 bg-[#111111]"></div>
+<div class="h-[2px] w-8 bg-neutral-200"></div>
+<div class="h-[2px] w-8 bg-neutral-200"></div>
+</div>
+<a class="inline-block font-inter font-black text-[11px] tracking-[0.15em] uppercase text-[#00A372] hover:translate-x-2 transition-transform duration-300" href="#">START SESSION</a>
+</div>
+</div>
+<!-- Workout 4 -->
+<div class="group relative bg-neutral-50 p-8 flex flex-col justify-between aspect-[4/5] hover:bg-neutral-100 transition-colors duration-500 border border-neutral-100">
+<div>
+<div class="flex justify-between items-start mb-12">
+<span class="font-inter text-[10px] tracking-widest uppercase text-[#444444]">Sequence 04</span>
+<span class="material-symbols-outlined text-neutral-300">all_out</span>
+</div>
+<h2 class="font-headline font-extrabold text-4xl tracking-tighter text-[#111111] mb-2">Push 2</h2>
+<p class="font-inter text-xs text-[#444444] uppercase tracking-widest">Incline Focus / Tricep Peak</p>
+</div>
+<div class="mt-auto">
+<div class="flex gap-2 mb-8">
+<div class="h-[2px] w-8 bg-[#111111]"></div>
+<div class="h-[2px] w-8 bg-[#111111]"></div>
+<div class="h-[2px] w-8 bg-neutral-200"></div>
+</div>
+<a class="inline-block font-inter font-black text-[11px] tracking-[0.15em] uppercase text-[#00A372] hover:translate-x-2 transition-transform duration-300" href="#">START SESSION</a>
+</div>
+</div>
+<!-- Workout 5 -->
+<div class="group relative bg-neutral-50 p-8 flex flex-col justify-between aspect-[4/5] hover:bg-neutral-100 transition-colors duration-500 border border-neutral-100">
+<div>
+<div class="flex justify-between items-start mb-12">
+<span class="font-inter text-[10px] tracking-widest uppercase text-[#444444]">Sequence 05</span>
+<span class="material-symbols-outlined text-neutral-300">expand</span>
+</div>
+<h2 class="font-headline font-extrabold text-4xl tracking-tighter text-[#111111] mb-2">Pull 2</h2>
+<p class="font-inter text-xs text-[#444444] uppercase tracking-widest">Width Focus / Bicep Girth</p>
+</div>
+<div class="mt-auto">
+<div class="flex gap-2 mb-8">
+<div class="h-[2px] w-8 bg-[#111111]"></div>
+<div class="h-[2px] w-8 bg-[#111111]"></div>
+<div class="h-[2px] w-8 bg-neutral-200"></div>
+</div>
+<a class="inline-block font-inter font-black text-[11px] tracking-[0.15em] uppercase text-[#00A372] hover:translate-x-2 transition-transform duration-300" href="#">START SESSION</a>
+</div>
+</div>
+<!-- Workout 6 -->
+<div class="group relative bg-neutral-50 p-8 flex flex-col justify-between aspect-[4/5] hover:bg-neutral-100 transition-colors duration-500 border border-neutral-100">
+<div>
+<div class="flex justify-between items-start mb-12">
+<span class="font-inter text-[10px] tracking-widest uppercase text-[#444444]">Sequence 06</span>
+<span class="material-symbols-outlined text-neutral-300">keyboard_double_arrow_up</span>
+</div>
+<h2 class="font-headline font-extrabold text-4xl tracking-tighter text-[#111111] mb-2">Legs 2</h2>
+<p class="font-inter text-xs text-[#444444] uppercase tracking-widest">Posterior Chain / Explosive Power</p>
+</div>
+<div class="mt-auto">
+<div class="flex gap-2 mb-8">
+<div class="h-[2px] w-8 bg-[#111111]"></div>
+<div class="h-[2px] w-8 bg-[#111111]"></div>
+<div class="h-[2px] w-8 bg-neutral-200"></div>
+</div>
+<a class="inline-block font-inter font-black text-[11px] tracking-[0.15em] uppercase text-[#00A372] hover:translate-x-2 transition-transform duration-300" href="#">START SESSION</a>
+</div>
+</div>
+</div>
+<!-- Secondary Section: Performance Metrics -->
+<section class="mt-32">
+<h3 class="font-headline font-extrabold text-2xl tracking-tighter text-[#111111] mb-12 uppercase">Cumulative Volume</h3>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-12">
+<div>
+<span class="block font-inter text-[10px] tracking-widest uppercase text-[#444444] mb-2">Weekly Load</span>
+<span class="block font-headline font-black text-5xl tracking-tighter text-[#111111]">42,500</span>
+<span class="block font-inter text-[10px] tracking-widest uppercase text-[#444444] mt-1">Kilograms</span>
+</div>
+<div>
+<span class="block font-inter text-[10px] tracking-widest uppercase text-[#444444] mb-2">Active Time</span>
+<span class="block font-headline font-black text-5xl tracking-tighter text-[#111111]">08:12</span>
+<span class="block font-inter text-[10px] tracking-widest uppercase text-[#444444] mt-1">Hours / Week</span>
+</div>
+<div class="col-span-2 hidden md:block">
+<!-- Progress Monolith -->
+<div class="flex items-end gap-1 h-full pt-4">
+<div class="w-full bg-neutral-100 h-12"></div>
+<div class="w-full bg-neutral-100 h-24"></div>
+<div class="w-full bg-neutral-100 h-16"></div>
+<div class="w-full bg-[#111111] h-32"></div>
+<div class="w-full bg-neutral-100 h-20"></div>
+<div class="w-full bg-neutral-100 h-28"></div>
+<div class="w-full bg-neutral-100 h-36"></div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-2 py-2 bg-white/90 backdrop-blur-2xl rounded-full border border-neutral-200 shadow-2xl">
+<button class="bg-[#111111] rounded-full p-3 text-white flex items-center justify-center transition-all active:scale-90" title="Workouts Library">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">fitness_center</span>
+</button>
+<button class="p-3 text-[#444444] hover:text-[#111111] transition-all flex items-center justify-center active:scale-95" title="Gym Calendar">
+<span class="material-symbols-outlined">calendar_today</span>
+</button>
+<button class="p-3 text-[#111111] hover:scale-110 transition-all flex items-center justify-center active:scale-90" title="Add Workout">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+<button class="p-3 text-[#444444] hover:text-[#111111] transition-all flex items-center justify-center active:scale-95" title="Weights Log">
+<span class="material-symbols-outlined">assessment</span>
+</button>
+<button class="p-3 text-[#444444] hover:text-[#111111] transition-all flex items-center justify-center active:scale-95" title="Calorie Calculator">
+<span class="material-symbols-outlined">local_fire_department</span>
+</button>
+<button class="p-3 text-[#444444] hover:text-[#111111] transition-all flex items-center justify-center active:scale-95" title="Settings">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</nav>
+</body></html>

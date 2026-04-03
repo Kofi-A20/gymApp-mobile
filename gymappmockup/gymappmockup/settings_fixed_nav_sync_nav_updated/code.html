@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "tertiary-fixed": "#5f5e5e",
+                  "error-container": "#93000a",
+                  "error": "#ffb4ab",
+                  "on-tertiary": "#1c1b1b",
+                  "primary-fixed": "#5d5f5f",
+                  "inverse-surface": "#e5e2e1",
+                  "tertiary-fixed-dim": "#474746",
+                  "surface-bright": "#3a3939",
+                  "on-surface-variant": "#c6c6c6",
+                  "surface-tint": "#c6c6c7",
+                  "on-primary-fixed-variant": "#e2e2e2",
+                  "primary-fixed-dim": "#454747",
+                  "surface-container-lowest": "#0e0e0e",
+                  "inverse-primary": "#5d5f5f",
+                  "secondary-container": "#474646",
+                  "on-secondary-fixed": "#1c1b1b",
+                  "secondary-fixed": "#c8c6c5",
+                  "on-tertiary-fixed": "#ffffff",
+                  "on-background": "#e5e2e1",
+                  "on-surface": "#e5e2e1",
+                  "surface-container-low": "#1c1b1b",
+                  "secondary": "#c8c6c5",
+                  "outline-variant": "#474747",
+                  "on-secondary": "#1c1b1b",
+                  "surface-variant": "#353534",
+                  "surface": "#131313",
+                  "on-primary-container": "#000000",
+                  "inverse-on-surface": "#313030",
+                  "tertiary": "#e5e2e1",
+                  "primary": "#ffffff",
+                  "on-secondary-fixed-variant": "#3c3b3b",
+                  "primary-container": "#d4d4d4",
+                  "on-secondary-container": "#e5e2e1",
+                  "surface-container-highest": "#353534",
+                  "on-primary": "#1a1c1c",
+                  "tertiary-container": "#929090",
+                  "surface-container-high": "#2a2a2a",
+                  "outline": "#919191",
+                  "on-primary-fixed": "#ffffff",
+                  "surface-dim": "#131313",
+                  "on-tertiary-fixed-variant": "#e5e2e1",
+                  "surface-container": "#201f1f",
+                  "on-error": "#690005",
+                  "on-tertiary-container": "#000000",
+                  "background": "#131313",
+                  "on-error-container": "#ffdad6",
+                  "secondary-fixed-dim": "#adabaa",
+                  "brand-neon": "#a3ff00"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0px",
+                  "lg": "0px",
+                  "xl": "0px",
+                  "full": "9999px"
+          },
+          "fontFamily": {
+                  "headline": ["Manrope"],
+                  "body": ["Inter"],
+                  "label": ["Inter"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body { background-color: #0e0e0e; }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 0px; }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-body text-on-background selection:bg-brand-neon selection:text-black antialiased custom-scrollbar">
+<!-- TopAppBar -->
+<header class="bg-zinc-950/70 backdrop-blur-xl fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 w-full">
+<div class="flex items-center">
+<span class="material-symbols-outlined text-white mr-4 cursor-pointer hover:opacity-80 transition-opacity active:scale-95 duration-200">menu</span>
+</div>
+<h1 class="font-headline font-black tracking-tighter uppercase text-xl text-white">MONOLITH</h1>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant bg-surface-container-highest cursor-pointer hover:opacity-80 transition-opacity active:scale-95 duration-200">
+<img alt="Alexander Vance" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTI81yeyAeSfPt8YLJKQK1S-c3n5QbSIJn2dKTV8zZUYr-21zEOdfownEERntsg_c81YH4Dnr1NIM3OlvEBr5orQ3DgxGNLRXhNVt68HWtosy-sbCAN420pUWRTIlGtj1Ksqz1vZKNqcoVpkGfT6AdnfGzPEyUafrECvnahKaMjH0_6rmjsGApSibzZN09uzACL4iR75Is0orlAzS2RkwAlOl8x_acwRxbXIfPwlkZM6x31oNieD2fYTdAeqNJBfTUxqBTBtuPTTs"/>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-2xl mx-auto">
+<!-- Hero Section -->
+<section class="mb-12">
+<p class="font-label text-[10px] tracking-[0.2em] uppercase text-on-surface-variant mb-2">SYSTEM PREFERENCES</p>
+<h2 class="font-headline text-5xl font-extrabold tracking-tighter text-white leading-none">SETTINGS</h2>
+</section>
+<!-- Account Section -->
+<section class="mb-16">
+<div class="flex items-baseline justify-between mb-8">
+<h3 class="font-headline text-xl font-bold tracking-tight text-white uppercase italic">01. Account</h3>
+<div class="h-[1px] flex-grow mx-4 bg-outline-variant/30"></div>
+</div>
+<div class="space-y-6">
+<!-- Profile Link -->
+<a class="group block bg-surface-container-low p-6 transition-all hover:bg-surface-container duration-300" href="#">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="relative">
+<img alt="User Profile" class="w-16 h-16 grayscale hover:grayscale-0 transition-all duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqzbMzwGt43g_qZKD7zrsqYKIXkpblkRLv7ZjLFyONkp2eD3rEpyyCDbS_mhopt_Qlb4QPhlA7By1W5G4dzygWzFlkSRw_OnZ3pW2LKfC-3p2-s7oSlPGYWgbDs1dGCqjb9blGmp513yxZIB5RdgJvcbW9uUy-CEX2el_MBPu9bNRUpakhe7ujsHx49T8SOOZfTh-6XMJHtQcL9iYGAvf1V8PsYqVk_HksTZK-IPAh81PDyU4Uk3JQK--H6Va2cLwsnL278cwAYBU"/>
+<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-brand-neon"></div>
+</div>
+<div>
+<p class="font-label text-[10px] tracking-widest uppercase text-on-surface-variant mb-1">Authenticated User</p>
+<p class="font-headline text-2xl font-bold text-white tracking-tight">Alexander Vance</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-brand-neon transition-colors">arrow_forward_ios</span>
+</div>
+</a>
+<!-- Password Link -->
+<a class="group flex items-center justify-between p-6 bg-surface-container-lowest border-b border-outline-variant/20 hover:bg-surface-container-low transition-all" href="#">
+<div>
+<p class="font-headline text-lg font-bold text-white uppercase tracking-tighter">Security &amp; Password</p>
+<p class="font-label text-[9px] tracking-wider text-on-surface-variant uppercase mt-1">Last changed 4 months ago</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">lock_open</span>
+</a>
+</div>
+</section>
+<!-- Appearance Section -->
+<section class="mb-16">
+<div class="flex items-baseline justify-between mb-8">
+<h3 class="font-headline text-xl font-bold tracking-tight text-white uppercase italic">02. Interface</h3>
+<div class="h-[1px] flex-grow mx-4 bg-outline-variant/30"></div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<button class="bg-brand-neon p-8 flex flex-col items-start justify-between min-h-[160px] text-black">
+<span class="material-symbols-outlined scale-150" style="font-variation-settings: 'FILL' 1;">dark_mode</span>
+<div class="text-left">
+<p class="font-headline text-2xl font-black uppercase tracking-tighter leading-none">Deep<br/>Black</p>
+<p class="font-label text-[9px] font-bold tracking-widest mt-2">ACTIVE THEME</p>
+</div>
+</button>
+<button class="bg-surface-container-low p-8 flex flex-col items-start justify-between min-h-[160px] hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-white scale-150">light_mode</span>
+<div class="text-left">
+<p class="font-headline text-2xl font-black uppercase tracking-tighter leading-none text-white">Stark<br/>White</p>
+<p class="font-label text-[9px] tracking-widest text-on-surface-variant mt-2 uppercase">Switch Mode</p>
+</div>
+</button>
+</div>
+</section>
+<!-- Notifications Section -->
+<section class="mb-16">
+<div class="flex items-baseline justify-between mb-8">
+<h3 class="font-headline text-xl font-bold tracking-tight text-white uppercase italic">03. Alerts</h3>
+<div class="h-[1px] flex-grow mx-4 bg-outline-variant/30"></div>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-6 bg-surface-container-low">
+<div>
+<p class="font-headline text-lg font-bold text-white uppercase tracking-tighter">Workout Reminders</p>
+<p class="font-label text-[10px] tracking-wide text-on-surface-variant uppercase mt-1">Push notifications for scheduled sets</p>
+</div>
+<div class="w-12 h-6 bg-brand-neon relative">
+<div class="absolute right-1 top-1 w-4 h-4 bg-black"></div>
+</div>
+</div>
+<div class="flex items-center justify-between p-6 bg-surface-container-low">
+<div>
+<p class="font-headline text-lg font-bold text-white uppercase tracking-tighter">Weekly Analytics</p>
+<p class="font-label text-[10px] tracking-wide text-on-surface-variant uppercase mt-1">Monday morning performance digest</p>
+</div>
+<div class="w-12 h-6 bg-surface-container-highest relative">
+<div class="absolute left-1 top-1 w-4 h-4 bg-on-surface-variant"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Support Section -->
+<section class="mb-16">
+<div class="flex items-baseline justify-between mb-8">
+<h3 class="font-headline text-xl font-bold tracking-tight text-white uppercase italic">04. Terminal</h3>
+<div class="h-[1px] flex-grow mx-4 bg-outline-variant/30"></div>
+</div>
+<div class="grid grid-cols-1 gap-1">
+<a class="group flex items-center justify-between p-4 hover:bg-surface-container transition-colors" href="#">
+<span class="font-label text-[11px] tracking-[0.2em] uppercase text-white">Contact Support</span>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-brand-neon text-sm">open_in_new</span>
+</a>
+<a class="group flex items-center justify-between p-4 hover:bg-surface-container transition-colors" href="#">
+<span class="font-label text-[11px] tracking-[0.2em] uppercase text-white">Privacy Policy</span>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-brand-neon text-sm">open_in_new</span>
+</a>
+<a class="group flex items-center justify-between p-4 hover:bg-surface-container transition-colors" href="#">
+<span class="font-label text-[11px] tracking-[0.2em] uppercase text-white">Version 2.4.1 (Stable)</span>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-brand-neon text-sm">terminal</span>
+</a>
+</div>
+</section>
+<!-- Danger Zone -->
+<section class="mt-24 pt-12 border-t border-error/20">
+<button class="w-full py-6 bg-surface-container-lowest border border-error/40 text-error font-headline font-black uppercase tracking-[0.3em] text-sm hover:bg-error hover:text-on-error transition-all duration-300">
+        Terminate Account Session
+      </button>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 py-3 bg-zinc-800/60 backdrop-blur-xl rounded-full border border-white/5 shadow-2xl px-6"><!-- Workouts -->
+<div class="flex items-center justify-center p-3 text-white hover:opacity-70 transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined">fitness_center</span>
+</div>
+<!-- Calendar -->
+<div class="flex items-center justify-center p-3 text-white hover:opacity-70 transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined">calendar_today</span>
+</div>
+<!-- Add -->
+<div class="flex items-center justify-center p-3 text-white hover:opacity-70 transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined">add</span>
+</div>
+<!-- Weight Log -->
+<div class="flex items-center justify-center p-3 text-white hover:opacity-70 transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined">line_weight</span>
+</div>
+<!-- Calories -->
+<div class="flex items-center justify-center p-3 text-white hover:opacity-70 transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined">local_fire_department</span>
+</div>
+<!-- Settings (Active) -->
+<div class="flex items-center justify-center bg-zinc-600 rounded-full p-3 text-white transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+</div></nav>
+</body></html>
