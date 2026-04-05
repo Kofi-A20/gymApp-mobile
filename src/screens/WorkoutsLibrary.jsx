@@ -1,53 +1,67 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { useProfile } from '../context/ProfileContext';
+import { workoutsService } from '../services/workoutsService';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 
-const WORKOUTS = [
-  { id: '01', name: 'Push 1', muscles: 'CHEST / SHOULDERS / TRICEPS', icon: 'lightning-bolt', progress: [1, 0, 0] },
-  { id: '02', name: 'Pull 1', muscles: 'BACK / REAR DELTS / BICEPS', icon: 'waves', progress: [1, 1, 0] },
-  { id: '03', name: 'Legs 1', muscles: 'QUADS / HAMSTRINGS / CALVES', icon: 'home-outline', progress: [0, 0, 0] },
-  { id: '04', name: 'Push 2', muscles: 'INCLINE FOCUS / TRICEP PEAK', icon: 'target', progress: [1, 0, 0] },
-  { id: '05', name: 'Pull 2', muscles: 'WIDTH FOCUS / BICEP GIRTH', icon: 'arrow-up-down', progress: [1, 1, 1] },
-  { id: '06', name: 'Legs 2', muscles: 'POSTERIOR CHAIN / EXPLOSIVE POWER', icon: 'chevron-double-up', progress: [1, 0, 0] },
-];
-
 const WorkoutsLibrary = ({ navigation }) => {
-  const { colors, isDarkMode, units } = useTheme();
+  const { colors, isDarkMode } = useTheme();
+  const { profile } = useProfile();
+  const [workouts, setWorkouts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const WorkoutCard = ({ item }) => (
-    <TouchableOpacity 
-      style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate('WorkoutDetail', { workout: item })}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={[styles.sequenceId, { color: colors.secondaryText }]}>SEQUENCE {item.id}</Text>
-        <MaterialCommunityIcons name={item.icon} size={20} color={colors.secondaryText} />
-      </View>
-      
-      <View style={styles.cardInfo}>
-        <Text style={[styles.workoutName, { color: colors.text }]}>{item.name}</Text>
-        <Text style={[styles.muscleGroups, { color: colors.secondaryText }]}>{item.muscles}</Text>
-      </View>
-
-      <View style={styles.cardFooter}>
-        <View style={styles.progressContainer}>
-          {item.progress.map((p, idx) => (
-            <View 
-              key={idx} 
-              style={[
-                styles.progressBar, 
-                { backgroundColor: p ? (isDarkMode ? '#FFF' : '#000') : (isDarkMode ? '#333' : '#EEE') }
-              ]} 
-            />
-          ))}
-        </View>
-        <Text style={[styles.startBtn, { color: isDarkMode ? '#CCFF00' : '#10B981' }]}>START SESSION</Text>
-      </View>
-    </TouchableOpacity>
+  useFocusEffect(
+    useCallback(() => {
+      fetchWorkouts();
+    }, [])
   );
+
+  const fetchWorkouts = async () => {
+    try {
+      setLoading(true);
+      const data = await workoutsService.getUserWorkouts();
+      setWorkouts(data);
+    } catch (error) {
+      console.error('Failed to fetch workouts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const WorkoutCard = ({ item }) => {
+    // Determine muscle groups from exercises
+    const muscles = item.exercises?.map(ex => ex.name.split(' ')[0]).slice(0, 3).join(' / ') || 'MIXED';
+    
+    return (
+      <TouchableOpacity 
+        style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
+        activeOpacity={0.8}
+        onPress={() => navigation.navigate('WorkoutDetail', { workout: item })}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={[styles.sequenceId, { color: colors.secondaryText }]}>TEMPLATE_ID: {item.id.split('-')[0].toUpperCase()}</Text>
+          <MaterialCommunityIcons name="lightning-bolt" size={20} color={colors.secondaryText} />
+        </View>
+        
+        <View style={styles.cardInfo}>
+          <Text style={[styles.workoutName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
+          <Text style={[styles.muscleGroups, { color: colors.secondaryText }]}>{muscles.toUpperCase()}</Text>
+        </View>
+
+        <View style={styles.cardFooter}>
+          <View style={styles.progressContainer}>
+             <Text style={[styles.sequenceId, { color: colors.secondaryText }]}>
+               {item.exercises?.length || 0} MOVEMENTS
+             </Text>
+          </View>
+          <Text style={[styles.startBtn, { color: '#CCFF00' }]}>START SESSION</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -56,9 +70,9 @@ const WorkoutsLibrary = ({ navigation }) => {
         <View style={styles.brandHeader}>
           <Ionicons name="menu" size={24} color={colors.text} />
           <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-          <View style={styles.avatarPlaceholder}>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
              <MaterialCommunityIcons name="account" size={24} color={colors.text} />
-          </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.content}>
@@ -70,9 +84,23 @@ const WorkoutsLibrary = ({ navigation }) => {
           </Text>
 
           <View style={styles.listContainer}>
-            {WORKOUTS.map((workout) => (
-              <WorkoutCard key={workout.id} item={workout} />
-            ))}
+            {loading ? (
+              <ActivityIndicator color={colors.text} style={{ marginTop: 50 }} />
+            ) : workouts.length > 0 ? (
+              workouts.map((workout) => (
+                <WorkoutCard key={workout.id} item={workout} />
+              ))
+            ) : (
+              <View style={{ alignItems: 'center', marginTop: 50 }}>
+                <Text style={{ color: colors.secondaryText, marginBottom: 20 }}>NO TEMPLATES FOUND</Text>
+                <TouchableOpacity 
+                   style={[styles.card, { borderColor: colors.border, borderStyle: 'dashed' }]}
+                   onPress={() => navigation.navigate('AddWorkout')}
+                >
+                   <Text style={[styles.startBtn, { color: colors.text }]}>+ CREATE NEW ROUTINE</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {/* Cumulative Volume Footer */}
@@ -81,12 +109,14 @@ const WorkoutsLibrary = ({ navigation }) => {
             <View style={styles.volumeGrid}>
               <View style={styles.volumeItem}>
                 <Text style={[styles.volumeLabel, { color: colors.secondaryText }]}>WEEKLY LOAD</Text>
-                <Text style={[styles.volumeValue, { color: colors.text }]}>42,500</Text>
-                <Text style={[styles.volumeSub, { color: colors.secondaryText }]}>{units === 'kg' ? 'KILOGRAMS' : 'POUNDS'}</Text>
+                <Text style={[styles.volumeValue, { color: colors.text }]}>--</Text>
+                <Text style={[styles.volumeSub, { color: colors.secondaryText }]}>
+                  {profile?.units === 'kg' ? 'KILOGRAMS' : 'POUNDS'}
+                </Text>
               </View>
               <View style={styles.volumeItem}>
                 <Text style={[styles.volumeLabel, { color: colors.secondaryText }]}>ACTIVE TIME</Text>
-                <Text style={[styles.volumeValue, { color: colors.text }]}>08:12</Text>
+                <Text style={[styles.volumeValue, { color: colors.text }]}>--</Text>
                 <Text style={[styles.volumeSub, { color: colors.secondaryText }]}>HOURS / WEEK</Text>
               </View>
             </View>

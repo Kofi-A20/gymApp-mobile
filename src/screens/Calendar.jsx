@@ -1,50 +1,64 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { calendarService } from '../services/calendarService';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-const CALENDAR_DATA = [
-  { day: 1, type: 'light', active: true },
-  { day: 2, type: 'LEGS / HYPERTR', active: true },
-  { day: 3, type: 'light', active: true },
-  { day: 4, type: 'rest', active: false },
-  { day: 5, type: 'light', active: true },
-  { day: 6, type: 'rest', active: false },
-  { day: 7, type: 'light', active: true },
-  { day: 8, type: 'rest', active: false },
-  { day: 9, type: 'PEAK STRENG', active: true },
-  { day: 10, type: 'light', active: true },
-  { day: 11, type: 'rest', active: false },
-  { day: 12, type: 'light', active: true },
-  { day: 13, type: 'light', active: true },
-  { day: 14, type: 'rest', active: false },
-  { day: 15, type: 'light', active: true },
-  { day: 16, type: 'rest', active: false },
-  { day: 17, type: 'light', active: true },
-  { day: 18, type: 'TODAY', active: false }, // Today special
-];
-
-const Calendar = () => {
+const Calendar = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
+  const [stats, setStats] = useState({ completions: {}, monthCount: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchCalendarData();
+    }, [])
+  );
+
+  const fetchCalendarData = async () => {
+    try {
+      setLoading(true);
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      const data = await calendarService.getMonthStats(month, year);
+      setStats(data);
+    } catch (error) {
+      console.error('Failed to fetch calendar data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getMonthName = () => {
+    return new Date().toLocaleString('default', { month: 'long' }).toUpperCase();
+  };
+
+  const currentYear = new Date().getFullYear();
+  const today = new Date().getDate();
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Ionicons name="menu" size={24} color={colors.text} />
         <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-        <View style={styles.avatarPlaceholder} />
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <MaterialCommunityIcons name="account" size={24} color={colors.text} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <Text style={[styles.subLabel, { color: colors.secondaryText }]}>CURRENT CYCLE</Text>
-          <Text style={[styles.mainTitle, { color: colors.text }]}>SEPTEMBER</Text>
-          <Text style={[styles.yearTitle, { color: isDarkMode ? '#333' : '#E0E0E0' }]}>2024</Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>{getMonthName()}</Text>
+          <Text style={[styles.yearTitle, { color: isDarkMode ? '#333' : '#E0E0E0' }]}>{currentYear}</Text>
           
           <Text style={[styles.description, { color: colors.secondaryText }]}>
-             Consistency is the only metric that transforms into power. 18 sessions completed this month.
+             Consistency is the only metric that transforms into power. {stats.monthCount} sessions completed this month.
           </Text>
 
           {/* Custom Calendar Grid */}
@@ -56,70 +70,39 @@ const Calendar = () => {
              </View>
 
              <View style={styles.gridContent}>
-                {/* Visualizing 4 weeks for mockup */}
-                {[...Array(28)].map((_, i) => {
-                  const dayData = CALENDAR_DATA.find(d => d.day === i + 1);
-                  const isToday = dayData?.type === 'TODAY';
-                  return (
-                    <View key={i} style={[
-                      styles.gridCell, 
-                      { 
-                        borderColor: colors.border,
-                        backgroundColor: isToday ? 'transparent' : 'transparent',
-                        borderColor: isToday ? (isDarkMode ? '#CCFF00' : '#10B981') : colors.border,
-                        borderWidth: isToday ? 2 : 0.5
-                      }
-                    ]}>
-                      <Text style={[
-                        styles.dateNum, 
-                        { color: (i + 1) === 18 ? colors.text : colors.secondaryText, opacity: (i + 1) > 18 ? 0.3 : 1 }
-                      ]}>{(i + 1).toString().padStart(2, '0')}</Text>
-                      
-                      {dayData?.active && <View style={[styles.activeDot, { backgroundColor: isDarkMode ? '#CCFF00' : '#10B981' }]} />}
-                      
-                      {dayData?.type && dayData.type.length > 5 && (
-                        <View style={styles.typeTag}>
-                          <View style={[styles.typeLine, { backgroundColor: isDarkMode ? '#CCFF00' : '#10B981' }]} />
-                          <Text style={[styles.typeText, { color: colors.text }]}>{dayData.type}</Text>
-                        </View>
-                      )}
-
-                      {isToday && (
-                        <View style={styles.todayTag}>
-                          <Text style={[styles.todayText, { color: colors.secondaryText }]}>TODAY</Text>
-                          <View style={[styles.todayCircle, { borderColor: isDarkMode ? '#CCFF00' : '#10B981' }]} />
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
+                {loading ? (
+                  <ActivityIndicator color={colors.text} style={{ margin: 50 }} />
+                ) : (
+                  [...Array(35)].map((_, i) => {
+                    const dayNum = i + 1;
+                    const sessionCount = stats.completions[dayNum] || 0;
+                    const isToday = dayNum === today;
+                    return (
+                      <View key={i} style={[
+                        styles.gridCell, 
+                        { 
+                          borderColor: isToday ? (isDarkMode ? '#CCFF00' : '#10B981') : colors.border,
+                          borderWidth: isToday ? 2 : 0.5
+                        }
+                      ]}>
+                        <Text style={[
+                          styles.dateNum, 
+                          { color: dayNum === today ? colors.text : colors.secondaryText, opacity: dayNum > today ? 0.3 : 1 }
+                        ]}>{dayNum.toString().padStart(2, '0')}</Text>
+                        
+                        {sessionCount > 0 && <View style={[styles.activeDot, { backgroundColor: isDarkMode ? '#CCFF00' : '#10B981' }]} />}
+                      </View>
+                    );
+                  })
+                )}
              </View>
           </View>
 
-          {/* Volume Growth Card */}
+          {/* Volume Growth Card Placeholder */}
           <View style={[styles.growthCard, { backgroundColor: isDarkMode ? '#121212' : '#000' }]}>
              <Text style={[styles.growthSub, { color: isDarkMode ? '#666' : '#999' }]}>VOLUME GROWTH</Text>
-             <Text style={[styles.growthValue, { color: '#FFF' }]}>+14%</Text>
-             <Text style={[styles.growthDesc, { color: isDarkMode ? '#666' : '#999' }]}>COMPARED TO AUGUST</Text>
-          </View>
-
-          {/* Milestone Monitor */}
-          <View style={[styles.milestoneCard, { backgroundColor: isDarkMode ? '#121212' : '#000' }]}>
-             <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=300' }} 
-                style={[styles.milestoneImg, { opacity: 0.1 }]} 
-             />
-             <View style={styles.milestoneContent}>
-                <Text style={[styles.milestoneLabel, { color: isDarkMode ? '#666' : '#999' }]}>NEXT MILESTONE</Text>
-                <Text style={[styles.milestoneValue, { color: '#FFF' }]}>250KG{"\n"}DEADLIFT</Text>
-                
-                <View style={styles.progressContainer}>
-                   <View style={[styles.progressBar, { backgroundColor: '#333' }]}>
-                      <View style={[styles.progressFill, { width: '78%', backgroundColor: isDarkMode ? '#CCFF00' : '#10B981' }]} />
-                   </View>
-                   <Text style={[styles.progressPct, { color: '#FFF' }]}>78%</Text>
-                </View>
-             </View>
+             <Text style={[styles.growthValue, { color: '#FFF' }]}>--</Text>
+             <Text style={[styles.growthDesc, { color: isDarkMode ? '#666' : '#999' }]}>CALCULATING ADAPTATION...</Text>
           </View>
 
           <View style={{ height: 100 }} />

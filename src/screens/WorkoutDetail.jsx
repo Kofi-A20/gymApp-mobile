@@ -1,36 +1,35 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { useWorkout } from '../context/WorkoutContext';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 
-const EXERCISES_MOCK = [
-  {
-    name: 'FLAT BARBELL BENCH PRESS',
-    details: '4 SETS | 6-8 REPS | 3:1:1 TEMPO',
-    cues: [
-      'Retract scapula and drive heels into the floor.',
-      'Touch mid-sternum; do not bounce the weight.',
-      'Maintain a slight arch in the lower back for stability.'
-    ],
-    sets: 4,
-    completed: 3,
-  },
-  {
-    name: 'ARNOLD PRESS',
-    details: '3 SETS | 10-12 REPS | 2:0:2 TEMPO',
-    cues: [
-      'Rotate dumbbells during the eccentric phase.',
-      'Ensure full lockout at the peak while keeping ears away from shoulders.'
-    ],
-    sets: 3,
-    completed: 0,
-  }
-];
-
 const WorkoutDetail = ({ route, navigation }) => {
-  const { workout } = route.params || { workout: { name: 'PUSH 1', id: '01' } };
+  const { workout } = route.params || {};
   const { colors, isDarkMode, units } = useTheme();
+  const { startWorkout } = useWorkout();
+  const [starting, setStarting] = useState(false);
+
+  const handleStartSession = async () => {
+    try {
+      setStarting(true);
+      await startWorkout(workout.id);
+      navigation.navigate('ActiveWorkout');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to start workout session');
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  if (!workout) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: colors.text }}>WORKOUT NOT FOUND</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -40,26 +39,25 @@ const WorkoutDetail = ({ route, navigation }) => {
           <AntDesign name="arrowleft" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-        <Image 
-          source={{ uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100' }} 
-          style={styles.avatar} 
-        />
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <MaterialCommunityIcons name="account" size={24} color={colors.text} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          <Text style={[styles.sessionId, { color: colors.secondaryText }]}>SESSION ID: P{workout.id}-772</Text>
+          <Text style={[styles.sessionId, { color: colors.secondaryText }]}>TEMPLATE_ID: {workout.id.split('-')[0].toUpperCase()}</Text>
           <Text style={[styles.workoutTitle, { color: colors.text }]}>{workout.name.toUpperCase()}</Text>
 
           {/* Stats Row */}
           <View style={styles.statsRow}>
             <View style={[styles.statItem, { borderLeftColor: colors.text }]}>
-               <Text style={[styles.statLabel, { color: colors.secondaryText }]}>TARGET VOLUME</Text>
-               <Text style={[styles.statValue, { color: colors.text }]}>14,200 {units.toUpperCase()}</Text>
+               <Text style={[styles.statLabel, { color: colors.secondaryText }]}>MOVEMENTS</Text>
+               <Text style={[styles.statValue, { color: colors.text }]}>{workout.exercises?.length || 0}</Text>
             </View>
             <View style={styles.statItem}>
                <Text style={[styles.statLabel, { color: colors.secondaryText }]}>ESTIMATED TIME</Text>
-               <Text style={[styles.statValue, { color: colors.text }]}>75 MIN</Text>
+               <Text style={[styles.statValue, { color: colors.text }]}>~ { (workout.exercises?.length || 0) * 12} MIN</Text>
             </View>
           </View>
 
@@ -76,67 +74,47 @@ const WorkoutDetail = ({ route, navigation }) => {
             </View>
             <View style={styles.focusTextWrapper}>
                <Text style={[styles.focusDescription, { color: colors.text }]}>
-                  Heavy compound day focusing on explosive pectoral power and shoulder stability. Maintain rigid core tension throughout all vertical movements.
+                  {workout.description || "A high-intensity protocol designed for structural hypertrophy and architectural strength. Maintain rigid core tension throughout all movements."}
                </Text>
             </View>
           </View>
 
           {/* Exercise List */}
           <View style={styles.exerciseList}>
-            {EXERCISES_MOCK.map((exercise, index) => (
+            {workout.exercises?.map((exercise, index) => (
               <View key={index} style={styles.exerciseCard}>
                 <View style={styles.exerciseHeader}>
                   <View>
-                    <Text style={[styles.exerciseName, { color: colors.text }]}>{exercise.name}</Text>
-                    <Text style={[styles.exerciseDetails, { color: colors.secondaryText }]}>{exercise.details}</Text>
+                    <Text style={[styles.exerciseName, { color: colors.text }]}>{exercise.name.toUpperCase()}</Text>
+                    <Text style={[styles.exerciseDetails, { color: colors.secondaryText }]}>MOVEMENT ARCHIVE {index + 1}</Text>
                   </View>
-                  <AntDesign name="down" size={16} color={colors.text} />
+                  <AntDesign name="right" size={16} color={colors.text} />
                 </View>
 
                 {/* Coaching Cues */}
                 <View style={[styles.cuesContainer, { backgroundColor: colors.secondaryBackground }]}>
                    <Text style={[styles.cuesTitle, { color: colors.secondaryText }]}>COACHING CUES</Text>
-                   {exercise.cues.map((cue, cIdx) => (
-                     <View key={cIdx} style={styles.cueRow}>
-                        <Text style={[styles.cueId, { color: colors.text }]}>{(cIdx + 1).toString().padStart(2, '0')}</Text>
-                        <Text style={[styles.cueText, { color: colors.text }]}>{cue}</Text>
-                     </View>
-                   ))}
-                </View>
-
-                {/* Set Tracker */}
-                <View style={styles.trackerContainer}>
-                   <View style={styles.setsWrapper}>
-                      {[...Array(exercise.sets)].map((_, sIdx) => (
-                        <View 
-                          key={sIdx} 
-                          style={[
-                            styles.setBox, 
-                            { 
-                              backgroundColor: sIdx < exercise.completed ? (isDarkMode ? '#FFF' : '#000') : (isDarkMode ? '#333' : '#EEE'),
-                              borderColor: colors.border
-                            }
-                          ]}
-                        >
-                          <Text style={[
-                            styles.setNum, 
-                            { color: sIdx < exercise.completed ? (isDarkMode ? '#000' : '#FFF') : colors.secondaryText }
-                          ]}>{sIdx + 1}</Text>
-                        </View>
-                      ))}
+                   <View style={styles.cueRow}>
+                      <Text style={[styles.cueId, { color: colors.text }]}>01</Text>
+                      <Text style={[styles.cueText, { color: colors.text }]}>Maintain absolute control throughout the full range of motion.</Text>
                    </View>
-                   <Text style={[styles.progressText, { color: colors.secondaryText }]}>
-                      PROGRESS MONOLITH: {Math.round((exercise.completed / exercise.sets) * 100)}% COMPLETE
-                   </Text>
+                   <View style={styles.cueRow}>
+                      <Text style={[styles.cueId, { color: colors.text }]}>02</Text>
+                      <Text style={[styles.cueText, { color: colors.text }]}>Mind-muscle synchronization is mandatory for adaptation.</Text>
+                   </View>
                 </View>
               </View>
             ))}
           </View>
 
-          {/* Log Action Button */}
-          <TouchableOpacity style={styles.logBtn}>
-            <Text style={styles.logBtnText}>LOG SESSION</Text>
-            <AntDesign name="arrowright" size={20} color="#000" />
+          {/* Start Action Button */}
+          <TouchableOpacity 
+            style={styles.logBtn}
+            onPress={handleStartSession}
+            disabled={starting}
+          >
+            <Text style={styles.logBtnText}>{starting ? 'INITIALIZING...' : 'START SESSION'}</Text>
+            <AntDesign name="play" size={20} color="#000" />
           </TouchableOpacity>
 
           <View style={{ height: 100 }} />

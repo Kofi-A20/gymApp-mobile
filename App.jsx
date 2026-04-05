@@ -6,6 +6,8 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { WorkoutProvider } from './src/context/WorkoutContext';
+import { ProfileProvider } from './src/context/ProfileContext';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 
@@ -31,7 +33,16 @@ export default function App() {
     prefixes: [prefix, 'monolith://'],
     config: {
       screens: {
-        SharedWorkoutPreview: 'share/:token',
+        Main: {
+          screens: {
+            SharedWorkoutPreview: 'share/:token',
+          }
+        },
+        Auth: {
+          screens: {
+            SharedWorkoutPreview: 'share/:token',
+          }
+        }
       },
     },
   };
@@ -39,12 +50,16 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <ThemeProvider>
-          <NavigationContainer linking={linking}>
-            <RootNavigator />
-            <StatusBar style="auto" />
-          </NavigationContainer>
-        </ThemeProvider>
+        <ProfileProvider>
+          <WorkoutProvider>
+            <ThemeProvider>
+              <NavigationContainer linking={linking}>
+                <RootNavigator />
+                <StatusBar style="auto" />
+              </NavigationContainer>
+            </ThemeProvider>
+          </WorkoutProvider>
+        </ProfileProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

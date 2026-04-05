@@ -1,132 +1,100 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
-import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { sessionsService } from '../services/sessionsService';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 
-const MOCK_SESSION = [
-  {
-    id: '01',
-    group: 'CHEST',
-    name: 'BARBELL BENCH PRESS',
-    sets: [
-      { id: 1, previous: '100 x 8', kg: '105', reps: '8' },
-      { id: 2, previous: '100 x 8', kg: '105', reps: '6' },
-    ]
-  },
-  {
-    id: '02',
-    group: 'BACK',
-    name: 'WEIGHTED PULL UPS',
-    sets: [
-      { id: 1, previous: '20 x 10', kg: '25', reps: '10' },
-      { id: 2, previous: '20 x 10', kg: '25', reps: '8' },
-    ]
-  }
-];
-
-const WeightsLog = () => {
+const WeightsLog = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const ExerciseLog = ({ exercise }) => (
-    <View style={styles.exerciseSection}>
-      <Text style={[styles.groupLabel, { color: colors.secondaryText }]}>{exercise.id} / {exercise.group}</Text>
-      <View style={styles.exerciseHeader}>
-        <Text style={[styles.exerciseTitle, { color: colors.text }]}>{exercise.name}</Text>
-        <TouchableOpacity style={styles.addNoteBtn}>
-          <Text style={styles.addNoteText}>ADD NOTE</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={[styles.tableHeader, { backgroundColor: colors.secondaryBackground }]}>
-        <Text style={[styles.tableLabel, { flex: 0.5, color: colors.secondaryText }]}>SET</Text>
-        <Text style={[styles.tableLabel, { flex: 1.5, color: colors.secondaryText }]}>PREVIOUS</Text>
-        <Text style={[styles.tableLabel, { flex: 1.5, color: colors.secondaryText }]}>{units.toUpperCase()}</Text>
-        <Text style={[styles.tableLabel, { flex: 1, color: colors.secondaryText }]}>REPS</Text>
-      </View>
-
-      {exercise.sets.map((set) => (
-        <View key={set.id} style={styles.tableRow}>
-          <Text style={[styles.rowText, { flex: 0.5, color: colors.text }]}>{set.id}</Text>
-          <Text style={[styles.previousText, { flex: 1.5, color: colors.secondaryText }]}>{set.previous}</Text>
-          <View style={[styles.inputWrapper, { flex: 1.5 }]}>
-            <TextInput 
-              style={[styles.rowInput, { color: colors.text, borderColor: colors.border }]} 
-              defaultValue={set.kg}
-              keyboardType="numeric"
-            />
-          </View>
-          <View style={[styles.inputWrapper, { flex: 1 }]}>
-            <TextInput 
-              style={[styles.rowInput, { color: colors.text, borderColor: colors.border }]} 
-              defaultValue={set.reps}
-              keyboardType="numeric"
-            />
-          </View>
-        </View>
-      ))}
-    </View>
+  useFocusEffect(
+    useCallback(() => {
+      fetchSessions();
+    }, [])
   );
+
+  const fetchSessions = async () => {
+    try {
+      setLoading(true);
+      const data = await sessionsService.getSessionHistory();
+      setSessions(data);
+    } catch (error) {
+      console.error('Failed to fetch sessions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const SessionCard = ({ session }) => {
+    const date = new Date(session.created_at).toLocaleDateString('en-US', {
+      month: 'SHORT',
+      day: 'NUMERIC',
+      year: '2-DIGIT',
+    }).toUpperCase();
+
+    return (
+      <TouchableOpacity 
+        style={[styles.sessionCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
+        onPress={() => navigation.navigate('WorkoutDetail', { workout: { id: session.workout_id, name: session.workout_name, exercises: session.exercises } })}
+      >
+        <View style={styles.sessionHeader}>
+          <Text style={[styles.sessionDate, { color: colors.secondaryText }]}>{date}</Text>
+          <MaterialCommunityIcons name="check-decagram" size={18} color="#CCFF00" />
+        </View>
+        <Text style={[styles.sessionTitle, { color: colors.text }]}>{session.workout_name?.toUpperCase() || 'FREE SESSION'}</Text>
+        
+        <View style={styles.sessionFooter}>
+          <Text style={[styles.sessionStat, { color: colors.secondaryText }]}>
+            {session.total_volume_kg || 0} {units.toUpperCase()} TOTAL
+          </Text>
+          <Text style={[styles.sessionStat, { color: colors.secondaryText }]}>
+             {Math.round((new Date(session.completed_at) - new Date(session.created_at)) / 60000)} MIN
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-        style={{ flex: 1 }}
-      >
-        <View style={styles.header}>
-          <Ionicons name="menu" size={24} color={colors.text} />
-          <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-          <View style={styles.avatarPlaceholder} />
+      <View style={styles.header}>
+        <Ionicons name="menu" size={24} color={colors.text} />
+        <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+           <MaterialCommunityIcons name="account" size={24} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          <Text style={[styles.subLabel, { color: colors.secondaryText }]}>CHRONOLOGICAL ARCHIVE</Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>SESSION{"\n"}HISTORY.</Text>
+
+          {loading ? (
+            <ActivityIndicator color={colors.text} style={{ marginTop: 50 }} />
+          ) : sessions.length > 0 ? (
+            sessions.map((session) => (
+              <SessionCard key={session.id} session={session} />
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={{ color: colors.secondaryText }}>NO HISTORY COMMITTED</Text>
+              <TouchableOpacity 
+                style={styles.startBtn}
+                onPress={() => navigation.navigate('Workouts')}
+              >
+                <Text style={{ color: '#000', fontWeight: '900' }}>START FIRST SESSION</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={{ height: 100 }} />
         </View>
-
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-          <View style={styles.content}>
-            <Text style={[styles.subLabel, { color: colors.secondaryText }]}>CURRENT SESSION</Text>
-            <Text style={[styles.mainTitle, { color: colors.text }]}>HYPERTROPHY{"\n"}B.</Text>
-
-            {/* Stats Summary */}
-            <View style={styles.statsRow}>
-              <View style={[styles.statBox, { borderLeftColor: isDarkMode ? '#CCFF00' : '#10B981' }]}>
-                <Text style={[styles.statLabel, { color: colors.secondaryText }]}>DURATION</Text>
-                <Text style={[styles.statValue, { color: colors.text }]}>54:12</Text>
-              </View>
-              <View style={styles.statBox}>
-                <Text style={[styles.statLabel, { color: colors.secondaryText }]}>VOLUME</Text>
-                <Text style={[styles.statValue, { color: colors.text }]}>12,450 {units.toUpperCase()}</Text>
-              </View>
-            </View>
-
-            {/* Log Entry List */}
-            {MOCK_SESSION.map((ex) => (
-              <ExerciseLog key={ex.id} exercise={ex} />
-            ))}
-
-            {/* PR Milestone */}
-            <View style={[styles.milestoneCard, { backgroundColor: colors.secondaryBackground }]}>
-               <Text style={[styles.milestoneSub, { color: colors.secondaryText }]}>PR MILESTONE</Text>
-               <Text style={[styles.milestoneTitle, { color: colors.text }]}>YOU ARE 5% STRONGER THAN LAST WEEK.</Text>
-               <Text style={[styles.milestoneDesc, { color: colors.secondaryText }]}>
-                  Consistency in the hypertrophy phase is showing significant neural adaptation in compound movements.
-               </Text>
-            </View>
-
-            {/* Intensity Card */}
-            <View style={[styles.intensityCard, { backgroundColor: isDarkMode ? '#121212' : '#000' }]}>
-               <FontAwesome5 name="bolt" size={28} color={isDarkMode ? '#CCFF00' : '#FFF'} />
-               <Text style={[styles.intensityLabel, { color: isDarkMode ? '#666' : '#999' }]}>INTENSITY</Text>
-               <Text style={[styles.intensityValue, { color: isDarkMode ? '#FFF' : '#FFF' }]}>HIGH</Text>
-            </View>
-
-            {/* Finish Workout Button */}
-            <TouchableOpacity style={[styles.finishBtn, { backgroundColor: isDarkMode ? '#FFF' : '#000' }]}>
-               <Text style={[styles.finishBtnText, { color: isDarkMode ? '#000' : '#FFF' }]}>FINISH WORKOUT</Text>
-            </TouchableOpacity>
-
-            <View style={{ height: 100 }} />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </SafeAreaView>
   );
 };

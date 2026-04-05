@@ -1,17 +1,53 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useProfile } from '../context/ProfileContext';
 import { MaterialCommunityIcons, Ionicons, AntDesign, Feather } from '@expo/vector-icons';
 
 const Profile = ({ navigation }) => {
-  const { colors, isDarkMode, units } = useTheme();
+  const { colors, isDarkMode } = useTheme();
+  const { signOut } = useAuth();
+  const { profile, loading: profileLoading, updateProfile, refreshProfile } = useProfile();
 
-  // State for form fields
-  const [firstName, setFirstName] = useState('Alex');
-  const [lastName, setLastName] = useState('Sterling');
-  const [email, setEmail] = useState('alex.sterling@monolith.com');
-  const [phone, setPhone] = useState('+1 (555) 012-3456');
+  // Local state for form fields, initialized from profile
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setFirstName(profile.first_name || '');
+      setLastName(profile.last_name || '');
+      setPhone(profile.phone || '');
+    }
+  }, [profile]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateProfile({
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone,
+      });
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to log out');
+    }
+  };
 
   const BiometricTile = ({ label, value, unit, isDark }) => (
     <View style={[
@@ -29,16 +65,25 @@ const Profile = ({ navigation }) => {
     </View>
   );
 
-  const InputField = ({ label, value, onChangeText }) => (
+  const InputField = ({ label, value, onChangeText, keyboardType }) => (
     <View style={styles.inputContainer}>
        <Text style={[styles.fieldLabel, { color: colors.secondaryText }]}>{label.toUpperCase()}</Text>
        <TextInput 
           style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
           value={value}
           onChangeText={onChangeText}
+          keyboardType={keyboardType}
        />
     </View>
   );
+
+  if (profileLoading && !profile) {
+    return (
+      <View style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.text} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -48,10 +93,9 @@ const Profile = ({ navigation }) => {
           <AntDesign name="arrowleft" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>PROFILE SETTINGS</Text>
-        <Image 
-          source={{ uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100' }} 
-          style={styles.headerAvatar} 
-        />
+        <TouchableOpacity onPress={handleLogout}>
+          <MaterialCommunityIcons name="logout" size={24} color={colors.text} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -71,8 +115,12 @@ const Profile = ({ navigation }) => {
              
              <View style={styles.identityText}>
                 <Text style={[styles.identityLabel, { color: colors.secondaryText }]}>USER IDENTIFICATION</Text>
-                <Text style={[styles.userName, { color: colors.text }]}>ALEX STERLING</Text>
-                <Text style={[styles.memberSince, { color: colors.secondaryText }]}>Member since October 2023</Text>
+                <Text style={[styles.userName, { color: colors.text }]}>
+                  {profile?.first_name?.toUpperCase()} {profile?.last_name?.toUpperCase()}
+                </Text>
+                <Text style={[styles.memberSince, { color: colors.secondaryText }]}>
+                  Member since {profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : 'Unknown'}
+                </Text>
              </View>
           </View>
 
@@ -83,10 +131,10 @@ const Profile = ({ navigation }) => {
           </View>
 
           <View style={styles.bioGrid}>
-             <BiometricTile label="Height" value="184" unit="cm" />
-             <BiometricTile label="Weight" value="82.5" unit={units} />
-             <BiometricTile label="Activity" value="ATHLETIC ELITE" />
-             <BiometricTile label="Goal" value="HYPERTROPHY FOCUS" isDark />
+             <BiometricTile label="Height" value={profile?.height_cm || '--'} unit="cm" />
+             <BiometricTile label="Weight" value={profile?.weight_kg || '--'} unit={profile?.units || 'kg'} />
+             <BiometricTile label="Activity" value={profile?.activity_level?.toUpperCase() || 'NOT SET'} />
+             <BiometricTile label="Goal" value={profile?.fitness_goals?.toUpperCase() || 'NOT SET'} isDark />
           </View>
 
           {/* Account Details */}
@@ -97,8 +145,8 @@ const Profile = ({ navigation }) => {
 
           <InputField label="First Name" value={firstName} onChangeText={setFirstName} />
           <InputField label="Last Name" value={lastName} onChangeText={setLastName} />
-          <InputField label="Email Address" value={email} onChangeText={setEmail} />
-          <InputField label="Mobile Phone" value={phone} onChangeText={setPhone} />
+          <InputField label="Email Address" value={profile?.email} editable={false} />
+          <InputField label="Mobile Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
 
           {/* System Preferences */}
           <View style={[styles.sectionTitleRow, { marginTop: 60 }]}>
@@ -112,14 +160,21 @@ const Profile = ({ navigation }) => {
              <TouchableOpacity style={[styles.prefChip, { backgroundColor: colors.secondaryBackground }]}>
                 <Text style={[styles.prefChipText, { color: colors.text }]}>NOTIFICATIONS</Text>
              </TouchableOpacity>
-             <TouchableOpacity style={[styles.prefChip, { backgroundColor: colors.secondaryBackground }]}>
-                <Text style={[styles.prefChipText, { color: colors.text }]}>PRIVACY</Text>
+             <TouchableOpacity 
+                style={[styles.prefChip, { backgroundColor: colors.secondaryBackground }]}
+                onPress={() => navigation.navigate('Settings')}
+              >
+                <Text style={[styles.prefChipText, { color: colors.text }]}>SETTINGS</Text>
              </TouchableOpacity>
           </View>
 
           {/* Save Action */}
-          <TouchableOpacity style={[styles.saveBtn, { backgroundColor: isDarkMode ? '#CCFF00' : '#CCFF00' }]}>
-             <Text style={styles.saveBtnText}>SAVE CHANGES</Text>
+          <TouchableOpacity 
+            style={[styles.saveBtn, { backgroundColor: '#CCFF00' }]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+             {saving ? <ActivityIndicator color="#000" /> : <Text style={styles.saveBtnText}>SAVE CHANGES</Text>}
           </TouchableOpacity>
 
           <View style={{ height: 100 }} />

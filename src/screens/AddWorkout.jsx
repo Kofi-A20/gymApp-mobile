@@ -1,30 +1,105 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { exercisesService } from '../services/exercisesService';
+import { workoutsService } from '../services/workoutsService';
 import { MaterialCommunityIcons, AntDesign, Feather } from '@expo/vector-icons';
 
-const FILTERS = ['ALL', 'CHEST', 'BACK', 'LEGS', 'SHOULDERS'];
-const MOCK_SELECTED_EXERCISES = [
-  { id: '01', name: 'BARBELL BACK SQUAT', focus: 'QUADRICEPS, GLUTES' },
-  { id: '02', name: 'ROMANIAN DEADLIFT', focus: 'HAMSTRINGS, LOWER BACK' },
-  { id: '03', name: 'LEG_PRESS', focus: 'QUADRICEPS' },
-];
+const FILTERS = ['ALL', 'CHEST', 'BACK', 'LEGS', 'SHOULDERS', 'ARMS'];
 
-const AddWorkout = () => {
+const AddWorkout = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
   const [workoutName, setWorkoutName] = useState('');
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
+  const [allExercises, setAllExercises] = useState([]);
+  const [filteredExercises, setFilteredExercises] = useState([]);
+  const [selectedExercises, setSelectedExercises] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchExercises();
+  }, []);
+
+  const fetchExercises = async () => {
+    try {
+      setLoading(true);
+      const data = await exercisesService.getAllExercises();
+      setAllExercises(data);
+      setFilteredExercises(data);
+    } catch (error) {
+      console.error('Failed to fetch exercises:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let result = allExercises;
+
+    if (activeFilter !== 'ALL') {
+      result = result.filter(ex => ex.body_part?.toUpperCase() === activeFilter);
+    }
+
+    if (search) {
+      result = result.filter(ex => 
+        ex.name.toUpperCase().includes(search.toUpperCase()) || 
+        ex.body_part?.toUpperCase().includes(search.toUpperCase())
+      );
+    }
+
+    setFilteredExercises(result);
+  }, [search, activeFilter, allExercises]);
+
+  const toggleExerciseSelection = (exercise) => {
+    const isSelected = selectedExercises.find(ex => ex.id === exercise.id);
+    if (isSelected) {
+      setSelectedExercises(selectedExercises.filter(ex => ex.id !== exercise.id));
+    } else {
+      setSelectedExercises([...selectedExercises, exercise]);
+    }
+  };
+
+  const handleCreateWorkout = async () => {
+    if (!workoutName.trim()) {
+      Alert.alert('Error', 'Please enter a workout name');
+      return;
+    }
+    if (selectedExercises.length === 0) {
+      Alert.alert('Error', 'Please select at least one exercise');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Create the workout with the selected exercises
+      // In our current schema, we need to pass exercises as an array of IDs or names
+      // The workoutsService.createWorkout takes (name, description, exercises)
+      const exercisesList = selectedExercises.map(ex => ({
+        exercise_id: ex.id,
+        name: ex.name,
+      }));
+      
+      await workoutsService.createWorkout(workoutName, '', exercisesList);
+      Alert.alert('Success', 'Workout template created');
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to create workout');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
            <AntDesign name="close" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
            <Text style={[styles.cancelBtn, { color: colors.text }]}>CANCEL</Text>
         </TouchableOpacity>
       </View>
@@ -95,26 +170,73 @@ const AddWorkout = () => {
           <View style={[styles.selectionCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
              <View style={styles.selectionHeader}>
                 <Text style={[styles.selectionTitle, { color: colors.text }]}>EXERCISE{"\n"}SELECTION</Text>
-                <Text style={[styles.selectionCount, { color: colors.secondaryText }]}>03 ITEMS{"\n"}ADDED</Text>
+                <Text style={[styles.selectionCount, { color: colors.secondaryText }]}>
+                  {String(selectedExercises.length).padStart(2, '0')} ITEMS{"\n"}SELECTED
+                </Text>
              </View>
              
              <View style={styles.selectedList}>
-                {MOCK_SELECTED_EXERCISES.map((ex) => (
-                  <View key={ex.id} style={[styles.exerciseItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                     <Text style={[styles.exerciseId, { color: colors.secondaryText }]}>{ex.id}</Text>
-                     <View>
-                        <Text style={[styles.exerciseName, { color: colors.text }]}>{ex.name}</Text>
-                        <Text style={[styles.exerciseFocus, { color: colors.secondaryText }]}>{ex.focus}</Text>
-                     </View>
-                  </View>
-                ))}
+                {loading ? (
+                  <ActivityIndicator color={colors.text} style={{ padding: 40 }} />
+                ) : (
+                  filteredExercises.map((ex, index) => {
+                    const isSelected = selectedExercises.find(s => s.id === ex.id);
+                    return (
+                      <TouchableOpacity 
+                        key={ex.id} 
+                        style={[
+                          styles.exerciseItem, 
+                          { 
+                            backgroundColor: isSelected ? colors.text : colors.background, 
+                            borderColor: colors.border 
+                          }
+                        ]}
+                        onPress={() => toggleExerciseSelection(ex)}
+                      >
+                         <Text style={[
+                           styles.exerciseId, 
+                           { color: isSelected ? colors.background : colors.secondaryText }
+                         ]}>
+                           {String(index + 1).padStart(2, '0')}
+                         </Text>
+                         <View>
+                            <Text style={[
+                              styles.exerciseName, 
+                              { color: isSelected ? colors.background : colors.text }
+                            ]}>{ex.name.toUpperCase()}</Text>
+                            <Text style={[
+                              styles.exerciseFocus, 
+                              { color: isSelected ? colors.background : colors.secondaryText }
+                            ]}>{ex.body_part?.toUpperCase() || 'GENERAL'}</Text>
+                         </View>
+                         {isSelected && (
+                           <AntDesign name="check" size={20} color={colors.background} style={{ marginLeft: 'auto' }} />
+                         )}
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
 
-                <TouchableOpacity style={[styles.appendBtn, { borderColor: colors.border }]}>
-                    <AntDesign name="plus" size={20} color={colors.text} />
-                    <Text style={[styles.appendBtnText, { color: colors.text }]}>APPEND MOVEMENT</Text>
-                </TouchableOpacity>
+                {filteredExercises.length === 0 && !loading && (
+                  <Text style={{ color: colors.secondaryText, textAlign: 'center', marginVertical: 20 }}>
+                    NO MOVEMENTS MATCH YOUR SEARCH
+                  </Text>
+                )}
              </View>
           </View>
+
+          {/* Action Button */}
+          <TouchableOpacity 
+            style={[styles.saveBtn, { backgroundColor: '#CCFF00' }]} 
+            onPress={handleCreateWorkout}
+            disabled={saving}
+          >
+             {saving ? (
+               <ActivityIndicator color="#000" />
+             ) : (
+               <Text style={styles.saveBtnText}>COMMIT WORKOUT</Text>
+             )}
+          </TouchableOpacity>
 
           {/* Branded Footer */}
           <View style={styles.brandedFooter}>
