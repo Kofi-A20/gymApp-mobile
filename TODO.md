@@ -36,3 +36,10 @@ Screens to fix and build out:
    - Create session in Supabase
    - Log sets and reps during active workout
    - Complete session and save to sessions table
+
+8. Workout Detail Screen Redesign
+   - Each exercise row should show sets x reps targets, not coaching cues
+   - Coaching cues should be hidden by default
+   - Tapping the right arrow on an exercise opens a detail/info view
+     showing coaching cues and muscle diagram
+   - This makes the routine view compact and scannable
