@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useMonolithAlert } from '../../context/AlertContext';
 
 const SignUp = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
@@ -13,15 +14,16 @@ const SignUp = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const { colors } = useTheme();
+  const { showAlert } = useMonolithAlert();
 
   const handleSignUp = async () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert('Error', 'Please fill in all fields');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert('Error', 'Passwords do not match');
       return;
     }
 
@@ -33,10 +35,10 @@ const SignUp = ({ navigation }) => {
           last_name: lastName,
         },
       });
-      Alert.alert('Success', 'Check your email for confirmation!');
+      showAlert('Success', 'Check your email for confirmation!');
       navigation.navigate('Login');
     } catch (error) {
-      Alert.alert('Signup Failed', error.message);
+      showAlert('Signup Failed', error.message);
     } finally {
       setLoading(false);
     }

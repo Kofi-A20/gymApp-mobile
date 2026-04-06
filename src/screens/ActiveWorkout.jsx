@@ -4,10 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useWorkout } from '../context/WorkoutContext';
 import { MaterialCommunityIcons, AntDesign, Feather } from '@expo/vector-icons';
+import { useMonolithAlert } from '../context/AlertContext';
 
 const ActiveWorkout = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
   const { activeSession, activeSets, logSet, finishWorkout, cancelWorkout } = useWorkout();
+  const { showAlert } = useMonolithAlert();
   
   const [notes, setNotes] = useState('');
   const [timer, setTimer] = useState(0);
@@ -26,7 +28,7 @@ const ActiveWorkout = ({ navigation }) => {
   };
 
   const handleFinish = async () => {
-    Alert.alert(
+    showAlert(
       "FINISH SESSION",
       "Are you sure you want to commit this session to the Monolith?",
       [
@@ -38,7 +40,7 @@ const ActiveWorkout = ({ navigation }) => {
               await finishWorkout(notes);
               navigation.navigate('Tabs', { screen: 'Log' });
             } catch (error) {
-              Alert.alert("Error", "Failed to save session");
+              showAlert("Error", "Failed to save session");
             }
           }
         }
@@ -47,7 +49,7 @@ const ActiveWorkout = ({ navigation }) => {
   };
 
   const handleCancel = () => {
-    Alert.alert(
+    showAlert(
       "CANCEL SESSION",
       "Discard all logged data? This action is irreversible.",
       [
@@ -145,6 +147,7 @@ const AddSetInputs = ({ exerciseId, onLog, colors, units }) => {
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
   const [loading, setLoading] = useState(false);
+  const { showAlert } = useMonolithAlert();
 
   const handleLog = async () => {
     if (!weight || !reps) return;
@@ -154,7 +157,7 @@ const AddSetInputs = ({ exerciseId, onLog, colors, units }) => {
       setWeight('');
       setReps('');
     } catch (error) {
-      Alert.alert("Error", "Failed to log set");
+      showAlert("Error", "Failed to log set");
     } finally {
       setLoading(false);
     }

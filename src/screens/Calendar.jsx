@@ -21,7 +21,6 @@ const Calendar = ({ navigation }) => {
 
   const fetchCalendarData = async () => {
     try {
-      setLoading(true);
       const now = new Date();
       const month = now.getMonth() + 1;
       const year = now.getFullYear();

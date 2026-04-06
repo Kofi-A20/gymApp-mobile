@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useMonolithAlert } from '../../context/AlertContext';
 
 const Login = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -11,10 +12,11 @@ const Login = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const { colors } = useTheme();
+  const { showAlert } = useMonolithAlert();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert('Error', 'Please fill in all fields');
       return;
     }
 
@@ -22,7 +24,7 @@ const Login = ({ navigation }) => {
     try {
       await signIn(email, password);
     } catch (error) {
-      Alert.alert('Login Failed', error.message);
+      showAlert('Login Failed', error.message);
     } finally {
       setLoading(false);
     }

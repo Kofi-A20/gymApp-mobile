@@ -6,12 +6,14 @@ import { useAuth } from '../context/AuthContext';
 import { useWorkout } from '../context/WorkoutContext';
 import { sharingService } from '../services/sharingService';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useMonolithAlert } from '../context/AlertContext';
 
 const SharedWorkoutPreview = ({ route, navigation }) => {
   const { token } = route.params;
   const { colors, isDarkMode } = useTheme();
   const { user } = useAuth();
   const { startWorkout } = useWorkout();
+  const { showAlert } = useMonolithAlert();
   const [workout, setWorkout] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -22,7 +24,7 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
         const data = await sharingService.getSharedWorkout(token);
         setWorkout(data);
       } catch (error) {
-        Alert.alert('LINK EXPIRED', 'This routine is no longer valid or accessible.');
+        showAlert('LINK EXPIRED', 'This routine is no longer valid or accessible.');
         navigation.goBack();
       } finally {
         setLoading(false);
@@ -34,7 +36,7 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
 
   const handleSave = async () => {
     if (!user) {
-      Alert.alert('AUTHENTICATION REQUIRED', 'Login to integrate this routine into your library.', [
+      showAlert('AUTHENTICATION REQUIRED', 'Login to integrate this routine into your library.', [
         { text: 'CANCEL', style: 'cancel' },
         { text: 'LOG IN', onPress: () => navigation.navigate('Login') }
       ]);
@@ -44,10 +46,10 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
     setSaving(true);
     try {
       await sharingService.saveSharedWorkout(token);
-      Alert.alert('DEPLOYED', 'Routine successfully integrated into your library.');
+      showAlert('DEPLOYED', 'Routine successfully integrated into your library.');
       navigation.navigate('Workouts');
     } catch (error) {
-      Alert.alert('ERROR', error.message);
+      showAlert('ERROR', error.message);
     } finally {
       setSaving(false);
     }
@@ -55,7 +57,7 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
 
   const handleQuickStart = () => {
      if (!user) {
-        Alert.alert('AUTHENTICATION REQUIRED', 'Login to initiate workout protocols.');
+        showAlert('AUTHENTICATION REQUIRED', 'Login to initiate workout protocols.');
         return;
      }
      startWorkout(workout);

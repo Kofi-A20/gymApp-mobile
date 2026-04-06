@@ -26,6 +26,7 @@ const WorkoutStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="WorkoutsLibrary" component={WorkoutsLibrary} />
     <Stack.Screen name="WorkoutDetail" component={WorkoutDetail} />
+    <Stack.Screen name="AddWorkout" component={AddWorkout} options={{ animation: 'slide_from_right' }} />
   </Stack.Navigator>
 );
 
@@ -44,9 +45,6 @@ const TAB_ICONS = {
   ),
   Calendar: ({ color, size }) => (
     <Ionicons name="calendar" color={color} size={size} />
-  ),
-  Add: ({ color, size }) => (
-    <AntDesign name="plus-circle" color={color} size={size} />
   ),
   Log: ({ color, size }) => (
     <FontAwesome name="bar-chart" color={color} size={size} />
@@ -196,11 +194,10 @@ const styles = StyleSheet.create({
 const TabNavigator = () => (
   <Tab.Navigator
     tabBar={(props) => <CustomTabBar {...props} />}
-    screenOptions={{ headerShown: false }}
+    screenOptions={{ headerShown: false, lazy: true, unmountOnBlur: false }}
   >
     <Tab.Screen name="Workouts" component={WorkoutStack} />
     <Tab.Screen name="Calendar" component={Calendar} />
-    <Tab.Screen name="Add" component={AddWorkout} />
     <Tab.Screen name="Log" component={WeightsLog} />
     <Tab.Screen name="Calories" component={Calories} />
     <Tab.Screen name="Settings" component={SettingsStack} />

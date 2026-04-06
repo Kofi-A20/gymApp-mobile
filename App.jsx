@@ -8,6 +8,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { WorkoutProvider } from './src/context/WorkoutContext';
 import { ProfileProvider } from './src/context/ProfileContext';
+import { AlertProvider } from './src/context/AlertContext';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 
@@ -48,19 +49,23 @@ export default function App() {
   };
 
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <ProfileProvider>
-          <WorkoutProvider>
-            <ThemeProvider>
-              <NavigationContainer linking={linking}>
-                <RootNavigator />
-                <StatusBar style="auto" />
-              </NavigationContainer>
-            </ThemeProvider>
-          </WorkoutProvider>
-        </ProfileProvider>
-      </AuthProvider>
-    </SafeAreaProvider>
+    <View style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <ProfileProvider>
+            <WorkoutProvider>
+              <ThemeProvider>
+                <AlertProvider>
+                  <NavigationContainer linking={linking}>
+                    <RootNavigator />
+                    <StatusBar style="auto" />
+                  </NavigationContainer>
+                </AlertProvider>
+              </ThemeProvider>
+            </WorkoutProvider>
+          </ProfileProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </View>
   );
 }

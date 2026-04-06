@@ -2,15 +2,21 @@ import { supabase } from '../lib/supabase';
 
 export const exercisesService = {
   /**
-   * Fetch all global exercises.
+   * Fetch all exercises (global + custom).
    */
-  async getGlobalExercises() {
-    const { data, error } = await supabase
-      .from('exercises')
-      .select('*')
-      .is('user_id', null)
-      .order('name');
+  async getAllExercises() {
+    const { data: { user } } = await supabase.auth.getUser();
     
+    let query = supabase.from('exercises').select('*').order('name');
+    
+    // If logged in, get global OR own custom
+    if (user) {
+      query = query.or(`user_id.is.null,user_id.eq.${user.id}`);
+    } else {
+      query = query.is('user_id', null);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   },

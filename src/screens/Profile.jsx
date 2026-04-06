@@ -5,11 +5,13 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import { MaterialCommunityIcons, Ionicons, AntDesign, Feather } from '@expo/vector-icons';
+import { useMonolithAlert } from '../context/AlertContext';
 
 const Profile = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
   const { signOut } = useAuth();
   const { profile, loading: profileLoading, updateProfile, refreshProfile } = useProfile();
+  const { showAlert } = useMonolithAlert();
 
   // Local state for form fields, initialized from profile
   const [firstName, setFirstName] = useState('');
@@ -33,9 +35,9 @@ const Profile = ({ navigation }) => {
         last_name: lastName,
         phone: phone,
       });
-      Alert.alert('Success', 'Profile updated successfully');
+      showAlert('Success', 'Profile updated successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
+      showAlert('Error', 'Failed to update profile');
     } finally {
       setSaving(false);
     }
@@ -45,7 +47,7 @@ const Profile = ({ navigation }) => {
     try {
       await signOut();
     } catch (error) {
-      Alert.alert('Error', 'Failed to log out');
+      showAlert('Error', 'Failed to log out');
     }
   };
 

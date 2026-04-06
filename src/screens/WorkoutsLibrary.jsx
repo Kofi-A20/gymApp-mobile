@@ -1,17 +1,46 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Pressable, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
 import { workoutsService } from '../services/workoutsService';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
+import { useMonolithAlert } from '../context/AlertContext';
 
 const WorkoutsLibrary = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
   const { profile } = useProfile();
+  const { showAlert } = useMonolithAlert();
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  
+  const [dropdownConfig, setDropdownConfig] = useState({
+    visible: false,
+    item: null,
+    position: { top: 0, right: 0 }
+  });
+
+  const { width: windowWidth } = Dimensions.get('window');
+
+  const openDropdown = (item, measureRef) => {
+    measureRef.current.measure((x, y, width, height, pageX, pageY) => {
+      setDropdownConfig({
+        visible: true,
+        item,
+        position: {
+          top: pageY + height + 5,
+          right: windowWidth - pageX - width
+        }
+      });
+    });
+  };
+
+  const closeDropdown = () => {
+    setDropdownConfig(prev => ({ ...prev, visible: false }));
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -21,7 +50,6 @@ const WorkoutsLibrary = ({ navigation }) => {
 
   const fetchWorkouts = async () => {
     try {
-      setLoading(true);
       const data = await workoutsService.getUserWorkouts();
       setWorkouts(data);
     } catch (error) {
@@ -31,19 +59,85 @@ const WorkoutsLibrary = ({ navigation }) => {
     }
   };
 
+  const toggleSelection = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleMenuPress = (item) => {
+    // Replaced by inline floating dropdown
+  };
+
+  const handleDeleteSelected = () => {
+    showAlert(
+      "Delete Workouts",
+      `Are you sure you want to delete ${selectedIds.length} routine(s)?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await workoutsService.bulkDeleteWorkouts(selectedIds);
+              setWorkouts(prev => prev.filter(w => !selectedIds.includes(w.id)));
+              setIsSelectionMode(false);
+              setSelectedIds([]);
+            } catch (error) {
+              console.error(error);
+              showAlert("Error", "Failed to delete workouts");
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const WorkoutCard = ({ item }) => {
-    // Determine muscle groups from exercises
     const muscles = item.exercises?.map(ex => ex.name.split(' ')[0]).slice(0, 3).join(' / ') || 'MIXED';
+    const isSelected = selectedIds.includes(item.id);
+    const menuRef = useRef(null);
     
     return (
       <TouchableOpacity 
-        style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
+        style={[
+          styles.card, 
+          { backgroundColor: colors.secondaryBackground, borderColor: colors.border },
+          isSelected && { borderColor: '#CCFF00', borderWidth: 2 }
+        ]}
         activeOpacity={0.8}
-        onPress={() => navigation.navigate('WorkoutDetail', { workout: item })}
+        onPress={() => {
+          if (isSelectionMode) {
+             toggleSelection(item.id);
+          } else {
+             navigation.navigate('WorkoutDetail', { workout: item });
+          }
+        }}
+        onLongPress={() => {
+          if (!isSelectionMode) {
+             setIsSelectionMode(true);
+             setSelectedIds([item.id]);
+          }
+        }}
+        delayLongPress={300}
       >
         <View style={styles.cardHeader}>
           <Text style={[styles.sequenceId, { color: colors.secondaryText }]}>TEMPLATE_ID: {item.id.split('-')[0].toUpperCase()}</Text>
-          <MaterialCommunityIcons name="lightning-bolt" size={20} color={colors.secondaryText} />
+          <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+             {isSelectionMode ? (
+                <MaterialCommunityIcons 
+                   name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"} 
+                   size={24} 
+                   color={isSelected ? '#CCFF00' : colors.secondaryText} />
+             ) : (
+                <View ref={menuRef} collapsable={false}>
+                  <TouchableOpacity onPress={() => openDropdown(item, menuRef)}>
+                    <MaterialCommunityIcons name="dots-horizontal" size={24} color={colors.secondaryText} />
+                  </TouchableOpacity>
+                </View>
+             )}
+          </View>
         </View>
         
         <View style={styles.cardInfo}>
@@ -65,14 +159,92 @@ const WorkoutsLibrary = ({ navigation }) => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      
+      {/* Dropdown Menu Modal */}
+      <Modal visible={dropdownConfig.visible} transparent animationType="fade" onRequestClose={closeDropdown}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={closeDropdown}>
+          <View style={[
+            styles.dropdownMenu, 
+            { 
+              top: dropdownConfig.position.top, 
+              right: dropdownConfig.position.right,
+              backgroundColor: colors.background,
+              borderColor: colors.border
+            }
+          ]}>
+            <TouchableOpacity style={[styles.dropdownItem, { borderBottomColor: colors.border }]} onPress={() => {
+              setIsSelectionMode(true);
+              setSelectedIds([dropdownConfig.item.id]);
+              closeDropdown();
+            }}>
+              <MaterialCommunityIcons name="check-circle-outline" size={16} color={colors.text} style={{marginRight: 10}} />
+              <Text style={[styles.dropdownItemText, { color: colors.text }]}>SELECT</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={[styles.dropdownItem, { borderBottomColor: colors.border }]} onPress={() => {
+              closeDropdown();
+              showAlert("SHARE", "Generating share link...");
+            }}>
+              <MaterialCommunityIcons name="share-variant" size={16} color={colors.text} style={{marginRight: 10}} />
+              <Text style={[styles.dropdownItemText, { color: colors.text }]}>SHARE</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.dropdownItem, { borderBottomWidth: 0 }]} onPress={() => {
+              closeDropdown();
+              showAlert(
+                "Delete Workout",
+                `Are you sure you want to delete this routine?`,
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Delete", style: "destructive", onPress: async () => {
+                     try {
+                       await workoutsService.bulkDeleteWorkouts([dropdownConfig.item.id]);
+                       setWorkouts(prev => prev.filter(w => w.id !== dropdownConfig.item.id));
+                     } catch(err) {
+                       showAlert("Error", "Failed to delete workout");
+                     }
+                  }}
+                ]
+              );
+            }}>
+              <MaterialCommunityIcons name="delete-outline" size={16} color="#FF3B30" style={{marginRight: 10}} />
+              <Text style={[styles.dropdownItemText, { color: '#FF3B30' }]}>DELETE</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Monolith Brand Header */}
         <View style={styles.brandHeader}>
-          <Ionicons name="menu" size={24} color={colors.text} />
-          <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-             <MaterialCommunityIcons name="account" size={24} color={colors.text} />
-          </TouchableOpacity>
+          {isSelectionMode ? (
+            <>
+              <TouchableOpacity onPress={() => { setIsSelectionMode(false); setSelectedIds([]); }}>
+                <Text style={[{ color: colors.text, fontWeight: '700', fontSize: 12, letterSpacing: 1 }]}>CANCEL</Text>
+              </TouchableOpacity>
+              <Text style={[styles.brandTitle, { color: colors.text }]}>{selectedIds.length} SELECTED</Text>
+              {selectedIds.length > 0 ? (
+                <TouchableOpacity onPress={handleDeleteSelected}>
+                  <MaterialCommunityIcons name="delete" size={24} color="#FF3B30" />
+                </TouchableOpacity>
+              ) : (
+                <View style={{ width: 24 }} />
+              )}
+            </>
+          ) : (
+            <>
+              <Ionicons name="menu" size={24} color={colors.text} />
+              <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center', gap: 20}}>
+                <TouchableOpacity onPress={() => navigation.navigate('AddWorkout')}>
+                   <AntDesign name="plus-circle" size={24} color={colors.text} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                   <MaterialCommunityIcons name="account" size={24} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
 
         <View style={styles.content}>
@@ -91,14 +263,8 @@ const WorkoutsLibrary = ({ navigation }) => {
                 <WorkoutCard key={workout.id} item={workout} />
               ))
             ) : (
-              <View style={{ alignItems: 'center', marginTop: 50 }}>
-                <Text style={{ color: colors.secondaryText, marginBottom: 20 }}>NO TEMPLATES FOUND</Text>
-                <TouchableOpacity 
-                   style={[styles.card, { borderColor: colors.border, borderStyle: 'dashed' }]}
-                   onPress={() => navigation.navigate('AddWorkout')}
-                >
-                   <Text style={[styles.startBtn, { color: colors.text }]}>+ CREATE NEW ROUTINE</Text>
-                </TouchableOpacity>
+              <View style={{ alignItems: 'center', marginTop: 80, marginBottom: 40 }}>
+                <Text style={{ color: colors.secondaryText, fontSize: 14 }}>No workout routines yet.</Text>
               </View>
             )}
           </View>
@@ -262,6 +428,28 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     marginTop: 4,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    width: 140,
+    borderWidth: 1,
+    borderRadius: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+  },
+  dropdownItemText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
 });
 

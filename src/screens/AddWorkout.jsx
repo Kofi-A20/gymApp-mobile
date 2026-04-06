@@ -5,11 +5,13 @@ import { useTheme } from '../context/ThemeContext';
 import { exercisesService } from '../services/exercisesService';
 import { workoutsService } from '../services/workoutsService';
 import { MaterialCommunityIcons, AntDesign, Feather } from '@expo/vector-icons';
+import { useMonolithAlert } from '../context/AlertContext';
 
 const FILTERS = ['ALL', 'CHEST', 'BACK', 'LEGS', 'SHOULDERS', 'ARMS'];
 
 const AddWorkout = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
+  const { showAlert } = useMonolithAlert();
   const [workoutName, setWorkoutName] = useState('');
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
@@ -40,53 +42,75 @@ const AddWorkout = ({ navigation }) => {
     let result = allExercises;
 
     if (activeFilter !== 'ALL') {
-      result = result.filter(ex => ex.body_part?.toUpperCase() === activeFilter);
+      result = result.filter(ex => ex.muscle_group?.toUpperCase() === activeFilter);
     }
 
     if (search) {
       result = result.filter(ex => 
         ex.name.toUpperCase().includes(search.toUpperCase()) || 
-        ex.body_part?.toUpperCase().includes(search.toUpperCase())
+        ex.muscle_group?.toUpperCase().includes(search.toUpperCase())
       );
     }
 
     setFilteredExercises(result);
   }, [search, activeFilter, allExercises]);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('blur', () => {
+      setWorkoutName('');
+      setSearch('');
+      setActiveFilter('ALL');
+      setSelectedExercises([]);
+    });
+    return unsubscribe;
+  }, [navigation]);
+
   const toggleExerciseSelection = (exercise) => {
     const isSelected = selectedExercises.find(ex => ex.id === exercise.id);
     if (isSelected) {
       setSelectedExercises(selectedExercises.filter(ex => ex.id !== exercise.id));
     } else {
-      setSelectedExercises([...selectedExercises, exercise]);
+      setSelectedExercises([...selectedExercises, { ...exercise, sets_target: '', reps_target: '' }]);
     }
+  };
+
+  const updateExerciseTarget = (id, field, value) => {
+    const numValue = value.replace(/[^0-9]/g, '');
+    setSelectedExercises(prev => 
+      prev.map(ex => ex.id === id ? { ...ex, [field]: numValue } : ex)
+    );
   };
 
   const handleCreateWorkout = async () => {
     if (!workoutName.trim()) {
-      Alert.alert('Error', 'Please enter a workout name');
+      showAlert('Error', 'Please enter a workout name');
       return;
     }
     if (selectedExercises.length === 0) {
-      Alert.alert('Error', 'Please select at least one exercise');
+      showAlert('Error', 'Please select at least one exercise before saving your workout routine.');
+      return;
+    }
+
+    const missingTargets = selectedExercises.find(ex => !ex.sets_target || !ex.reps_target);
+    if (missingTargets) {
+      showAlert('Error', `Please provide sets and reps for ${missingTargets.name.toUpperCase()}`);
       return;
     }
 
     setSaving(true);
     try {
-      // Create the workout with the selected exercises
-      // In our current schema, we need to pass exercises as an array of IDs or names
-      // The workoutsService.createWorkout takes (name, description, exercises)
       const exercisesList = selectedExercises.map(ex => ({
         exercise_id: ex.id,
         name: ex.name,
+        sets_target: parseInt(ex.sets_target, 10),
+        reps_target: parseInt(ex.reps_target, 10),
       }));
       
       await workoutsService.createWorkout(workoutName, '', exercisesList);
-      Alert.alert('Success', 'Workout template created');
+      showAlert('Success', 'Workout template created');
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create workout');
+      showAlert('Error', 'Failed to create workout');
     } finally {
       setSaving(false);
     }
@@ -182,37 +206,65 @@ const AddWorkout = ({ navigation }) => {
                   filteredExercises.map((ex, index) => {
                     const isSelected = selectedExercises.find(s => s.id === ex.id);
                     return (
-                      <TouchableOpacity 
+                      <View 
                         key={ex.id} 
                         style={[
-                          styles.exerciseItem, 
+                          styles.exerciseItemContainer, 
                           { 
-                            backgroundColor: isSelected ? colors.text : colors.background, 
-                            borderColor: colors.border 
+                            backgroundColor: isSelected ? isDarkMode ? '#111' : '#F5F5F5' : colors.background, 
+                            borderColor: colors.border,
+                            borderWidth: 1,
+                            marginBottom: 12
                           }
                         ]}
-                        onPress={() => toggleExerciseSelection(ex)}
                       >
-                         <Text style={[
-                           styles.exerciseId, 
-                           { color: isSelected ? colors.background : colors.secondaryText }
-                         ]}>
-                           {String(index + 1).padStart(2, '0')}
-                         </Text>
-                         <View>
-                            <Text style={[
-                              styles.exerciseName, 
-                              { color: isSelected ? colors.background : colors.text }
-                            ]}>{ex.name.toUpperCase()}</Text>
-                            <Text style={[
-                              styles.exerciseFocus, 
-                              { color: isSelected ? colors.background : colors.secondaryText }
-                            ]}>{ex.body_part?.toUpperCase() || 'GENERAL'}</Text>
-                         </View>
-                         {isSelected && (
-                           <AntDesign name="check" size={20} color={colors.background} style={{ marginLeft: 'auto' }} />
-                         )}
-                      </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={{ flexDirection: 'row', alignItems: 'center', padding: 15 }}
+                          onPress={() => toggleExerciseSelection(ex)}
+                        >
+                           <Text style={[
+                             styles.exerciseId, 
+                             { color: isSelected ? colors.text : colors.secondaryText }
+                           ]}>
+                             {String(index + 1).padStart(2, '0')}
+                           </Text>
+                           <View style={{ flex: 1 }}>
+                              <Text style={[
+                                styles.exerciseName, 
+                                { color: colors.text }
+                              ]}>{ex.name.toUpperCase()}</Text>
+                              <Text style={[
+                                styles.exerciseFocus, 
+                                { color: colors.secondaryText }
+                              ]}>{ex.muscle_group?.toUpperCase() || 'GENERAL'}</Text>
+                           </View>
+                           {isSelected && (
+                             <AntDesign name="check" size={20} color={colors.text} style={{ marginLeft: 'auto' }} />
+                           )}
+                        </TouchableOpacity>
+
+                        {isSelected && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingBottom: 15, gap: 15 }}>
+                            <TextInput
+                              style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
+                              placeholder="SETS"
+                              placeholderTextColor={colors.secondaryText}
+                              keyboardType="numeric"
+                              value={String(isSelected.sets_target || '')}
+                              onChangeText={(val) => updateExerciseTarget(ex.id, 'sets_target', val)}
+                            />
+                            <Text style={{color: colors.secondaryText, fontSize: 16}}>×</Text>
+                            <TextInput
+                              style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
+                              placeholder="REPS"
+                              placeholderTextColor={colors.secondaryText}
+                              keyboardType="numeric"
+                              value={String(isSelected.reps_target || '')}
+                              onChangeText={(val) => updateExerciseTarget(ex.id, 'reps_target', val)}
+                            />
+                          </View>
+                        )}
+                      </View>
                     );
                   })
                 )}
@@ -388,12 +440,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'right',
   },
-  exerciseItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    marginBottom: 12,
-    borderWidth: 1,
+  exerciseItemContainer: {
+    borderRadius: 0,
   },
   exerciseId: {
     fontSize: 18,
@@ -408,6 +456,14 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '600',
     marginTop: 2,
+  },
+  targetInput: {
+    width: 60,
+    borderBottomWidth: 2,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '900',
+    paddingVertical: 5,
   },
   appendBtn: {
     marginTop: 10,

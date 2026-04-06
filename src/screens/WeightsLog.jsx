@@ -19,7 +19,6 @@ const WeightsLog = ({ navigation }) => {
 
   const fetchSessions = async () => {
     try {
-      setLoading(true);
       const data = await sessionsService.getSessionHistory();
       setSessions(data);
     } catch (error) {
