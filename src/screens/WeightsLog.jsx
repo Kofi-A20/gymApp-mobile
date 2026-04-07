@@ -4,91 +4,250 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { sessionsService } from '../services/sessionsService';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { setsService } from '../services/setsService';
+import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
+import { useMonolithAlert } from '../context/AlertContext';
 
 const WeightsLog = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
+  const { showAlert } = useMonolithAlert();
   const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [progression, setProgression] = useState([]);
+  const [viewMode, setViewMode] = useState('ARCHIVE'); // ARCHIVE or PROGRESSION
+  const [loading, setLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchSessions();
-    }, [])
+      if (viewMode === 'ARCHIVE') {
+        fetchSessions();
+      } else {
+        fetchProgression();
+      }
+    }, [viewMode])
   );
 
   const fetchSessions = async () => {
+    if (!hasFetched) setLoading(true);
     try {
       const data = await sessionsService.getSessionHistory();
-      setSessions(data);
+      setSessions(data || []);
     } catch (error) {
       console.error('Failed to fetch sessions:', error);
+    } finally {
+      setLoading(false);
+      setHasFetched(true);
+    }
+  };
+
+  const fetchProgression = async () => {
+    setLoading(true);
+    try {
+      const data = await setsService.getUserProgression();
+      setProgression(data || []);
+    } catch (error) {
+      console.error('Failed to fetch progression:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const toggleSelection = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    showAlert(
+      "DELETE SESSIONS",
+      `Are you sure you want to permanently delete these ${selectedIds.length} records? This action cannot be undone.`,
+      [
+        { text: "CANCEL", style: "cancel" },
+        { 
+          text: "DESTROY", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await sessionsService.bulkDeleteSessions(selectedIds);
+              setSessions(prev => prev.filter(s => !selectedIds.includes(s.id)));
+              setIsSelectionMode(false);
+              setSelectedIds([]);
+            } catch (error) {
+              showAlert("Error", "Failed to delete selected sessions.");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const SessionCard = ({ session }) => {
-    const date = new Date(session.created_at).toLocaleDateString('en-US', {
-      month: 'SHORT',
-      day: 'NUMERIC',
-      year: '2-DIGIT',
-    }).toUpperCase();
+    const isSelected = selectedIds.includes(session.id);
+    const dateObj = new Date(session.started_at || session.created_at);
+    let date = 'INVALID DATE';
+    if (!isNaN(dateObj)) {
+      date = dateObj.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: '2-digit',
+      }).toUpperCase();
+    }
 
     return (
       <TouchableOpacity 
-        style={[styles.sessionCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
-        onPress={() => navigation.navigate('WorkoutDetail', { workout: { id: session.workout_id, name: session.workout_name, exercises: session.exercises } })}
+        style={[
+          styles.sessionCard, 
+          { backgroundColor: colors.secondaryBackground, borderColor: colors.border },
+          isSelected && { borderColor: '#CCFF00', borderWidth: 2 }
+        ]}
+        onPress={() => {
+          if (isSelectionMode) {
+            toggleSelection(session.id);
+          } else {
+            navigation.navigate('SessionHistoryDetail', { session });
+          }
+        }}
+        onLongPress={() => {
+          if (!isSelectionMode) {
+            setIsSelectionMode(true);
+            setSelectedIds([session.id]);
+          }
+        }}
+        delayLongPress={300}
       >
-        <View style={styles.sessionHeader}>
-          <Text style={[styles.sessionDate, { color: colors.secondaryText }]}>{date}</Text>
-          <MaterialCommunityIcons name="check-decagram" size={18} color="#CCFF00" />
-        </View>
-        <Text style={[styles.sessionTitle, { color: colors.text }]}>{session.workout_name?.toUpperCase() || 'FREE SESSION'}</Text>
-        
-        <View style={styles.sessionFooter}>
-          <Text style={[styles.sessionStat, { color: colors.secondaryText }]}>
-            {session.total_volume_kg || 0} {units.toUpperCase()} TOTAL
-          </Text>
-          <Text style={[styles.sessionStat, { color: colors.secondaryText }]}>
-             {Math.round((new Date(session.completed_at) - new Date(session.created_at)) / 60000)} MIN
-          </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+           <View style={{ flex: 1 }}>
+             <Text style={[styles.sessionTitle, { color: colors.text }]}>{session.workout_name?.toUpperCase() || 'FREE SESSION'}</Text>
+             <View style={styles.sessionHeader}>
+               <Text style={[styles.sessionDate, { color: colors.secondaryText }]}>{date}</Text>
+               <MaterialCommunityIcons name="check-decagram" size={16} color="#CCFF00" />
+             </View>
+           </View>
+           {isSelectionMode && (
+             <MaterialCommunityIcons 
+               name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"} 
+               size={24} 
+               color={isSelected ? '#CCFF00' : colors.secondaryText} 
+             />
+           )}
         </View>
       </TouchableOpacity>
+    );
+  };
+
+  const ProgressionCard = ({ item }) => {
+    const lastDateObj = new Date(item.lastDate);
+    const dateLabel = lastDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+
+    return (
+      <View style={[styles.progRow, { borderColor: colors.border }]}>
+        <View style={styles.progMain}>
+          <Text style={[styles.progName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
+          <Text style={[styles.progDate, { color: colors.secondaryText }]}>LAST: {dateLabel}</Text>
+        </View>
+        <View style={styles.progStats}>
+          <View style={styles.progStatItem}>
+            <Text style={[styles.progStatLabel, { color: colors.secondaryText }]}>BEST</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+               <Text style={[styles.progStatValue, { color: '#CCFF00' }]}>{item.bestWeight}</Text>
+               <Text style={[styles.progStatUnit, { color: '#CCFF00' }]}>{units.toUpperCase()}</Text>
+               <MaterialCommunityIcons name="trophy" size={14} color="#CCFF00" style={{ marginLeft: 4 }} />
+            </View>
+          </View>
+          <View style={styles.progStatItem}>
+            <Text style={[styles.progStatLabel, { color: colors.secondaryText }]}>LAST</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+               <Text style={[styles.progStatValue, { color: colors.text }]}>{item.lastWeight}</Text>
+               <Text style={[styles.progStatUnit, { color: colors.text }]}>{units.toUpperCase()}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
     );
   };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Ionicons name="menu" size={24} color={colors.text} />
-        <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-           <MaterialCommunityIcons name="account" size={24} color={colors.text} />
-        </TouchableOpacity>
+        {isSelectionMode ? (
+          <>
+            <TouchableOpacity onPress={() => { setIsSelectionMode(false); setSelectedIds([]); }}>
+              <Text style={{ color: colors.text, fontWeight: '900', fontSize: 12, letterSpacing: 1.5 }}>CANCEL</Text>
+            </TouchableOpacity>
+            <Text style={[styles.brandTitle, { color: colors.text }]}>{selectedIds.length} SELECTED</Text>
+            <TouchableOpacity onPress={handleDeleteSelected} disabled={selectedIds.length === 0}>
+               <MaterialCommunityIcons name="delete" size={24} color={selectedIds.length > 0 ? "#FF3B30" : colors.secondaryText} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Ionicons name="menu" size={24} color={colors.text} />
+            <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+               <MaterialCommunityIcons name="account" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          <Text style={[styles.subLabel, { color: colors.secondaryText }]}>CHRONOLOGICAL ARCHIVE</Text>
-          <Text style={[styles.mainTitle, { color: colors.text }]}>SESSION{"\n"}HISTORY.</Text>
+          <View style={styles.viewToggle}>
+             <TouchableOpacity 
+                style={[styles.toggleBtn, viewMode === 'ARCHIVE' && { borderBottomColor: '#CCFF00' }]}
+                onPress={() => { setViewMode('ARCHIVE'); setHasFetched(false); }}
+             >
+                <Text style={[styles.toggleBtnText, { color: viewMode === 'ARCHIVE' ? colors.text : colors.secondaryText }]}>ARCHIVE</Text>
+             </TouchableOpacity>
+             <TouchableOpacity 
+                style={[styles.toggleBtn, viewMode === 'PROGRESSION' && { borderBottomColor: '#CCFF00' }]}
+                onPress={() => setViewMode('PROGRESSION')}
+             >
+                <Text style={[styles.toggleBtnText, { color: viewMode === 'PROGRESSION' ? colors.text : colors.secondaryText }]}>PROGRESSION</Text>
+             </TouchableOpacity>
+          </View>
 
-          {loading ? (
+          <Text style={[styles.subLabel, { color: colors.secondaryText, marginTop: 20 }]}>
+            {viewMode === 'ARCHIVE' ? 'CHRONOLOGICAL ARCHIVE' : 'PERSONAL RECORDS'}
+          </Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>
+            {viewMode === 'ARCHIVE' ? 'SESSION\nHISTORY.' : 'WEIGHT\nPROGRESS.'}
+          </Text>
+
+          {loading && (viewMode === 'PROGRESSION' || (viewMode === 'ARCHIVE' && !hasFetched)) ? (
             <ActivityIndicator color={colors.text} style={{ marginTop: 50 }} />
-          ) : sessions.length > 0 ? (
-            sessions.map((session) => (
-              <SessionCard key={session.id} session={session} />
-            ))
+          ) : viewMode === 'ARCHIVE' ? (
+            sessions.length > 0 ? (
+               sessions.map((session) => (
+                 <SessionCard key={session.id} session={session} />
+               ))
+            ) : (
+               <View style={styles.emptyState}>
+                 <Text style={{ color: colors.secondaryText }}>NO HISTORY COMMITTED</Text>
+                 <TouchableOpacity 
+                   style={styles.startBtn}
+                   onPress={() => navigation.navigate('Workouts')}
+                 >
+                   <Text style={{ color: '#000', fontWeight: '900' }}>START FIRST SESSION</Text>
+                 </TouchableOpacity>
+               </View>
+            )
           ) : (
-            <View style={styles.emptyState}>
-              <Text style={{ color: colors.secondaryText }}>NO HISTORY COMMITTED</Text>
-              <TouchableOpacity 
-                style={styles.startBtn}
-                onPress={() => navigation.navigate('Workouts')}
-              >
-                <Text style={{ color: '#000', fontWeight: '900' }}>START FIRST SESSION</Text>
-              </TouchableOpacity>
-            </View>
+            progression.length > 0 ? (
+               progression.map((item) => (
+                 <ProgressionCard key={item.id} item={item} />
+               ))
+            ) : (
+               <View style={styles.emptyState}>
+                 <Text style={{ color: colors.secondaryText }}>NO TRACKED PROGRESS YET</Text>
+               </View>
+            )
           )}
 
           <View style={{ height: 100 }} />
@@ -139,6 +298,63 @@ const styles = StyleSheet.create({
     lineHeight: 52,
     letterSpacing: -2,
     marginBottom: 40,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 10,
+  },
+  toggleBtn: {
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  toggleBtnText: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  progRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+  },
+  progMain: {
+    flex: 1,
+  },
+  progName: {
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  progDate: {
+    fontSize: 10,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  progStats: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  progStatItem: {
+    alignItems: 'flex-end',
+  },
+  progStatLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  progStatValue: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  progStatUnit: {
+    fontSize: 10,
+    fontWeight: '900',
+    marginLeft: 2,
+    marginTop: 4,
   },
   statsRow: {
     flexDirection: 'row',
@@ -272,7 +488,31 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     letterSpacing: 1,
-  }
+  },
+  sessionCard: {
+    padding: 16,
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 85,
+    marginBottom: 16,
+    justifyContent: 'center',
+  },
+  sessionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  sessionTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  sessionDate: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
 });
 
 export default WeightsLog;

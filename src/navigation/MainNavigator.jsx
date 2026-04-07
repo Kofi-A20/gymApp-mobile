@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TabNavigator from './TabNavigator';
 import SharedWorkoutPreview from '../screens/SharedWorkoutPreview';
 import ActiveWorkout from '../screens/ActiveWorkout';
+import SessionHistoryDetail from '../screens/SessionHistoryDetail';
 
 const Stack = createNativeStackNavigator();
 
@@ -11,7 +12,12 @@ const MainNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={TabNavigator} />
       <Stack.Screen name="SharedWorkoutPreview" component={SharedWorkoutPreview} />
-      <Stack.Screen name="ActiveWorkout" component={ActiveWorkout} />
+      <Stack.Screen name="SessionHistoryDetail" component={SessionHistoryDetail} />
+      <Stack.Screen 
+        name="ActiveWorkout" 
+        component={ActiveWorkout} 
+        options={{ gestureEnabled: false }} 
+      />
     </Stack.Navigator>
   );
 };

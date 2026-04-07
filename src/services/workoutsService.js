@@ -17,7 +17,7 @@ export const workoutsService = {
           )
         `)
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('getUserWorkouts error:', error);
         throw error;
@@ -27,8 +27,14 @@ export const workoutsService = {
       return (data || []).map(workout => ({
         ...workout,
         exercises: (workout.workout_exercises || [])
-          .map(we => we.exercises)
-          .filter(Boolean)
+          .map(we => ({
+            ...(we.exercises || {}),
+            sets_target: we.sets_target,
+            reps_target: we.reps_target,
+            order_index: we.order_index
+          }))
+          .filter(e => e.id)
+          .sort((a, b) => a.order_index - b.order_index)
       }));
     } catch (err) {
       console.error('getUserWorkouts caught exception:', err);
@@ -41,46 +47,46 @@ export const workoutsService = {
    */
   async getWorkoutDetail(workoutId) {
     try {
-        console.log('Fetching detail for workoutId:', workoutId);
-        
-        const { data, error } = await supabase
-          .from('workouts')
-          .select(`
+      console.log('Fetching detail for workoutId:', workoutId);
+
+      const { data, error } = await supabase
+        .from('workouts')
+        .select(`
             *,
             workout_exercises (
               *,
               exercises (*)
             )
           `)
-          .eq('id', workoutId)
-          .single();
-        
-        if (error) {
-            console.error('getWorkoutDetail (workouts table) error:', error);
-            throw error;
-        }
+        .eq('id', workoutId)
+        .single();
 
-        console.log('getWorkoutDetail RAW RESPONSE:', JSON.stringify(data, null, 2));
+      if (error) {
+        console.error('getWorkoutDetail (workouts table) error:', error);
+        throw error;
+      }
 
-        // Map to flat exercises array as expected by UI
-        const mappedData = {
-          ...data,
-          exercises: (data.workout_exercises || [])
-            .map(we => ({
-              ...(we.exercises || {}),
-              sets_target: we.sets_target,
-              reps_target: we.reps_target,
-              order_index: we.order_index
-            }))
-            .filter(e => e.id) // Filter out any null exercises
-            .sort((a, b) => a.order_index - b.order_index)
-        };
+      console.log('getWorkoutDetail RAW RESPONSE:', JSON.stringify(data, null, 2));
 
-        console.log('getWorkoutDetail MAPPED RESPONSE:', JSON.stringify(mappedData, null, 2));
-        return mappedData;
+      // Map to flat exercises array as expected by UI
+      const mappedData = {
+        ...data,
+        exercises: (data.workout_exercises || [])
+          .map(we => ({
+            ...(we.exercises || {}),
+            sets_target: we.sets_target,
+            reps_target: we.reps_target,
+            order_index: we.order_index
+          }))
+          .filter(e => e.id) // Filter out any null exercises
+          .sort((a, b) => a.order_index - b.order_index)
+      };
+
+      console.log('getWorkoutDetail MAPPED RESPONSE:', JSON.stringify(mappedData, null, 2));
+      return mappedData;
     } catch (err) {
-        console.error('getWorkoutDetail exception:', err);
-        throw err;
+      console.error('getWorkoutDetail exception:', err);
+      throw err;
     }
   },
 
@@ -107,7 +113,7 @@ export const workoutsService = {
         .insert(workoutToInsert)
         .select()
         .single();
-      
+
       if (workoutError) {
         console.error('createWorkout (workouts table) error:', workoutError);
         throw workoutError;
@@ -127,7 +133,7 @@ export const workoutsService = {
       const { error: exError } = await supabase
         .from('workout_exercises')
         .insert(workoutExercises);
-      
+
       if (exError) {
         console.error('createWorkout (workout_exercises table) error:', exError);
         // Wipe orphaned workout
@@ -148,51 +154,51 @@ export const workoutsService = {
    */
   async updateWorkout(workoutId, name, description, exercises) {
     try {
-        console.log('Updating workout:', workoutId, 'name:', name);
+      console.log('Updating workout:', workoutId, 'name:', name);
 
-        // 1. Update Workout template
-        const { error: workoutError } = await supabase
-          .from('workouts')
-          .update({ name, description })
-          .eq('id', workoutId);
-        
-        if (workoutError) {
-            console.error('updateWorkout (workouts table) error:', workoutError);
-            throw workoutError;
-        }
+      // 1. Update Workout template
+      const { error: workoutError } = await supabase
+        .from('workouts')
+        .update({ name, description })
+        .eq('id', workoutId);
 
-        // 2. Clear and Re-insert Workout Exercises
-        const { error: deleteError } = await supabase
-          .from('workout_exercises')
-          .delete()
-          .eq('workout_id', workoutId);
-        
-        if (deleteError) {
-            console.error('updateWorkout delete (exercises) error:', deleteError);
-            throw deleteError;
-        }
+      if (workoutError) {
+        console.error('updateWorkout (workouts table) error:', workoutError);
+        throw workoutError;
+      }
 
-        const workoutExercises = exercises.map((ex, index) => ({
-          workout_id: workoutId,
-          exercise_id: ex.exercise_id || ex.id,
-          sets_target: ex.sets_target || 3,
-          reps_target: ex.reps_target || 10,
-          order_index: index,
-        }));
+      // 2. Clear and Re-insert Workout Exercises
+      const { error: deleteError } = await supabase
+        .from('workout_exercises')
+        .delete()
+        .eq('workout_id', workoutId);
 
-        const { error: exError } = await supabase
-          .from('workout_exercises')
-          .insert(workoutExercises);
-        
-        if (exError) {
-            console.error('updateWorkout insert (exercises) error:', exError);
-            throw exError;
-        }
+      if (deleteError) {
+        console.error('updateWorkout delete (exercises) error:', deleteError);
+        throw deleteError;
+      }
 
-        console.log('Workout updated successfully');
+      const workoutExercises = exercises.map((ex, index) => ({
+        workout_id: workoutId,
+        exercise_id: ex.exercise_id || ex.id,
+        sets_target: ex.sets_target || 3,
+        reps_target: ex.reps_target || 10,
+        order_index: index,
+      }));
+
+      const { error: exError } = await supabase
+        .from('workout_exercises')
+        .insert(workoutExercises);
+
+      if (exError) {
+        console.error('updateWorkout insert (exercises) error:', exError);
+        throw exError;
+      }
+
+      console.log('Workout updated successfully');
     } catch (err) {
-        console.error('updateWorkout exception:', err);
-        throw err;
+      console.error('updateWorkout exception:', err);
+      throw err;
     }
   },
 
@@ -201,18 +207,18 @@ export const workoutsService = {
    */
   async deleteWorkout(workoutId) {
     try {
-        const { error } = await supabase
-          .from('workouts')
-          .delete()
-          .eq('id', workoutId);
-        
-        if (error) {
-            console.error('deleteWorkout error:', error);
-            throw error;
-        }
+      const { error } = await supabase
+        .from('workouts')
+        .delete()
+        .eq('id', workoutId);
+
+      if (error) {
+        console.error('deleteWorkout error:', error);
+        throw error;
+      }
     } catch (err) {
-        console.error('deleteWorkout exception:', err);
-        throw err;
+      console.error('deleteWorkout exception:', err);
+      throw err;
     }
   },
 
@@ -221,18 +227,18 @@ export const workoutsService = {
    */
   async bulkDeleteWorkouts(workoutIds) {
     try {
-        const { error } = await supabase
-          .from('workouts')
-          .delete()
-          .in('id', workoutIds);
-        
-        if (error) {
-            console.error('bulkDeleteWorkouts error:', error);
-            throw error;
-        }
+      const { error } = await supabase
+        .from('workouts')
+        .delete()
+        .in('id', workoutIds);
+
+      if (error) {
+        console.error('bulkDeleteWorkouts error:', error);
+        throw error;
+      }
     } catch (err) {
-        console.error('bulkDeleteWorkouts exception:', err);
-        throw err;
+      console.error('bulkDeleteWorkouts exception:', err);
+      throw err;
     }
   }
 };

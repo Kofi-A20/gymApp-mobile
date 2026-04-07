@@ -1,93 +1,139 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { sessionsService } from '../services/sessionsService';
 import { setsService } from '../services/setsService';
+import { workoutsService } from '../services/workoutsService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const STORAGE_KEY = '@monolith_activeWorkoutState';
 
 const WorkoutContext = createContext({});
 
 export const WorkoutProvider = ({ children }) => {
   const [activeSession, setActiveSession] = useState(null);
-  const [activeSets, setActiveSets] = useState([]);
   const [isLogging, setIsLogging] = useState(false);
 
+  // Restore session on app mount (resume after backgrounding/crash)
+  useEffect(() => {
+    const restore = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          if (saved?.session) {
+            setActiveSession(saved.session);
+            setIsLogging(true);
+          }
+        }
+      } catch (e) {
+        // Silently fail — no session to restore
+      }
+    };
+    restore();
+  }, []);
+
   /**
-   * Start a workout session.
+   * Start a workout session from a template.
    */
   const startWorkout = useCallback(async (workoutId = null) => {
     setIsLogging(true);
     try {
-      const session = await sessionsService.startSession(workoutId);
+      let session = {
+        id: 'local_' + Date.now(),
+        workout_id: workoutId,
+        workout_name: '',
+        exercises: [],
+        started_at: new Date().toISOString(),
+      };
+
+      if (workoutId) {
+        const detail = await workoutsService.getWorkoutDetail(workoutId);
+        session.workout_name = detail.name || '';
+        session.exercises = detail.exercises || [];
+      }
+
+      // Clear any stale UI state from the previous session before starting fresh
+      await AsyncStorage.removeItem('@monolith_activeWorkout_ui');
+
       setActiveSession(session);
-      setActiveSets([]);
+
+      // Persist to AsyncStorage so the session survives backgrounding
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ session }));
     } catch (error) {
-      console.error('Failed to start workout:', error);
       setIsLogging(false);
       throw error;
     }
   }, []);
 
   /**
-   * Log a set to the active session.
+   * Finish and commit the session to Supabase.
+   * completedSets format: { "exerciseId-setIndex": { weight: string, reps: string } }
    */
-  const logSet = useCallback(async (exerciseId, weight, reps) => {
+  const finishWorkout = useCallback(async (completedSets = {}, notes = '') => {
     if (!activeSession) return;
 
     try {
-      // Determine set number for this exercise in this session
-      const existingSetsForEx = activeSets.filter(s => s.exercise_id === exerciseId);
-      const setNumber = existingSetsForEx.length + 1;
+      // 1. Create session row in DB — pass workout_name so it survives template deletion
+      const dbSession = await sessionsService.startSession(
+        activeSession.workout_id,
+        activeSession.workout_name
+      );
 
-      const newSet = await setsService.logSet(activeSession.id, exerciseId, setNumber, weight, reps);
-      setActiveSets(prev => [...prev, newSet]);
-      return newSet;
-    } catch (error) {
-      console.error('Failed to log set:', error);
-      throw error;
-    }
-  }, [activeSession, activeSets]);
+      // 2. Log each completed set to Supabase
+      let setNumber = 1;
+      for (const exercise of (activeSession.exercises || [])) {
+        const exId = exercise.id || exercise.exercise_id;
+        const setsCount = exercise.sets_target || 3;
+        let exSetNumber = 1;
+        for (let i = 0; i < setsCount; i++) {
+          const key = `${exId}-${i}`;
+          const setData = completedSets[key];
+          if (setData && setData.weight && setData.reps) {
+            await setsService.logSet(
+              dbSession.id,
+              exId,
+              exSetNumber,
+              parseFloat(setData.weight),
+              parseInt(setData.reps)
+            );
+            exSetNumber++;
+          }
+        }
+      }
 
-  /**
-   * Finish and save the session.
-   */
-  const finishWorkout = useCallback(async (notes = '') => {
-    if (!activeSession) return;
+      // 3. Calculate total volume and complete the session
+      const totalVolume = Object.values(completedSets).reduce((acc, s) => {
+        const w = parseFloat(s.weight) || 0;
+        const r = parseInt(s.reps) || 0;
+        return acc + (w * r);
+      }, 0);
 
-    try {
-      // Calculate total volume
-      const totalVolume = activeSets.reduce((acc, s) => acc + (s.weight_kg * s.reps), 0);
+      await sessionsService.completeSession(dbSession.id, { total_volume_kg: totalVolume, notes });
 
-      await sessionsService.completeSession(activeSession.id, {
-        total_volume_kg: totalVolume,
-        notes
-      });
-
+      // 4. Clear local state
       setActiveSession(null);
-      setActiveSets([]);
       setIsLogging(false);
+      await AsyncStorage.removeItem(STORAGE_KEY);
     } catch (error) {
-      console.error('Failed to finish workout:', error);
       throw error;
     }
-  }, [activeSession, activeSets]);
+  }, [activeSession]);
 
   /**
-   * Cancel and discard the current session.
+   * Cancel and discard the session.
    */
-  const cancelWorkout = useCallback(() => {
+  const cancelWorkout = useCallback(async () => {
     setActiveSession(null);
-    setActiveSets([]);
     setIsLogging(false);
-    // Note: We might want to delete the session in the DB too
+    await AsyncStorage.removeItem(STORAGE_KEY);
   }, []);
 
   return (
-    <WorkoutContext.Provider value={{ 
-      activeSession, 
-      activeSets, 
-      isLogging, 
-      startWorkout, 
-      logSet, 
-      finishWorkout, 
-      cancelWorkout 
+    <WorkoutContext.Provider value={{
+      activeSession,
+      isLogging,
+      startWorkout,
+      finishWorkout,
+      cancelWorkout,
     }}>
       {children}
     </WorkoutContext.Provider>

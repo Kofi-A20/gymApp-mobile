@@ -4,7 +4,7 @@ export const sessionsService = {
   /**
    * Start a new workout session.
    */
-  async startSession(workoutId = null) {
+  async startSession(workoutId = null, workoutName = null) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
@@ -14,6 +14,7 @@ export const sessionsService = {
         .insert({
           user_id: user.id,
           workout_id: workoutId,
+          workout_name: workoutName,
           started_at: new Date().toISOString(),
         })
         .select()
@@ -112,7 +113,7 @@ export const sessionsService = {
 
         return {
           ...s,
-          workout_name: s.workouts?.name || 'FREE SESSION',
+          workout_name: s.workout_name || s.workouts?.name || 'FREE SESSION',
           exercises: Array.from(exerciseMap.values())
         };
       });
@@ -145,6 +146,8 @@ export const sessionsService = {
         throw error;
       }
 
+      console.log('getSessionDetail result:', JSON.stringify(data, null, 2));
+      
       // Sort sets by log time or set number
       if (data.session_sets) {
           data.session_sets.sort((a, b) => a.set_number - b.set_number);
@@ -153,6 +156,46 @@ export const sessionsService = {
       return data;
     } catch (err) {
       console.error('getSessionDetail exception:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * Delete a session and completely wipe related tracking
+   */
+  async deleteSession(sessionId) {
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', sessionId);
+      
+      if (error) {
+        console.error('deleteSession error:', error);
+        throw error;
+      }
+    } catch (err) {
+      console.error('deleteSession exception:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * Bulk delete sessions.
+   */
+  async bulkDeleteSessions(sessionIds) {
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .in('id', sessionIds);
+      
+      if (error) {
+        console.error('bulkDeleteSessions error:', error);
+        throw error;
+      }
+    } catch (err) {
+      console.error('bulkDeleteSessions exception:', err);
       throw err;
     }
   }

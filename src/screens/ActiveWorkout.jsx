@@ -1,321 +1,572 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  BackHandler,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { useWorkout } from '../context/WorkoutContext';
-import { MaterialCommunityIcons, AntDesign, Feather } from '@expo/vector-icons';
 import { useMonolithAlert } from '../context/AlertContext';
+import { MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
+
+const UI_STORAGE_KEY = '@monolith_activeWorkout_ui';
 
 const ActiveWorkout = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
-  const { activeSession, activeSets, logSet, finishWorkout, cancelWorkout } = useWorkout();
+  const { activeSession, finishWorkout, cancelWorkout } = useWorkout();
   const { showAlert } = useMonolithAlert();
-  
-  const [notes, setNotes] = useState('');
-  const [timer, setTimer] = useState(0);
 
+  // Session timer
+  const [sessionTimer, setSessionTimer] = useState(0);
+
+  // Per-set input values: key = "exerciseId-setIndex", value = { weight, reps }
+  const [setInputs, setSetInputs] = useState({});
+
+  // Completed sets: key = "exerciseId-setIndex", value = true
+  const [completedSets, setCompletedSets] = useState({});
+
+  // Rest timer
+  const [restDuration, setRestDuration] = useState('90');
+  const [restRemaining, setRestRemaining] = useState(0);
+
+  // Session notes
+  const [notes, setNotes] = useState('');
+
+  // Gate the persist effect — don't write state until restore has completed
+  const hasRestored = useRef(false);
+
+  // Allow navigation.goBack() through after user confirms DISCARD
+  const discardConfirmed = useRef(false);
+
+  // Session timer tick
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimer(prev => prev + 1);
+      setSessionTimer(prev => prev + 1);
+      setRestRemaining(prev => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(interval);
   }, []);
 
+  // Restore UI state from AsyncStorage when session loads
+  useEffect(() => {
+    if (!activeSession?.id) return;
+    hasRestored.current = false; // reset for new session
+    const restore = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(UI_STORAGE_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          if (saved?.sessionId === activeSession.id) {
+            setSetInputs(saved.setInputs || {});
+            setCompletedSets(saved.completedSets || {});
+            setNotes(saved.notes || '');
+            setRestDuration(saved.restDuration || '90');
+          }
+        }
+      } catch (e) {
+        // Nothing to restore
+      } finally {
+        hasRestored.current = true;
+      }
+    };
+    restore();
+  }, [activeSession?.id]);
+
+  // Persist UI state to AsyncStorage on every change — only after restore is complete
+  useEffect(() => {
+    if (!activeSession?.id || !hasRestored.current) return;
+    const save = async () => {
+      try {
+        await AsyncStorage.setItem(UI_STORAGE_KEY, JSON.stringify({
+          sessionId: activeSession.id,
+          setInputs,
+          completedSets,
+          notes,
+          restDuration,
+        }));
+      } catch (e) {
+        // Fail silently
+      }
+    };
+    save();
+  }, [setInputs, completedSets, notes, restDuration, activeSession?.id]);
+
+  // Hardware back button interception
+  useEffect(() => {
+    const onBack = () => {
+      handleCancel();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
+    return () => sub.remove();
+  }, []);
+
+  // Navigation gesture interception
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (discardConfirmed.current) return; // user confirmed — let it through
+      e.preventDefault();
+      handleCancel();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  // Hide tab bar while active session is open
+  useEffect(() => {
+    navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } });
+    return () => {
+      navigation.getParent()?.setOptions({ tabBarStyle: undefined });
+    };
+  }, [navigation]);
+
   const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
   };
 
-  const handleFinish = async () => {
+  const handleInputChange = (exId, setIdx, field, value) => {
+    const key = `${exId}-${setIdx}`;
+    setSetInputs(prev => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: value },
+    }));
+  };
+
+  const handleTick = (exId, setIdx) => {
+    const key = `${exId}-${setIdx}`;
+    if (completedSets[key]) return;
+
+    const weight = setInputs[key]?.weight;
+    const reps = setInputs[key]?.reps;
+
+    if (!weight || !reps) {
+      showAlert('MISSING DATA', 'Enter weight and reps before completing a set.');
+      return;
+    }
+
+    setCompletedSets(prev => ({ ...prev, [key]: true }));
+    setRestRemaining(parseInt(restDuration) || 90);
+  };
+
+  const isSetLocked = (exId, setIdx) => {
+    if (setIdx === 0) return false;
+    const prevKey = `${exId}-${setIdx - 1}`;
+    return !completedSets[prevKey];
+  };
+
+  const allSetsComplete = () => {
+    if (!activeSession?.exercises) return false;
+    for (const ex of activeSession.exercises) {
+      const exId = ex.id || ex.exercise_id;
+      const count = ex.sets_target || 3;
+      for (let i = 0; i < count; i++) {
+        if (!completedSets[`${exId}-${i}`]) return false;
+      }
+    }
+    return true;
+  };
+
+  const handleFinish = () => {
+    if (!allSetsComplete()) {
+      showAlert(
+        'INCOMPLETE SESSION',
+        'Some sets are not yet marked complete. Finish anyway?',
+        [
+          { text: 'KEEP WORKING', style: 'cancel' },
+          { text: 'FINISH EARLY', style: 'destructive', onPress: commitSession },
+        ]
+      );
+    } else {
+      showAlert(
+        'FINISH SESSION',
+        'Are you sure you want to commit this session to the Monolith?',
+        [
+          { text: 'CANCEL', style: 'cancel' },
+          { text: 'COMMIT', onPress: commitSession },
+        ]
+      );
+    }
+  };
+
+  const commitSession = async () => {
+    try {
+      await AsyncStorage.removeItem(UI_STORAGE_KEY);
+      const setsToCommit = {};
+      Object.keys(completedSets).forEach(key => {
+        if (completedSets[key]) {
+          setsToCommit[key] = {
+            weight: setInputs[key]?.weight || '0',
+            reps: setInputs[key]?.reps || '0',
+          };
+        }
+      });
+      await finishWorkout(setsToCommit, notes);
+      navigation.navigate('Tabs', { screen: 'Log' });
+    } catch (e) {
+      showAlert('ERROR', 'Failed to save session. Please try again.');
+    }
+  };
+
+  const handleCancel = useCallback(() => {
     showAlert(
-      "FINISH SESSION",
-      "Are you sure you want to commit this session to the Monolith?",
+      'CANCEL SESSION',
+      'Discard all logged data? This action is irreversible.',
       [
-        { text: "CANCEL", style: "cancel" },
-        { 
-          text: "COMMIT", 
+        { text: 'KEEP WORKING', style: 'cancel' },
+        {
+          text: 'DISCARD',
+          style: 'destructive',
           onPress: async () => {
-            try {
-              await finishWorkout(notes);
-              navigation.navigate('Tabs', { screen: 'Log' });
-            } catch (error) {
-              showAlert("Error", "Failed to save session");
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleCancel = () => {
-    showAlert(
-      "CANCEL SESSION",
-      "Discard all logged data? This action is irreversible.",
-      [
-        { text: "KEEP WORKING", style: "cancel" },
-        { 
-          text: "DISCARD", 
-          style: "destructive",
-          onPress: () => {
-            cancelWorkout();
+            await AsyncStorage.removeItem(UI_STORAGE_KEY);
+            await cancelWorkout();
+            discardConfirmed.current = true;
             navigation.goBack();
-          }
-        }
+          },
+        },
       ]
     );
-  };
+  }, [showAlert, cancelWorkout, navigation]);
 
   if (!activeSession) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: colors.text }}>NO ACTIVE SESSION</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 20 }}>
-          <Text style={{ color: '#CCFF00' }}>GO BACK</Text>
-        </TouchableOpacity>
+        <ActivityIndicator color="#CCFF00" />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleCancel}>
-           <AntDesign name="close" size={24} color={colors.secondaryText} />
+        <TouchableOpacity onPress={handleCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <AntDesign name="close" size={22} color={colors.secondaryText} />
         </TouchableOpacity>
-        <View style={styles.timerContainer}>
-           <MaterialCommunityIcons name="clock-outline" size={16} color="#CCFF00" />
-           <Text style={[styles.timerText, { color: '#CCFF00' }]}>{formatTime(timer)}</Text>
+
+        <View style={styles.headerCenter}>
+          {restRemaining > 0 && (
+            <View style={[styles.restBadge, { backgroundColor: '#CCFF00' }]}>
+              <MaterialCommunityIcons name="timer-sand" size={11} color="#000" />
+              <Text style={styles.restBadgeText}>{formatTime(restRemaining)}</Text>
+            </View>
+          )}
+          <MaterialCommunityIcons name="clock-outline" size={14} color={colors.text} />
+          <Text style={[styles.timerText, { color: colors.text }]}>{formatTime(sessionTimer)}</Text>
         </View>
-        <TouchableOpacity onPress={handleFinish}>
-           <Text style={styles.finishBtn}>FINISH</Text>
+
+        <TouchableOpacity onPress={handleFinish} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Text style={styles.finishBtn}>FINISH</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+        >
+          {/* Title */}
           <Text style={[styles.subLabel, { color: colors.secondaryText }]}>ACTIVE PROTOCOL</Text>
-          <Text style={[styles.mainTitle, { color: colors.text }]}>{activeSession.workout_name?.toUpperCase() || 'FREE SESSION'}</Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>
+            {activeSession.workout_name?.toUpperCase() || 'FREE SESSION'}
+          </Text>
 
-          {/* Exercise Logging Section */}
-          {activeSession.exercises?.map((exercise, exIdx) => (
-            <View key={exercise.exercise_id || exIdx} style={styles.exerciseSection}>
-               <Text style={[styles.exerciseName, { color: colors.text }]}>{exercise.name.toUpperCase()}</Text>
-               
-               {/* Logged Sets for this Exercise */}
-               <View style={styles.setsList}>
-                  {activeSets.filter(s => s.exercise_id === exercise.exercise_id).map((set, sIdx) => (
-                    <View key={set.id || sIdx} style={[styles.setRow, { borderBottomColor: colors.border }]}>
-                       <Text style={[styles.setNum, { color: colors.secondaryText }]}>SET {set.set_number}</Text>
-                       <Text style={[styles.setData, { color: colors.text }]}>{set.weight_kg} {units.toUpperCase()} × {set.reps}</Text>
-                       {set.is_pr && <MaterialCommunityIcons name="trophy" size={16} color="#CCFF00" />}
-                    </View>
-                  ))}
-               </View>
-
-               {/* Add Set Input */}
-               <AddSetInputs 
-                  exerciseId={exercise.exercise_id} 
-                  onLog={logSet} 
-                  colors={colors} 
-                  units={units}
-               />
-            </View>
-          ))}
-
-          {/* Session Notes */}
-          <View style={styles.notesContainer}>
-             <Text style={[styles.notesLabel, { color: colors.secondaryText }]}>SESSION NOTES</Text>
-             <TextInput 
-                style={[styles.notesInput, { color: colors.text, borderColor: colors.border }]}
-                placeholder="ANY OBSERVATIONS?"
-                placeholderTextColor={colors.secondaryText}
-                multiline
-                value={notes}
-                onChangeText={setNotes}
-             />
+          {/* Rest duration config */}
+          <View style={styles.restConfig}>
+            <Text style={[styles.restConfigLabel, { color: colors.secondaryText }]}>REST (SEC)</Text>
+            <TextInput
+              style={[styles.restConfigInput, { color: colors.text, borderColor: colors.border }]}
+              value={restDuration}
+              onChangeText={setRestDuration}
+              keyboardType="numeric"
+            />
           </View>
 
-          <View style={{ height: 100 }} />
-        </View>
-      </ScrollView>
+          {/* Exercise Sections */}
+          {activeSession.exercises?.map((exercise, exIdx) => {
+            const exId = exercise.id || exercise.exercise_id;
+            const setsCount = exercise.sets_target || 3;
+
+            const allDone = Array.from({ length: setsCount }).every((_, i) =>
+              completedSets[`${exId}-${i}`]
+            );
+
+            return (
+              <View key={exId} style={[styles.exerciseSection, { borderColor: colors.border }]}>
+                {/* Exercise name row */}
+                <View style={styles.exerciseNameRow}>
+                  {allDone && (
+                    <MaterialCommunityIcons name="check-circle" size={16} color="#CCFF00" style={{ marginRight: 8 }} />
+                  )}
+                  <Text style={[styles.exerciseName, { color: colors.text }]}>
+                    {exercise.name?.toUpperCase()}
+                  </Text>
+                </View>
+
+                {/* Sets table header */}
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.thText, { flex: 0.5, color: colors.secondaryText }]}>SET</Text>
+                  <Text style={[styles.thText, { flex: 1, textAlign: 'center', color: colors.secondaryText }]}>
+                    {units.toUpperCase()}
+                  </Text>
+                  <Text style={[styles.thText, { flex: 1, textAlign: 'center', color: colors.secondaryText }]}>REPS</Text>
+                  <Text style={[styles.thText, { flex: 0.5, textAlign: 'right', color: colors.secondaryText }]}>DONE</Text>
+                </View>
+
+                {/* Set rows */}
+                {Array.from({ length: setsCount }).map((_, setIdx) => {
+                  const key = `${exId}-${setIdx}`;
+                  const locked = isSetLocked(exId, setIdx);
+                  const done = !!completedSets[key];
+                  const rowOpacity = locked ? 0.3 : 1;
+                  const rowBg = done ? (isDarkMode ? '#1A2400' : '#F4FFD4') : 'transparent';
+
+                  return (
+                    <View
+                      key={key}
+                      style={[styles.setRow, { opacity: rowOpacity, backgroundColor: rowBg }]}
+                    >
+                      {/* Set number */}
+                      <Text style={[styles.setNum, { color: done ? '#CCFF00' : colors.secondaryText }]}>
+                        {setIdx + 1}
+                      </Text>
+
+                      {/* Weight input */}
+                      <TextInput
+                        style={[
+                          styles.setInput,
+                          {
+                            color: done ? '#CCFF00' : colors.text,
+                            borderBottomColor: done ? 'transparent' : colors.border,
+                          },
+                        ]}
+                        keyboardType="numeric"
+                        placeholder="—"
+                        placeholderTextColor={colors.secondaryText}
+                        value={setInputs[key]?.weight || ''}
+                        onChangeText={v => handleInputChange(exId, setIdx, 'weight', v)}
+                        editable={!done && !locked}
+                      />
+
+                      {/* Reps input */}
+                      <TextInput
+                        style={[
+                          styles.setInput,
+                          {
+                            color: done ? '#CCFF00' : colors.text,
+                            borderBottomColor: done ? 'transparent' : colors.border,
+                          },
+                        ]}
+                        keyboardType="numeric"
+                        placeholder="—"
+                        placeholderTextColor={colors.secondaryText}
+                        value={setInputs[key]?.reps || ''}
+                        onChangeText={v => handleInputChange(exId, setIdx, 'reps', v)}
+                        editable={!done && !locked}
+                      />
+
+                      {/* Done checkbox */}
+                      <TouchableOpacity
+                        style={[
+                          styles.checkbox,
+                          {
+                            borderColor: done ? '#CCFF00' : colors.border,
+                            backgroundColor: done ? '#CCFF00' : 'transparent',
+                          },
+                        ]}
+                        onPress={() => handleTick(exId, setIdx)}
+                        disabled={done || locked}
+                      >
+                        {done && <AntDesign name="check" size={12} color="#000" />}
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })}
+
+          {/* Session notes */}
+          <View style={styles.notesSection}>
+            <Text style={[styles.subLabel, { color: colors.secondaryText }]}>SESSION LOGS</Text>
+            <TextInput
+              style={[styles.notesInput, { color: colors.text, borderColor: colors.border }]}
+              placeholder="ANY OBSERVATIONS?"
+              placeholderTextColor={colors.secondaryText}
+              multiline
+              value={notes}
+              onChangeText={setNotes}
+            />
+          </View>
+
+          <View style={{ height: 120 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
-const AddSetInputs = ({ exerciseId, onLog, colors, units }) => {
-  const [weight, setWeight] = useState('');
-  const [reps, setReps] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { showAlert } = useMonolithAlert();
-
-  const handleLog = async () => {
-    if (!weight || !reps) return;
-    setLoading(true);
-    try {
-      await onLog(exerciseId, parseFloat(weight), parseInt(reps));
-      setWeight('');
-      setReps('');
-    } catch (error) {
-      showAlert("Error", "Failed to log set");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <View style={[styles.addSetRow, { backgroundColor: colors.secondaryBackground }]}>
-      <View style={styles.inputWrapper}>
-        <Text style={[styles.tinyLabel, { color: colors.secondaryText }]}>{units.toUpperCase()}</Text>
-        <TextInput 
-          style={[styles.smallInput, { color: colors.text }]}
-          keyboardType="numeric"
-          value={weight}
-          onChangeText={setWeight}
-          placeholder="0"
-          placeholderTextColor={colors.secondaryText}
-        />
-      </View>
-      <View style={styles.inputWrapper}>
-        <Text style={[styles.tinyLabel, { color: colors.secondaryText }]}>REPS</Text>
-        <TextInput 
-          style={[styles.smallInput, { color: colors.text }]}
-          keyboardType="numeric"
-          value={reps}
-          onChangeText={setReps}
-          placeholder="0"
-          placeholderTextColor={colors.secondaryText}
-        />
-      </View>
-      <TouchableOpacity 
-        style={[styles.addBtn, { backgroundColor: colors.text }]} 
-        onPress={handleLog}
-        disabled={loading}
-      >
-        {loading ? <ActivityIndicator size="small" color={colors.background} /> : <AntDesign name="plus" size={20} color={colors.background} />}
-      </TouchableOpacity>
-    </View>
-  );
-};
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    height: 60,
+    height: 56,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#222',
   },
-  timerContainer: {
+  headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
   timerText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
     fontVariant: ['tabular-nums'],
+    letterSpacing: 1,
+  },
+  restBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 3,
+    gap: 4,
+    marginRight: 4,
+  },
+  restBadgeText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#000',
   },
   finishBtn: {
     color: '#CCFF00',
     fontWeight: '900',
-    fontSize: 14,
-    letterSpacing: 1,
+    fontSize: 13,
+    letterSpacing: 1.5,
   },
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
+  scroll: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
   },
   subLabel: {
     fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 1.5,
+    letterSpacing: 2,
   },
   mainTitle: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '900',
-    marginTop: 5,
-    letterSpacing: -1,
+    letterSpacing: -0.5,
+    marginTop: 4,
+    marginBottom: 20,
+  },
+  restConfig: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  restConfigLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  restConfigInput: {
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    fontSize: 12,
+    fontWeight: '900',
+    width: 52,
+    textAlign: 'center',
   },
   exerciseSection: {
-    marginTop: 40,
+    marginTop: 28,
+    borderWidth: 1,
+  },
+  exerciseNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#333',
   },
   exerciseName: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '900',
-    marginBottom: 15,
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
-  setsList: {
-    marginBottom: 10,
+  tableHeader: {
+    flexDirection: 'row',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  thText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   setRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   setNum: {
-    fontSize: 12,
-    fontWeight: '700',
-    width: 50,
+    flex: 0.5,
+    fontSize: 13,
+    fontWeight: '900',
   },
-  setData: {
+  setInput: {
     flex: 1,
+    textAlign: 'center',
     fontSize: 16,
     fontWeight: '800',
+    borderBottomWidth: 1,
+    paddingVertical: 4,
+    marginHorizontal: 6,
   },
-  addSetRow: {
-    flexDirection: 'row',
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 4,
-    gap: 12,
-  },
-  inputWrapper: {
-    flex: 1,
-  },
-  tinyLabel: {
-    fontSize: 8,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  smallInput: {
-    fontSize: 18,
-    fontWeight: '900',
-    padding: 0,
-  },
-  addBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignSelf: 'flex-end',
+    marginLeft: 'auto',
   },
-  notesContainer: {
-    marginTop: 60,
-  },
-  notesLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 10,
+  notesSection: {
+    marginTop: 36,
+    gap: 10,
   },
   notesInput: {
     borderWidth: 1,
-    padding: 15,
-    borderRadius: 4,
-    height: 100,
+    padding: 14,
+    height: 90,
     textAlignVertical: 'top',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
+    marginTop: 8,
   },
 });
 

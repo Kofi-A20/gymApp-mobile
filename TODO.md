@@ -8,9 +8,11 @@ Screens to fix and build out:
    - Visual indicator on days that have logged sessions
 
 2. Weights Log Screen
-   - Display logged session history
-   - Show volume, sets, reps per session
-   - Filter/sort options
+   - [x] Display logged session history
+   - [x] Show volume, sets, reps per session
+   - [ ] Filter/sort options
+   - [x] History cards with detail drill-down
+   - [x] Delete and edit specific historical sets
 
 3. Calorie Calculator Screen
    - Wire up to user profile data (weight, height, activity level, goal)
@@ -32,14 +34,22 @@ Screens to fix and build out:
    - Muscle heat map diagram showing targeted muscles per exercise
 
 7. Start Session Flow
-   - START SESSION button in workout detail needs to be fully wired up
-   - Create session in Supabase
-   - Log sets and reps during active workout
-   - Complete session and save to sessions table
+   - [x] START SESSION button in workout detail needs to be fully wired up
+   - [x] Create session in Supabase (on completion)
+   - [x] Log sets and reps during active workout (locally with AsyncStorage)
+   - [x] Progressive set locking (unlock 1 by 1)
+   - [x] Background persistence (AsyncStorage)
+   - [x] Navigation lockdown (No back/tabs)
+   - [x] Complete session and save to sessions table in bulk
 
 8. Workout Detail Screen Redesign
-   - Each exercise row should show sets x reps targets, not coaching cues
-   - Coaching cues should be hidden by default
-   - Tapping the right arrow on an exercise opens a detail/info view
-     showing coaching cues and muscle diagram
-   - This makes the routine view compact and scannable
+   - [x] Each exercise row should show sets x reps targets, not coaching cues
+   - [x] Coaching cues should be hidden by default
+   - [x] Tapping the right arrow on an exercise opens a detail/info view showing coaching cues
+   - [ ] Implement muscle diagram visualization in expanded view
+   - [x] This makes the routine view compact and scannable.
+
+9. Weights Log Screen Redesign
+   - [x] History-based card view implemented
+   - [ ] Add PR Progression Archive (Exercise name, last weight, best weight)
+   - [ ] Motivates progression by showing hit PRs clearly

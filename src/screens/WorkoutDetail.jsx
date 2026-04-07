@@ -18,7 +18,16 @@ const WorkoutDetail = ({ route, navigation }) => {
   
   const [starting, setStarting] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [expandedExercises, setExpandedExercises] = useState({});
   const [editedExercises, setEditedExercises] = useState(workout?.exercises ? JSON.parse(JSON.stringify(workout.exercises)) : []);
+
+  const toggleExpand = (index) => {
+    if (isEditMode) return;
+    setExpandedExercises(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
 
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
@@ -258,9 +267,12 @@ const WorkoutDetail = ({ route, navigation }) => {
   };
 
   const renderExerciseItem = ({ item, index }) => {
+    const isExpanded = expandedExercises[index];
+
     return (
         <TouchableOpacity
-          disabled={true}
+          disabled={isEditMode}
+          onPress={() => toggleExpand(index)}
           style={[
             styles.exerciseCard,
             { paddingHorizontal: 24, paddingVertical: 10, marginBottom: 20 },
@@ -271,7 +283,9 @@ const WorkoutDetail = ({ route, navigation }) => {
             <View style={{flexDirection: 'row', alignItems: 'center', flex: 1}}>
               <View style={{flex: 1}}>
                 <Text style={[styles.exerciseName, { color: colors.text }]}>{item.name?.toUpperCase()}</Text>
-                <Text style={[styles.exerciseDetails, { color: colors.secondaryText }]}>MOVEMENT ARCHIVE {index + 1}</Text>
+                <Text style={[styles.exerciseDetails, { color: colors.secondaryText }]}>
+                  {isEditMode ? `MOVEMENT ARCHIVE ${index + 1}` : `${item.sets_target || 3} SETS × ${item.reps_target || 10} REPS`}
+                </Text>
               </View>
             </View>
             {isEditMode ? (
@@ -291,7 +305,7 @@ const WorkoutDetail = ({ route, navigation }) => {
                  </TouchableOpacity>
               </View>
             ) : (
-              <AntDesign name="right" size={16} color={colors.text} />
+              <AntDesign name={isExpanded ? "down" : "right"} size={16} color={colors.text} />
             )}
           </View>
 
@@ -330,17 +344,19 @@ const WorkoutDetail = ({ route, navigation }) => {
                 />
              </View>
           ) : (
-             <View style={[styles.cuesContainer, { backgroundColor: colors.secondaryBackground }]}>
-                <Text style={[styles.cuesTitle, { color: colors.secondaryText }]}>COACHING CUES</Text>
-                <View style={styles.cueRow}>
-                   <Text style={[styles.cueId, { color: colors.text }]}>01</Text>
-                   <Text style={[styles.cueText, { color: colors.text }]}>Maintain absolute control throughout the full range of motion.</Text>
-                </View>
-                <View style={styles.cueRow}>
-                   <Text style={[styles.cueId, { color: colors.text }]}>02</Text>
-                   <Text style={[styles.cueText, { color: colors.text }]}>Mind-muscle synchronization is mandatory for adaptation.</Text>
-                </View>
-             </View>
+             isExpanded && (
+               <View style={[styles.cuesContainer, { backgroundColor: colors.secondaryBackground }]}>
+                  <Text style={[styles.cuesTitle, { color: colors.secondaryText }]}>COACHING CUES</Text>
+                  <View style={styles.cueRow}>
+                     <Text style={[styles.cueId, { color: colors.text }]}>01</Text>
+                     <Text style={[styles.cueText, { color: colors.text }]}>Maintain absolute control throughout the full range of motion.</Text>
+                  </View>
+                  <View style={styles.cueRow}>
+                     <Text style={[styles.cueId, { color: colors.text }]}>02</Text>
+                     <Text style={[styles.cueText, { color: colors.text }]}>Mind-muscle synchronization is mandatory for adaptation.</Text>
+                  </View>
+               </View>
+             )
           )}
         </TouchableOpacity>
     );

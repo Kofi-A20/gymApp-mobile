@@ -46,8 +46,7 @@ export const setsService = {
             await supabase
                 .from('milestones')
                 .update({ 
-                    current_weight_kg: weight_kg,
-                    achieved_at: weight_kg >= supabase.from('milestones').select('target_weight_kg').eq('exercise_id', exerciseId).eq('user_id', user.id).single() ? new Date().toISOString() : null
+                    current_weight_kg: weight_kg
                 })
                 .eq('user_id', user.id)
                 .eq('exercise_id', exerciseId)
@@ -102,5 +101,76 @@ export const setsService = {
       .eq('id', setId);
     
     if (error) throw error;
+  },
+
+  /**
+   * Update an existing historical set's metrics
+   */
+  async updateSet(setId, weight_kg, reps) {
+    const { data, error } = await supabase
+      .from('session_sets')
+      .update({
+        weight_kg: weight_kg,
+        reps: reps
+      })
+      .eq('id', setId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Fetch PR progression for all exercises.
+   * Groups by exercise to find Best All-Time and Last Logged weights.
+   */
+  async getUserProgression() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data, error } = await supabase
+        .from('session_sets')
+        .select(`
+          weight_kg,
+          reps,
+          logged_at,
+          exercise_id,
+          exercises (name),
+          sessions!inner (user_id)
+        `)
+        .eq('sessions.user_id', user.id)
+        .order('logged_at', { ascending: false });
+
+      if (error) throw error;
+
+      const progressionMap = {};
+      
+      (data || []).forEach(set => {
+        const exId = set.exercise_id;
+        const exName = set.exercises?.name || 'UNKNOWN';
+
+        if (!progressionMap[exId]) {
+          progressionMap[exId] = {
+            id: exId,
+            name: exName,
+            bestWeight: set.weight_kg,
+            lastWeight: set.weight_kg,
+            lastDate: set.logged_at
+          };
+        } else {
+          // Update best if current set is higher
+          if (set.weight_kg > progressionMap[exId].bestWeight) {
+            progressionMap[exId].bestWeight = set.weight_kg;
+          }
+        }
+      });
+
+      return Object.values(progressionMap).sort((a, b) => a.name.localeCompare(b.name));
+    } catch (err) {
+      console.error('getUserProgression error:', err);
+      throw err;
+    }
   }
 };
