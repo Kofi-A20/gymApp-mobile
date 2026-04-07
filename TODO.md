@@ -3,9 +3,9 @@ NEXT SESSION - TODO
 Screens to fix and build out:
 
 1. Calendar Screen
-   - Wire up actual session data to calendar days
-   - Tap a day to see what workout was done
-   - Visual indicator on days that have logged sessions
+   - [x] Wire up actual session data to calendar days
+   - [x] Tap a day to see what workout was done
+   - [x] Visual indicator on days that have logged sessions
 
 2. Weights Log Screen
    - [x] Display logged session history

@@ -11,6 +11,16 @@ import { ProfileProvider } from './src/context/ProfileContext';
 import { AlertProvider } from './src/context/AlertContext';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
+import * as Notifications from 'expo-notifications';
+
+// Handle notifications while the app is in the foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const prefix = Linking.createURL('/');
 

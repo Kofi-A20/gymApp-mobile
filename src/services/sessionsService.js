@@ -77,6 +77,42 @@ export const sessionsService = {
   },
 
   /**
+   * Fetch all sessions for a specific month.
+   * Month is 1-indexed (1 = Jan, 12 = Dec).
+   */
+  async getSessionsForMonth(year, month) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const startDate = new Date(year, month - 1, 1).toISOString();
+      const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+
+      const { data, error } = await supabase
+        .from('sessions')
+        .select(`
+          *,
+          workouts (name)
+        `)
+        .eq('user_id', user.id)
+        .gte('completed_at', startDate)
+        .lte('completed_at', endDate)
+        .not('completed_at', 'is', null)
+        .order('completed_at', { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []).map(s => ({
+        ...s,
+        workout_name: s.workout_name || s.workouts?.name || 'FREE SESSION'
+      }));
+    } catch (err) {
+      console.error('getSessionsForMonth exception:', err);
+      throw err;
+    }
+  },
+
+  /**
    * Fetch session history for the current user.
    * Now includes nested exercises for consistent display in WorkoutDetail.
    */
