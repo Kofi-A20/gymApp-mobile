@@ -128,7 +128,12 @@ const AddWorkout = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
         <View style={styles.content}>
           <Text style={[styles.subLabel, { color: colors.secondaryText }]}>NEW ENTRY</Text>
           <Text style={[styles.mainTitle, { color: colors.text }]}>DEFINE{"\n"}THE SESSION</Text>

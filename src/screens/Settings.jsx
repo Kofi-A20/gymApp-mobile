@@ -2,10 +2,22 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
-import { MaterialCommunityIcons, Ionicons, AntDesign, FontAwesome } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
+import { MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
+import { useMonolithAlert } from '../context/AlertContext';
 
 const Settings = ({ navigation }) => {
   const { isDarkMode, toggleTheme, units, toggleUnits, notifications, toggleNotifications, colors } = useTheme();
+  const { signOut } = useAuth();
+  const { showAlert } = useMonolithAlert();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      showAlert('Error', 'Failed to log out');
+    }
+  };
 
   const SectionHeader = ({ id, title }) => (
     <View style={styles.sectionHeaderContainer}>
@@ -16,50 +28,27 @@ const Settings = ({ navigation }) => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
         {/* Branding Header */}
         <View style={styles.brandHeader}>
-          <Ionicons name="menu" size={24} color={colors.text} />
-          <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-          <Image 
-            source={{ uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100' }} 
-            style={styles.avatar} 
-          />
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <AntDesign name="arrowleft" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.brandTitle, { color: colors.text }]}>SETTINGS</Text>
+          <View style={{ width: 24 }} />
         </View>
 
         <View style={styles.content}>
           <Text style={[styles.topLabel, { color: colors.secondaryText }]}>SYSTEM PREFERENCES</Text>
-          <Text style={[styles.mainTitle, { color: colors.text }]}>SETTINGS</Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>OPTIONS</Text>
 
-          {/* Section 01: Account */}
-          <SectionHeader id="01" title="Account" />
-          <TouchableOpacity 
-            style={[styles.accountCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
-            onPress={() => navigation.navigate('Profile')}
-          >
-            <View style={styles.accountInfo}>
-              <View style={[styles.avatarPlaceholder, { backgroundColor: isDarkMode ? '#333' : '#E0E0E0' }]}>
-                <MaterialCommunityIcons name="account" size={40} color={isDarkMode ? '#666' : '#999'} />
-                <View style={styles.onlineBadge} />
-              </View>
-              <View style={styles.userInfo}>
-                <Text style={[styles.authSub, { color: colors.secondaryText }]}>AUTHENTICATED USER</Text>
-                <Text style={[styles.userName, { color: colors.text }]}>Alexander Vance</Text>
-              </View>
-            </View>
-            <AntDesign name="right" size={20} color={colors.text} />
-          </TouchableOpacity>
-
-          <View style={styles.securityRow}>
-             <View>
-                <Text style={[styles.securityLabel, { color: colors.text }]}>SECURITY & PASSWORD</Text>
-                <Text style={[styles.securitySub, { color: colors.secondaryText }]}>LAST CHANGED 4 MONTHS AGO</Text>
-             </View>
-             <FontAwesome name="lock" size={20} color={colors.text} />
-          </View>
-
-          {/* Section 02: Interface */}
-          <SectionHeader id="02" title="Interface" />
+          {/* Section 01: Interface */}
+          <SectionHeader id="01" title="Interface" />
           <View style={styles.interfaceGrid}>
             <TouchableOpacity 
               onPress={() => isDarkMode && toggleTheme()}
@@ -86,8 +75,8 @@ const Settings = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Section 03: Alerts & Units */}
-          <SectionHeader id="03" title="Alerts & Units" />
+          {/* Section 02: Alerts & Units */}
+          <SectionHeader id="02" title="Alerts & Units" />
           <View style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground }]}>
              <View style={styles.toggleRow}>
                 <View>
@@ -115,24 +104,7 @@ const Settings = ({ navigation }) => {
              </View>
           </View>
 
-          {/* Section 04: Terminal */}
-          <SectionHeader id="04" title="Terminal" />
-          <View style={styles.terminal}>
-             <TouchableOpacity style={styles.terminalLink}>
-                <Text style={[styles.terminalText, { color: colors.text }]}>CONTACT SUPPORT</Text>
-                <MaterialCommunityIcons name="export-variant" size={18} color={colors.text} />
-             </TouchableOpacity>
-             <TouchableOpacity style={styles.terminalLink}>
-                <Text style={[styles.terminalText, { color: colors.text }]}>PRIVACY POLICY</Text>
-                <MaterialCommunityIcons name="export-variant" size={18} color={colors.text} />
-             </TouchableOpacity>
-             <View style={styles.terminalLink}>
-                <Text style={[styles.terminalText, { color: colors.text }]}>VERSION 1.0.1 (STABLE)</Text>
-                <MaterialCommunityIcons name="update" size={18} color={colors.text} />
-             </View>
-          </View>
-
-          <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.danger }]}>
+          <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.danger }]} onPress={handleLogout}>
              <Text style={[styles.logoutText, { color: colors.danger }]}>TERMINATE ACCOUNT SESSION</Text>
           </TouchableOpacity>
 

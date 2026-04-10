@@ -1,168 +1,225 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Slider from '@react-native-community/slider';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
-import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 
-const ACTIVITY_LEVELS = [
-  { label: 'SEDENTARY', factor: 1.2 },
-  { label: 'LIGHT', factor: 1.375 },
-  { label: 'MODERATE', factor: 1.55 },
-  { label: 'ACTIVE', factor: 1.725 },
+const ACTIVITY_OPTIONS = [
+  { label: '1–2 days/week', value: 1.2 },
+  { label: '3–4 days/week', value: 1.375 },
+  { label: '5–6 days/week', value: 1.55 },
+  { label: 'Daily', value: 1.725 },
 ];
+
+const STRATEGIES = [
+  { label: 'CUT',      offset: -500, color: '#CCFF00' },
+  { label: 'MAINTAIN', offset: 0,    color: '#FFF' },
+  { label: 'BULK',     offset: 300,  color: '#CCFF00' },
+];
+
+// Derive strategy from comparing current vs goal weight
+const deriveStrategy = (weightKg, goalWeightKg) => {
+  const diff = goalWeightKg - weightKg;
+  if (diff < -0.5) return 0;      // CUT
+  if (diff > 0.5)  return 2;      // BULK
+  return 1;                        // MAINTAIN
+};
 
 const Calories = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
-  const { profile, updateProfile } = useProfile();
-  
-  // Local state for interactive sliders (synced to profile on adjust)
-  const [weight, setWeight] = useState(profile?.weight_kg || 78.5);
-  const [height, setHeight] = useState(profile?.height_cm || 180);
-  const [activity, setActivity] = useState(1); // LIGHT as default
+  const { profile, refreshProfile } = useProfile();
 
-  // Mifflin-St Jeor Equation
-  const bmr = useMemo(() => {
-    const w = units === 'lbs' ? weight * 0.453592 : weight;
-    const h = height;
-    const age = profile?.age || 25;
-    const genderOffset = profile?.gender === 'female' ? -161 : 5;
-    return Math.round(10 * w + 6.25 * h - 5 * age + genderOffset);
-  }, [weight, height, profile, units]);
+  const [weight, setWeight] = useState(75);
 
-  const maintenance = useMemo(() => Math.round(bmr * ACTIVITY_LEVELS[activity].factor), [bmr, activity]);
-  const intake = maintenance - 500;
+  useFocusEffect(
+    useCallback(() => {
+      if (refreshProfile) {
+        refreshProfile();
+      }
+    }, [refreshProfile])
+  );
 
-  const handleAdjust = async () => {
-    try {
-      await updateProfile({ weight_kg: units === 'lbs' ? weight * 0.453592 : weight, height_cm: height });
-    } catch (error) {
-      console.error('Failed to update biometrics:', error);
+  useEffect(() => {
+    if (profile) {
+      setWeight(units === 'lbs'
+        ? (profile.weight_kg || 75) * 2.20462
+        : (profile.weight_kg || 75));
     }
+  }, [profile, units]);
+
+  // ── All other values come from profile ──
+  const gender = profile?.gender || 'male';
+  const height = profile?.height_cm || 175;
+
+  // Age from DOB or from age field (legacy fallback)
+  const age = useMemo(() => {
+    if (profile?.dob) {
+      const today = new Date();
+      const birth = new Date(profile.dob);
+      let a = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) a--;
+      return a;
+    }
+    return profile?.age || 25;
+  }, [profile]);
+
+  const gwRaw = profile?.goal_weight || 70;
+  const goalWeight = units === 'lbs' ? gwRaw * 2.20462 : gwRaw;
+
+  const actIdxRaw = ACTIVITY_OPTIONS.findIndex(a => Number(a.value) === Number(profile?.activity_level));
+  const activityIdx = actIdxRaw !== -1 ? actIdxRaw : 1;
+  const activityLabel = ACTIVITY_OPTIONS[activityIdx].label;
+
+  // ── Calculations ──
+  const weightKg     = units === 'lbs' ? weight / 2.20462 : weight;
+  const goalWeightKg = units === 'lbs' ? goalWeight / 2.20462 : goalWeight;
+
+  const strategyIdx   = deriveStrategy(weightKg, goalWeightKg);
+  const strategyLabel = STRATEGIES[strategyIdx].label;
+
+  const bmr = useMemo(() => {
+    const offset = gender === 'female' ? -161 : 5;
+    return Math.round(10 * weightKg + 6.25 * height - 5 * age + offset);
+  }, [weightKg, height, age, gender]);
+
+  const tdee         = useMemo(() => Math.round(bmr * ACTIVITY_OPTIONS[activityIdx].value), [bmr, activityIdx]);
+  const targetIntake = tdee + STRATEGIES[strategyIdx].offset;
+
+  // Macro Ranges
+  const proLow  = Math.round(weightKg * 1.6);
+  const proHigh = Math.round(weightKg * 2.2);
+  const fatLow  = Math.round(weightKg * 0.7);
+  const fatHigh = Math.round(weightKg * 1.0);
+  const carbLow  = Math.max(0, Math.round((targetIntake - proHigh * 4 - fatHigh * 9) / 4));
+  const carbHigh = Math.max(0, Math.round((targetIntake - proLow  * 4 - fatLow  * 9) / 4));
+
+  const getNote = () => {
+    if (targetIntake < 1200)
+      return 'AT THIS WEIGHT A 500 KCAL DEFICIT PUSHES INTAKE BELOW 1,200 KCAL — CONSIDER A SMALLER DEFICIT TO STAY ABOVE SAFE MINIMUMS.';
+    if (strategyIdx === 0)
+      return `EATING ${targetIntake.toLocaleString()} KCAL/DAY CREATES A ~500 KCAL DEFICIT. RECALCULATE EVERY 2–3 KG AS MAINTENANCE DROPS WITH WEIGHT.`;
+    return `EATING ${targetIntake.toLocaleString()} KCAL/DAY SUPPORTS YOUR CURRENT STRATEGY. MAINTAIN CONSISTENCY FOR BEST RESULTS.`;
   };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Ionicons name="menu" size={24} color={colors.text} />
+        <View style={{ width: 24 }} />
         <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-           <MaterialCommunityIcons name="account" size={24} color={colors.text} />
+          <MaterialCommunityIcons name="account-outline" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
         <View style={styles.content}>
           <Text style={[styles.subLabel, { color: colors.secondaryText }]}>HEALTH DIAGNOSTICS</Text>
-          <Text style={[styles.mainTitle, { color: colors.text }]}>CALORIE{"\n"}COMMAND</Text>
-          
-          <View style={styles.sliderGroup}>
-            <View style={styles.labelRow}>
-               <Text style={[styles.inputLabel, { color: colors.secondaryText }]}>WEIGHT ({units.toUpperCase()})</Text>
-               <Text style={[styles.inputValue, { color: colors.text }]}>{weight.toFixed(1)}</Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>CALORIE{'\n'}COMMAND</Text>
+
+          {/* ── TOP METRICS ── */}
+          <View style={styles.metricsGrid}>
+            <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground }]}>
+              <Text style={styles.metricLabel}>BMR</Text>
+              <Text style={[styles.metricValue, { color: colors.text }]}>{bmr.toLocaleString()}</Text>
+              <Text style={styles.metricSub}>CALORIES AT REST</Text>
             </View>
-            <Slider
-               style={styles.slider}
-               minimumValue={40}
-               maximumValue={200}
-               value={weight}
-               onValueChange={setWeight}
-               minimumTrackTintColor={isDarkMode ? '#CCFF00' : '#000'}
-               maximumTrackTintColor={colors.border}
-               thumbTintColor={isDarkMode ? '#CCFF00' : '#000'}
+            <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground }]}>
+              <Text style={styles.metricLabel}>TDEE</Text>
+              <Text style={[styles.metricValue, { color: colors.text }]}>{tdee.toLocaleString()}</Text>
+              <Text style={styles.metricSub}>CALORIES BURNED DAILY</Text>
+            </View>
+            <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground, borderColor: '#CCFF00', borderWidth: 1 }]}>
+              <Text style={[styles.metricLabel, { color: '#CCFF00' }]}>CALORIE TARGET</Text>
+              <Text style={[styles.metricValue, { color: '#CCFF00' }]}>{targetIntake.toLocaleString()}</Text>
+              <Text style={[styles.metricSub, { color: '#CCFF00' }]}>CALORIES TO EAT DAILY</Text>
+            </View>
+          </View>
+
+          {/* ── WEIGHT INPUT ── */}
+          <View style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+            <Text style={styles.cardHeader}>CURRENT WEIGHT ({units.toUpperCase()})</Text>
+            <TextInput
+              style={[styles.weightInput, { color: colors.text, borderColor: colors.border }]}
+              keyboardType="numeric"
+              value={weight.toString()}
+              onChangeText={v => {
+                const val = v.replace(/[^0-9.]/g, '');
+                setWeight(parseFloat(val) || 0);
+              }}
             />
-
-            <View style={[styles.labelRow, { marginTop: 40 }]}>
-               <Text style={[styles.inputLabel, { color: colors.secondaryText }]}>HEIGHT (CM)</Text>
-               <Text style={[styles.inputValue, { color: colors.text }]}>{height}</Text>
-            </View>
-            <Slider
-               style={styles.slider}
-               minimumValue={120}
-               maximumValue={240}
-               value={height}
-               onValueChange={v => setHeight(Math.round(v))}
-               minimumTrackTintColor={isDarkMode ? '#CCFF00' : '#000'}
-               maximumTrackTintColor={colors.border}
-               thumbTintColor={isDarkMode ? '#CCFF00' : '#000'}
-            />
+            <Text style={[styles.weightHint, { color: colors.secondaryText }]}>UPDATE WEIGHT</Text>
           </View>
 
-          <View style={styles.activitySection}>
-            <View style={styles.labelRow}>
-              <Text style={[styles.inputLabel, { color: colors.secondaryText }]}>ACTIVITY LEVEL</Text>
-              <Text style={[styles.activityLabel, { color: isDarkMode ? '#CCFF00' : '#10B981' }]}>
-                {ACTIVITY_LEVELS[activity].label}
-              </Text>
-            </View>
-            <View style={styles.segmentContainer}>
-              {ACTIVITY_LEVELS.map((level, idx) => (
-                <TouchableOpacity 
-                   key={idx} 
-                   onPress={() => setActivity(idx)}
-                   style={[styles.segment, { 
-                      backgroundColor: idx <= activity ? (isDarkMode ? '#CCFF00' : '#10B981') : colors.border,
-                      opacity: idx === activity ? 1 : 0.4
-                   }]} 
-                />
-              ))}
+          {/* ── PROFILE SNAPSHOT ── */}
+          <View style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+            <Text style={styles.cardHeader}>PROFILE SNAPSHOT</Text>
+            <View style={styles.snapshotGrid}>
+              <View style={styles.snapshotItem}>
+                <Text style={styles.inputLabel}>GENDER</Text>
+                <Text style={[styles.snapshotValue, { color: colors.text }]}>{gender.toUpperCase()}</Text>
+              </View>
+              <View style={styles.snapshotItem}>
+                <Text style={styles.inputLabel}>ACTIVITY</Text>
+                <Text style={[styles.snapshotValue, { color: colors.text }]}>{activityLabel}</Text>
+              </View>
+              <View style={styles.snapshotItem}>
+                <Text style={styles.inputLabel}>STRATEGY</Text>
+                <Text style={[styles.snapshotValue, { color: '#CCFF00' }]}>{strategyLabel}</Text>
+              </View>
             </View>
           </View>
 
-          <View style={[styles.strategyCard, { borderColor: colors.border }]}>
-             <Text style={[styles.strategyLabel, { color: colors.secondaryText }]}>TARGET STRATEGY</Text>
-             <View style={styles.strategyRow}>
-                <View>
-                   <Text style={[styles.deficitValue, { color: isDarkMode ? '#CCFF00' : '#10B981' }]}>-500</Text>
-                   <Text style={[styles.deficitLabel, { color: colors.secondaryText }]}>DAILY DEFICIT</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                   <Text style={[styles.intensityTitle, { color: colors.text }]}>Aggressive</Text>
-                   <Text style={[styles.intensitySub, { color: colors.secondaryText }]}>INTENSITY LEVEL</Text>
-                </View>
-             </View>
-             <TouchableOpacity 
-               style={[styles.adjustBtn, { backgroundColor: isDarkMode ? '#FFF' : '#000' }]}
-               onPress={handleAdjust}
-             >
-                <Text style={[styles.adjustBtnText, { color: isDarkMode ? '#000' : '#FFF' }]}>COMMITT TO PROFILE</Text>
-             </TouchableOpacity>
+          {/* ── MACROS ── */}
+          <View style={[styles.card, { backgroundColor: '#000', borderColor: '#CCFF00' }]}>
+            <Text style={[styles.cardHeader, { color: '#CCFF00' }]}>MACRO RATIOS</Text>
+
+            <View style={styles.macroRow}>
+              <View style={styles.macroHeader}>
+                <Text style={styles.macroName}>PROTEIN</Text>
+                <Text style={styles.macroVal}>{proLow}G – {proHigh}G</Text>
+              </View>
+              <View style={styles.mBarBg}><View style={[styles.mBarFill, { width: '85%', backgroundColor: '#CCFF00' }]} /></View>
+            </View>
+
+            <View style={styles.macroRow}>
+              <View style={styles.macroHeader}>
+                <Text style={styles.macroName}>FATS</Text>
+                <Text style={styles.macroVal}>{fatLow}G – {fatHigh}G</Text>
+              </View>
+              <View style={styles.mBarBg}><View style={[styles.mBarFill, { width: '40%', backgroundColor: '#FFF' }]} /></View>
+            </View>
+
+            <View style={styles.macroRow}>
+              <View style={styles.macroHeader}>
+                <Text style={styles.macroName}>CARBS</Text>
+                <Text style={styles.macroVal}>{carbLow}G – {carbHigh}G</Text>
+              </View>
+              <View style={styles.mBarBg}><View style={[styles.mBarFill, { width: '60%', backgroundColor: colors.secondaryText }]} /></View>
+            </View>
           </View>
 
-          <View style={[styles.infoBlock, { backgroundColor: colors.secondaryBackground }]}>
-             <FontAwesome5 name="bolt" size={20} color={colors.secondaryText} />
-             <Text style={[styles.infoSub, { color: colors.secondaryText, marginTop: 20 }]}>BMR</Text>
-             <Text style={[styles.infoValue, { color: colors.text }]}>{bmr.toLocaleString()}</Text>
-             <Text style={[styles.infoDesc, { color: colors.secondaryText }]}>KCAL/DAY (BASAL)</Text>
+          {/* ── NOTE ── */}
+          <View style={styles.noteBox}>
+            <Ionicons name="information-circle-outline" size={18} color={colors.secondaryText} />
+            <Text style={styles.noteText}>{getNote()}</Text>
           </View>
 
-          <View style={[styles.infoBlock, { backgroundColor: colors.secondaryBackground, marginTop: 12 }]}>
-             <MaterialCommunityIcons name="refresh" size={24} color={colors.secondaryText} />
-             <Text style={[styles.infoSub, { color: colors.secondaryText, marginTop: 20 }]}>MAINTENANCE</Text>
-             <Text style={[styles.infoValue, { color: colors.text }]}>{maintenance.toLocaleString()}</Text>
-             <Text style={[styles.infoDesc, { color: colors.secondaryText }]}>KCAL/DAY (TOTAL)</Text>
-          </View>
-
-          <View style={[styles.macroCard, { backgroundColor: isDarkMode ? '#121212' : '#000' }]}>
-             <Text style={[styles.macroLabel, { color: colors.secondaryText }]}>RECOMMENDED INTAKE</Text>
-             <Text style={[styles.macroMainValue, { color: isDarkMode ? '#CCFF00' : '#10B981' }]}>{intake.toLocaleString()}</Text>
-             <Text style={[styles.macroMainSub, { color: colors.secondaryText }]}>KCAL FOR WEIGHT LOSS</Text>
-
-             <View style={styles.macrosList}>
-                <View style={styles.macroRow}>
-                   <View style={styles.macroMeta}>
-                      <Text style={styles.macroName}>PRO</Text>
-                      <Text style={styles.macroTarget}>{Math.round(weight * 2.2)}g</Text>
-                   </View>
-                   <View style={[styles.macroBarContainer, { backgroundColor: '#333' }]}>
-                      <View style={[styles.macroBar, { width: '80%', backgroundColor: isDarkMode ? '#CCFF00' : '#10B981' }]} />
-                   </View>
-                </View>
-             </View>
-          </View>
-
-          <View style={{ height: 100 }} />
+          <View style={{ height: 120 }} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -170,310 +227,46 @@ const Calories = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
+  safeArea: { flex: 1 },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    height: 60,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', paddingHorizontal: 24, height: 60,
   },
-  brandTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: 2,
+  brandTitle: { fontSize: 22, fontWeight: '900', letterSpacing: 2 },
+  container: { flex: 1 },
+  content: { paddingHorizontal: 24, paddingTop: 30 },
+  subLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 5 },
+  mainTitle: { fontSize: 42, fontWeight: '900', letterSpacing: -2, lineHeight: 40, marginBottom: 40 },
+
+  metricsGrid: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  metricBox: { flex: 1, padding: 15, justifyContent: 'center' },
+  metricLabel: { fontSize: 8, fontWeight: '900', letterSpacing: 1, opacity: 0.6, marginBottom: 5 },
+  metricValue: { fontSize: 18, fontWeight: '900' },
+  metricSub: { fontSize: 7, fontWeight: '800', marginTop: 3, opacity: 0.5 },
+
+  card: { padding: 20, borderWidth: 1, marginBottom: 12 },
+  cardHeader: { fontSize: 10, fontWeight: '900', letterSpacing: 2, marginBottom: 16, opacity: 0.8 },
+
+  weightInput: {
+    borderBottomWidth: 2, fontSize: 36, fontWeight: '900',
+    paddingVertical: 8, textAlign: 'center',
   },
-  avatarPlaceholder: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 24,
-    paddingTop: 40,
-  },
-  subLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-  mainTitle: {
-    fontSize: 56,
-    fontWeight: '900',
-    marginTop: 10,
-    lineHeight: 52,
-    letterSpacing: -2,
-    marginBottom: 50,
-  },
-  sliderGroup: {
-    marginBottom: 40,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: 15,
-  },
-  inputLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  inputValue: {
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-  },
-  activitySection: {
-    marginBottom: 50,
-  },
-  activityLabel: {
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  segmentContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 10,
-  },
-  segment: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-  },
-  strategyCard: {
-    padding: 30,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  strategyLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 20,
-  },
-  strategyRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  deficitValue: {
-    fontSize: 48,
-    fontWeight: '900',
-    letterSpacing: -1,
-  },
-  deficitLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  intensityTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    textAlign: 'right',
-  },
-  intensitySub: {
-    fontSize: 9,
-    fontWeight: '700',
-    textAlign: 'right',
-  },
-  adjustBtn: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  adjustBtnText: {
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  infoBlock: {
-    padding: 30,
-    borderRadius: 0,
-  },
-  infoSub: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-  },
-  infoValue: {
-    fontSize: 56,
-    fontWeight: '900',
-    letterSpacing: -1,
-    marginTop: 5,
-  },
-  infoDesc: {
-    fontSize: 10,
-    fontWeight: '700',
-    marginTop: 5,
-  },
-  macroCard: {
-    padding: 30,
-    marginTop: 12,
-    marginBottom: 12,
-  },
-  macroLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 20,
-  },
-  macroMainValue: {
-    fontSize: 64,
-    fontWeight: '900',
-    letterSpacing: -2,
-  },
-  macroMainSub: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  macrosList: {
-    marginTop: 40,
-  },
-  macroRow: {
-    marginBottom: 20,
-  },
-  macroMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  macroName: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  macroTarget: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  macroBarContainer: {
-    height: 4,
-    width: '100%',
-  },
-  macroBar: {
-    height: '100%',
-  },
-  journeyCard: {
-    padding: 24,
-    marginTop: 12,
-  },
-  journeyLabel: {
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  weekBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 2,
-  },
-  weekBadgeText: {
-    color: '#000',
-    fontSize: 8,
-    fontWeight: '900',
-  },
-  journeyBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 15,
-    marginVertical: 40,
-  },
-  journeyWeight: {
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  journeyBarBase: {
-    flex: 1,
-    height: 4,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    position: 'relative',
-  },
-  journeyBarProgress: {
-    height: '100%',
-    width: '50%', // Hardcoded for mockup
-  },
-  journeyMarker: {
-    position: 'absolute',
-    left: '50%',
-    top: -5,
-    alignItems: 'center',
-  },
-  markerLine: {
-    width: 2,
-    height: 14,
-    backgroundColor: '#000',
-  },
-  markerText: {
-    fontSize: 10,
-    fontWeight: '900',
-    marginTop: 2,
-  },
-  journeyStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  journeyStatItem: {
-    alignItems: 'center',
-  },
-  journeyStatValue: {
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  journeyStatLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginTop: 4,
-  },
-  brandingFooter: {
-    marginTop: 80,
-  },
-  footerImg: {
-    width: '100%',
-    height: 300,
-    opacity: 0.6,
-  },
-  footerContent: {
-    marginTop: 40,
-  },
-  footerMain: {
-    fontSize: 48,
-    fontWeight: '900',
-    letterSpacing: -1,
-    lineHeight: 46,
-  },
-  footerDesc: {
-    fontSize: 14,
-    lineHeight: 22,
-    fontWeight: '500',
-    marginTop: 25,
-  },
-  methodBtn: {
-    marginTop: 30,
-    borderBottomWidth: 2,
-    alignSelf: 'flex-start',
-    paddingBottom: 4,
-  },
-  methodBtnText: {
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-  }
+  weightHint: { fontSize: 9, fontWeight: '800', letterSpacing: 1, textAlign: 'center', marginTop: 10 },
+
+  snapshotGrid: { flexDirection: 'row', gap: 10 },
+  snapshotItem: { flex: 1 },
+  inputLabel: { fontSize: 9, fontWeight: '900', opacity: 0.5, marginBottom: 6 },
+  snapshotValue: { fontSize: 16, fontWeight: '900' },
+
+  macroRow: { marginBottom: 20 },
+  macroHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  macroName: { fontSize: 12, fontWeight: '900', color: '#FFF' },
+  macroVal: { fontSize: 12, fontWeight: '900', color: '#CCFF00' },
+  mBarBg: { height: 4, backgroundColor: '#333' },
+  mBarFill: { height: '100%' },
+
+  noteBox: { flexDirection: 'row', gap: 10, marginVertical: 30, paddingHorizontal: 10 },
+  noteText: { fontSize: 11, fontWeight: '700', lineHeight: 18, flex: 1, color: '#888' },
 });
 
 export default Calories;

@@ -21,7 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
 const { width } = Dimensions.get('window');
-const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const PLANNED_STORAGE_KEY = '@monolith_plannedSessions';
 
 const Calendar = ({ navigation }) => {
@@ -43,9 +43,14 @@ const Calendar = ({ navigation }) => {
 
   // Custom Planning Modal State
   const [showPlanModal, setShowPlanModal] = useState(false);
-  const [planDateIndex, setPlanDateIndex] = useState(0);
+  const [schedulingDate, setSchedulingDate] = useState(null); // The date selected from calendar
   const [planHour, setPlanHour] = useState(new Date().getHours());
-  const [planMinute, setPlanMinute] = useState(Math.ceil(new Date().getMinutes() / 5) * 5);
+  const [planMinute, setPlanMinute] = useState(0); 
+  const [planDateIndex, setPlanDateIndex] = useState(0); // For manual selection if needed
+  
+  // For scrolling to Upcoming section
+  const scrollRef = useRef(null);
+  const [upcomingSectionY, setUpcomingSectionY] = useState(0);
 
   // Cache the next 30 days
   const next30Days = useRef([]);
@@ -105,7 +110,7 @@ const Calendar = ({ navigation }) => {
       });
 
       setSessionsByDate(sessionMap);
-      setMonthStats({ count: data.length, totalVolume });
+      setMonthStats({ count: Object.keys(sessionMap).length, totalVolume });
     } catch (error) {
       console.error('Failed to fetch calendar data:', error);
     } finally {
@@ -134,6 +139,7 @@ const Calendar = ({ navigation }) => {
           content: {
             title: 'TIME TO TRAIN',
             body: `${workout.name.toUpperCase()} IS SCHEDULED FOR NOW.`,
+            data: { workoutId: workout.id },
             sound: true,
           },
           trigger: {
@@ -158,6 +164,11 @@ const Calendar = ({ navigation }) => {
       await AsyncStorage.setItem(PLANNED_STORAGE_KEY, JSON.stringify(updated));
       setShowAddModal(false);
       setSelectedWorkout(null);
+      
+      // Auto-scroll to the upcoming sessions section
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: upcomingSectionY, animated: true });
+      }, 500);
     } catch (e) {
       console.error('Save planned session error:', e);
       Alert.alert('ERROR', 'FAILED TO SAVE PLANNED SESSION.');
@@ -187,8 +198,9 @@ const Calendar = ({ navigation }) => {
   const handleConfirmPlan = () => {
     if (!selectedWorkout) return;
 
-    const selectedDateObj = next30Days.current[planDateIndex].date;
-    const finalDate = new Date(selectedDateObj);
+    // Use schedulingDate from calendar tap OR fallback to the 30-day picker index
+    const dateToUse = schedulingDate ? new Date(schedulingDate + 'T00:00:00') : next30Days.current[planDateIndex].date;
+    const finalDate = new Date(dateToUse);
     finalDate.setHours(planHour, planMinute, 0, 0);
 
     // Validation: Not in the past
@@ -199,23 +211,31 @@ const Calendar = ({ navigation }) => {
 
     savePlannedSession(selectedWorkout, finalDate);
     setShowPlanModal(false);
+    setSchedulingDate(null);
   };
 
   const handleDayPress = (dateStr) => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const daySessions = sessionsByDate[dateStr];
-    if (!daySessions || daySessions.length === 0) return;
-    if (daySessions.length === 1) {
-      navigation.navigate('SessionHistoryDetail', { session: daySessions[0] });
-    } else {
-      setSelectedDaySessions({ date: dateStr, items: daySessions });
+
+    if (dateStr >= todayStr) {
+      // Future or today - open scheduling flow
+      openAddPlanned(dateStr);
+    } else if (daySessions && daySessions.length > 0) {
+      // Past - view history
+      if (daySessions.length === 1) {
+        navigation.navigate('SessionHistoryDetail', { session: daySessions[0] });
+      } else {
+        setSelectedDaySessions({ date: dateStr, items: daySessions });
+      }
     }
   };
 
   const getMonthDays = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const startDayOffset = firstDay === 0 ? 6 : firstDay - 1;
+    const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
+    const startDayOffset = firstDay;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const totalCells = 42;
     const days = [];
@@ -254,13 +274,21 @@ const Calendar = ({ navigation }) => {
     );
   };
 
-  const openAddPlanned = async () => {
+  const openAddPlanned = async (targetDateStr = null) => {
     try {
       const data = await workoutsService.getUserWorkouts();
       setAvailableWorkouts(data);
+      setSchedulingDate(targetDateStr);
+      
+      // If we have a target date from the calendar, we'll use it.
+      // If not (legacy button press), we'll default to today in the list.
+      if (!targetDateStr) {
+        setPlanDateIndex(0);
+      }
+      
       setShowAddModal(true);
     } catch (e) {
-      Alert.alert('ERROR', 'Failed to load workouts');
+      Alert.alert('ERROR', 'FAILED TO LOAD ROUTINES');
     }
   };
 
@@ -277,7 +305,11 @@ const Calendar = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        ref={scrollRef}
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.content}>
           <View style={styles.monthNav}>
             <View style={{ flex: 1 }}>
@@ -333,13 +365,15 @@ const Calendar = ({ navigation }) => {
             </View>
           </View>
 
-          <View style={styles.plannedSection}>
+          <View 
+            style={styles.plannedSection}
+            onLayout={(event) => {
+              const layout = event.nativeEvent.layout;
+              setUpcomingSectionY(layout.y);
+            }}
+          >
             <View style={styles.plannedHeader}>
               <Text style={[styles.subLabel, { color: colors.secondaryText }]}>UPCOMING SESSIONS</Text>
-              <TouchableOpacity onPress={openAddPlanned} style={styles.addBtn}>
-                <Ionicons name="add" size={16} color="#000" />
-                <Text style={styles.addBtnText}>ADD PLANNED SESSION</Text>
-              </TouchableOpacity>
             </View>
 
             <View style={[styles.plannedTable, { borderColor: colors.border }]}>
@@ -400,21 +434,29 @@ const Calendar = ({ navigation }) => {
             <Text style={[styles.modalTitle, { color: colors.text, textAlign: 'center', marginBottom: 20 }]}>PLAN YOUR SESSION</Text>
 
             <Text style={[styles.pLabel, { color: colors.secondaryText }]}>DAY</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
-              {next30Days.current.map((d, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => setPlanDateIndex(index)}
-                  style={[
-                    styles.dateChip,
-                    { borderColor: colors.border },
-                    planDateIndex === index && { backgroundColor: '#CCFF00', borderColor: '#CCFF00' }
-                  ]}
-                >
-                  <Text style={[styles.dateChipText, { color: planDateIndex === index ? '#000' : colors.text }]}>{d.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            {schedulingDate ? (
+              <View style={[styles.dateChip, { backgroundColor: '#CCFF00', borderColor: '#CCFF00', alignSelf: 'flex-start', marginBottom: 10 }]}>
+                <Text style={[styles.dateChipText, { color: '#000' }]}>
+                  {new Date(schedulingDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()}
+                </Text>
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
+                {next30Days.current.map((d, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => setPlanDateIndex(index)}
+                    style={[
+                      styles.dateChip,
+                      { borderColor: colors.border },
+                      planDateIndex === index && { backgroundColor: '#CCFF00', borderColor: '#CCFF00' }
+                    ]}
+                  >
+                    <Text style={[styles.dateChipText, { color: planDateIndex === index ? '#000' : colors.text }]}>{d.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
 
             <Text style={[styles.pLabel, { color: colors.secondaryText, marginTop: 20 }]}>TIME (24H)</Text>
             <View style={styles.timePickerRow}>

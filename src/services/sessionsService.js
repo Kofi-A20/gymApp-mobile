@@ -234,5 +234,66 @@ export const sessionsService = {
       console.error('bulkDeleteSessions exception:', err);
       throw err;
     }
+  },
+
+  /**
+   * Calculate cumulative and weekly training statistics.
+   * Weekly stats now start from the current week's Monday.
+   */
+  async getTrainingStats() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // 1. Get all-time volume
+      const { data: allSessions, error: allErr } = await supabase
+        .from('sessions')
+        .select('total_volume_kg')
+        .eq('user_id', user.id)
+        .not('completed_at', 'is', null);
+
+      if (allErr) throw allErr;
+
+      const cumulativeVolume = (allSessions || []).reduce((acc, s) => acc + (Number(s.total_volume_kg) || 0), 0);
+
+      // 2. Get current calendar week (Starting from Sunday)
+      const now = new Date();
+      const day = now.getDay(); // 0 (Sun) to 6 (Sat)
+      const diff = now.getDate() - day; 
+      const sunday = new Date(now.setDate(diff));
+      sunday.setHours(0, 0, 0, 0);
+      const sundayISO = sunday.toISOString();
+
+      const { data: weeklySessions, error: weekErr } = await supabase
+        .from('sessions')
+        .select('total_volume_kg, started_at, completed_at')
+        .eq('user_id', user.id)
+        .gte('completed_at', sundayISO)
+        .not('completed_at', 'is', null);
+
+      if (weekErr) throw weekErr;
+
+      let weeklyLoad = 0;
+      let totalActiveMs = 0;
+
+      (weeklySessions || []).forEach(s => {
+        weeklyLoad += (Number(s.total_volume_kg) || 0);
+        if (s.started_at && s.completed_at) {
+          const duration = new Date(s.completed_at) - new Date(s.started_at);
+          if (duration > 0) totalActiveMs += duration;
+        }
+      });
+
+      const activeHours = totalActiveMs / (1000 * 60 * 60);
+
+      return {
+        cumulativeVolume,
+        weeklyLoad,
+        activeHours
+      };
+    } catch (err) {
+      console.error('getTrainingStats exception:', err);
+      throw err;
+    }
   }
 };

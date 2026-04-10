@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
@@ -39,7 +39,44 @@ const RootNavigator = () => {
   return user ? <MainNavigator /> : <AuthNavigator />;
 };
 
+const AppContent = ({ linking }) => {
+  const { settingsLoaded } = useTheme();
+
+  if (!settingsLoaded) {
+    return null;
+  }
+
+  return (
+    <AlertProvider>
+      <NavigationContainer linking={linking} ref={navigationRef}>
+        <RootNavigator />
+        <StatusBar style="auto" />
+      </NavigationContainer>
+    </AlertProvider>
+  );
+};
+
+export const navigationRef = React.createRef();
+
 export default function App() {
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const { workoutId } = response.notification.request.content.data;
+      if (workoutId && navigationRef.current) {
+        // Navigate through the tab stack
+        navigationRef.current.navigate('Tabs', {
+          screen: 'Workouts',
+          params: {
+            screen: 'WorkoutDetail',
+            params: { workoutId }
+          }
+        });
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   const linking = {
     prefixes: [prefix, 'monolith://'],
     config: {
@@ -65,12 +102,7 @@ export default function App() {
           <ProfileProvider>
             <WorkoutProvider>
               <ThemeProvider>
-                <AlertProvider>
-                  <NavigationContainer linking={linking}>
-                    <RootNavigator />
-                    <StatusBar style="auto" />
-                  </NavigationContainer>
-                </AlertProvider>
+                <AppContent linking={linking} />
               </ThemeProvider>
             </WorkoutProvider>
           </ProfileProvider>

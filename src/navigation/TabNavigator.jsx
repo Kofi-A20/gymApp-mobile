@@ -30,10 +30,10 @@ const WorkoutStack = () => (
   </Stack.Navigator>
 );
 
-const SettingsStack = () => (
+const ProfileStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="SettingsMain" component={Settings} />
-    <Stack.Screen name="Profile" component={Profile} />
+    <Stack.Screen name="ProfileMain" component={Profile} />
+    <Stack.Screen name="Settings" component={Settings} />
   </Stack.Navigator>
 );
 
@@ -52,8 +52,8 @@ const TAB_ICONS = {
   Calories: ({ color, size }) => (
     <MaterialCommunityIcons name="fire" color={color} size={size} />
   ),
-  Settings: ({ color, size }) => (
-    <FontAwesome name="cog" color={color} size={size} />
+  Profile: ({ color, size }) => (
+    <MaterialCommunityIcons name="account" color={color} size={size} />
   ),
 };
 
@@ -200,7 +200,7 @@ const TabNavigator = () => (
     <Tab.Screen name="Calendar" component={Calendar} />
     <Tab.Screen name="Log" component={WeightsLog} />
     <Tab.Screen name="Calories" component={Calories} />
-    <Tab.Screen name="Settings" component={SettingsStack} />
+    <Tab.Screen name="Profile" component={ProfileStack} />
   </Tab.Navigator>
 );
 

@@ -11,15 +11,40 @@ import { useMonolithAlert } from '../context/AlertContext';
 const FILTERS = ['ALL', 'CHEST', 'BACK', 'LEGS', 'SHOULDERS', 'ARMS'];
 
 const WorkoutDetail = ({ route, navigation }) => {
-  const { workout } = route.params || {};
   const { colors, isDarkMode } = useTheme();
   const { startWorkout } = useWorkout();
   const { showAlert } = useMonolithAlert();
   
+  const [currentWorkout, setCurrentWorkout] = useState(route.params?.workout || null);
+  const [loadingWorkout, setLoadingWorkout] = useState(!route.params?.workout);
   const [starting, setStarting] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [expandedExercises, setExpandedExercises] = useState({});
-  const [editedExercises, setEditedExercises] = useState(workout?.exercises ? JSON.parse(JSON.stringify(workout.exercises)) : []);
+  const [editedExercises, setEditedExercises] = useState([]);
+
+  useEffect(() => {
+    if (route.params?.workout) {
+      setCurrentWorkout(route.params.workout);
+      setEditedExercises(JSON.parse(JSON.stringify(route.params.workout.exercises || [])));
+      setLoadingWorkout(false);
+    } else if (route.params?.workoutId) {
+      fetchWorkoutDetail(route.params.workoutId);
+    }
+  }, [route.params]);
+
+  const fetchWorkoutDetail = async (id) => {
+    try {
+      setLoadingWorkout(true);
+      const data = await workoutsService.getWorkoutDetail(id);
+      setCurrentWorkout(data);
+      setEditedExercises(JSON.parse(JSON.stringify(data.exercises || [])));
+    } catch (err) {
+      showAlert("Error", "Failed to load workout details");
+      navigation.goBack();
+    } finally {
+      setLoadingWorkout(false);
+    }
+  };
 
   const toggleExpand = (index) => {
     if (isEditMode) return;
@@ -71,7 +96,7 @@ const WorkoutDetail = ({ route, navigation }) => {
   const handleStartSession = async () => {
     try {
       setStarting(true);
-      await startWorkout(workout.id);
+      await startWorkout(currentWorkout.id);
       navigation.navigate('ActiveWorkout');
     } catch (error) {
       showAlert('Error', 'Failed to start workout session');
@@ -94,7 +119,7 @@ const WorkoutDetail = ({ route, navigation }) => {
         sets_target: parseInt(ex.sets_target, 10),
         reps_target: parseInt(ex.reps_target, 10),
       }));
-      await workoutsService.updateWorkout(workout.id, workout.name, workout.description, exercisesList);
+      await workoutsService.updateWorkout(currentWorkout.id, currentWorkout.name, currentWorkout.description, exercisesList);
       setIsEditMode(false);
     } catch (err) {
       showAlert("Error", "Failed to update workout. Please try again.");
@@ -114,7 +139,7 @@ const WorkoutDetail = ({ route, navigation }) => {
           style: "destructive",
           onPress: async () => {
              try {
-                await workoutsService.deleteWorkout(workout.id);
+                await workoutsService.deleteWorkout(currentWorkout.id);
                 navigation.goBack();
              } catch (err) {
                 showAlert("Error", "Failed to delete workout");
@@ -125,18 +150,18 @@ const WorkoutDetail = ({ route, navigation }) => {
     );
   };
 
-  if (!workout) {
+  if (loadingWorkout) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: colors.text }}>WORKOUT NOT FOUND</Text>
+        <ActivityIndicator size="large" color="#CCFF00" />
       </SafeAreaView>
     );
   }
 
   const renderHeader = () => (
     <View style={styles.content}>
-      <Text style={[styles.sessionId, { color: colors.secondaryText }]}>TEMPLATE_ID: {workout.id.split('-')[0].toUpperCase()}</Text>
-      <Text style={[styles.workoutTitle, { color: colors.text }]}>{workout.name.toUpperCase()}</Text>
+      <Text style={[styles.sessionId, { color: colors.secondaryText }]}>TEMPLATE_ID: {currentWorkout.id.split('-')[0].toUpperCase()}</Text>
+      <Text style={[styles.workoutTitle, { color: colors.text }]}>{currentWorkout.name.toUpperCase()}</Text>
 
       {/* Stats Row */}
       <View style={styles.statsRow}>
@@ -163,7 +188,7 @@ const WorkoutDetail = ({ route, navigation }) => {
         </View>
         <View style={styles.focusTextWrapper}>
            <Text style={[styles.focusDescription, { color: colors.text }]}>
-              {workout.description || "A high-intensity protocol designed for structural hypertrophy and architectural strength. Maintain rigid core tension throughout all movements."}
+              {currentWorkout.description || "A high-intensity protocol designed for structural hypertrophy and architectural strength. Maintain rigid core tension throughout all movements."}
            </Text>
         </View>
       </View>
@@ -361,6 +386,14 @@ const WorkoutDetail = ({ route, navigation }) => {
         </TouchableOpacity>
     );
   };
+
+  if (loadingWorkout) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#CCFF00" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
