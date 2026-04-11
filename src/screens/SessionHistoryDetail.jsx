@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
-import { AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
+import { AntDesign, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import RepsHeader from '../components/MonolithHeader';
 import { sessionsService } from '../services/sessionsService';
 import { setsService } from '../services/setsService';
-import { useMonolithAlert } from '../context/AlertContext';
+import { useRepsAlert } from '../context/AlertContext';
 
 const SessionHistoryDetail = ({ route, navigation }) => {
   const { session } = route.params; // use only for id, title, date while sets load
   const { colors, isDarkMode, units } = useTheme();
-  const { showAlert } = useMonolithAlert();
+  const insets = useSafeAreaInsets();
+  const { showAlert } = useRepsAlert();
 
   const [detailedSession, setDetailedSession] = useState(null);
   const [fetching, setFetching] = useState(true);
@@ -114,14 +116,11 @@ const SessionHistoryDetail = ({ route, navigation }) => {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-           <AntDesign name="arrowleft" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.dateText, { color: colors.secondaryText }]}>{dateStr}</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <RepsHeader 
+        onLeftPress={() => navigation.goBack()}
+        title={dateStr}
+      />
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
@@ -221,7 +220,7 @@ const SessionHistoryDetail = ({ route, navigation }) => {
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

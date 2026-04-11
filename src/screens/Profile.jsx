@@ -12,15 +12,15 @@ import {
   Modal,
   Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
 import { MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';
-import { useMonolithAlert } from '../context/AlertContext';
-import MonolithHeader from '../components/MonolithHeader';
+import { useRepsAlert } from '../context/AlertContext';
+import RepsHeader from '../components/MonolithHeader';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -68,8 +68,9 @@ const InputField = ({ label, value, onChangeText, keyboardType, editable = true,
 
 const Profile = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
+  const insets = useSafeAreaInsets();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
-  const { showAlert } = useMonolithAlert();
+  const { showAlert } = useRepsAlert();
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -262,12 +263,11 @@ const Profile = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       {/* Header */}
-      <MonolithHeader 
-        title="MONOLITH" 
-        leftIcon="settings-outline" 
-        onLeftPress={() => navigation.navigate('Settings')} 
+      <RepsHeader
+        title="REPS"
+        rightActions={[{ icon: 'settings-outline', library: 'Ionicons', onPress: () => navigation.navigate('Settings') }]}
       />
 
       <ScrollView
@@ -444,7 +444,7 @@ const Profile = ({ navigation }) => {
           <View style={{ height: 120 }} />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

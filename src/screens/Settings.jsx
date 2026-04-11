@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Switch, Platform, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
-import { useMonolithAlert } from '../context/AlertContext';
+import { MaterialCommunityIcons, AntDesign, Ionicons } from '@expo/vector-icons';
+import RepsHeader from '../components/MonolithHeader';
+import { useRepsAlert } from '../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -16,8 +17,9 @@ const EXPO_WEEKDAYS = {
 
 const Settings = ({ navigation }) => {
   const { isDarkMode, toggleTheme, units, toggleUnits, notifications, toggleNotifications, colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
-  const { showAlert } = useMonolithAlert();
+  const { showAlert } = useRepsAlert();
 
   // Weight Reminder States
   const [weightReminderEnabled, setWeightReminderEnabled] = useState(false);
@@ -58,7 +60,7 @@ const Settings = ({ navigation }) => {
         await Notifications.scheduleNotificationAsync({
           identifier: 'weeklyWeightReminder',
           content: {
-            title: 'MONOLITH',
+            title: 'REPS',
             body: 'TIME TO LOG YOUR WEIGHT — STAY ON TRACK.',
           },
           trigger: {
@@ -122,21 +124,17 @@ const Settings = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <ScrollView 
         style={styles.container} 
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        {/* Branding Header */}
-        <View style={styles.brandHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <AntDesign name="arrowleft" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.brandTitle, { color: colors.text }]}>SETTINGS</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <RepsHeader 
+          title="SETTINGS" 
+          onLeftPress={() => navigation.goBack()} 
+        />
 
         <View style={styles.content}>
           <Text style={[styles.topLabel, { color: colors.secondaryText }]}>SYSTEM PREFERENCES</Text>
@@ -300,7 +298,7 @@ const Settings = ({ navigation }) => {
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

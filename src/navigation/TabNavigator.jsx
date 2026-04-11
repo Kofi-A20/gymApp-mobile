@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { CommonActions } from '@react-navigation/native';
 import { MaterialCommunityIcons, Ionicons, AntDesign, FontAwesome } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 
@@ -23,7 +24,7 @@ const Stack = createNativeStackNavigator();
 // ─── Nested Stacks ────────────────────────────────────────────────────────────
 
 const WorkoutStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
+  <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
     <Stack.Screen name="WorkoutsLibrary" component={WorkoutsLibrary} />
     <Stack.Screen name="WorkoutDetail" component={WorkoutDetail} />
     <Stack.Screen name="AddWorkout" component={AddWorkout} options={{ animation: 'slide_from_right' }} />
@@ -31,7 +32,7 @@ const WorkoutStack = () => (
 );
 
 const ProfileStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
+  <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
     <Stack.Screen name="ProfileMain" component={Profile} />
     <Stack.Screen name="Settings" component={Settings} />
   </Stack.Navigator>
@@ -236,7 +237,12 @@ const TabNavigator = () => (
       listeners={({ navigation }) => ({
         tabPress: (e) => {
           e.preventDefault();
-          navigation.navigate('Profile', { screen: 'ProfileMain' });
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: 'Profile', state: { routes: [{ name: 'ProfileMain' }], index: 0 } }],
+            })
+          );
         },
       })}
     />

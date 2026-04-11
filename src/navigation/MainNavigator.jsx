@@ -9,7 +9,7 @@ const Stack = createNativeStackNavigator();
 
 const MainNavigator = () => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
       <Stack.Screen name="Tabs" component={TabNavigator} />
       <Stack.Screen name="SharedWorkoutPreview" component={SharedWorkoutPreview} />
       <Stack.Screen name="SessionHistoryDetail" component={SessionHistoryDetail} />

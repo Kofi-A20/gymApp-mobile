@@ -1,19 +1,20 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Pressable, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
 import { workoutsService } from '../services/workoutsService';
 import { sessionsService } from '../services/sessionsService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
-import { useMonolithAlert } from '../context/AlertContext';
-import MonolithHeader from '../components/MonolithHeader';
+import { useRepsAlert } from '../context/AlertContext';
+import RepsHeader from '../components/MonolithHeader';
 
 const WorkoutsLibrary = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
+  const insets = useSafeAreaInsets();
   const { profile } = useProfile();
-  const { showAlert } = useMonolithAlert();
+  const { showAlert } = useRepsAlert();
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -77,6 +78,14 @@ const WorkoutsLibrary = ({ navigation }) => {
     setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === workouts.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(workouts.map(w => w.id));
+    }
   };
 
   const handleMenuPress = (item) => {
@@ -172,7 +181,7 @@ const WorkoutsLibrary = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
 
       {/* Dropdown Menu Modal */}
       <Modal visible={dropdownConfig.visible} transparent animationType="fade" onRequestClose={closeDropdown}>
@@ -235,13 +244,13 @@ const WorkoutsLibrary = ({ navigation }) => {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        <MonolithHeader 
-          leftIcon="menu" 
+        <RepsHeader 
           rightActions={[{ icon: 'plus-circle', library: 'AntDesign', onPress: () => navigation.navigate('AddWorkout') }]} 
           selectionMode={isSelectionMode} 
           selectedCount={selectedIds.length} 
           onCancelSelection={() => { setIsSelectionMode(false); setSelectedIds([]); }} 
           onDeleteSelected={handleDeleteSelected} 
+          onSelectAll={handleSelectAll}
         />
 
         <View style={styles.content}>
@@ -301,7 +310,7 @@ const WorkoutsLibrary = ({ navigation }) => {
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

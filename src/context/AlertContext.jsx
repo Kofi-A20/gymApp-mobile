@@ -4,7 +4,9 @@ import { useTheme } from './ThemeContext';
 
 const AlertContext = createContext();
 
-export const useMonolithAlert = () => useContext(AlertContext);
+export const useRepsAlert = () => useContext(AlertContext);
+// backwards-compatible alias — remove once all imports are updated
+export const useMonolithAlert = useRepsAlert;
 
 export const AlertProvider = ({ children }) => {
   const { colors } = useTheme();

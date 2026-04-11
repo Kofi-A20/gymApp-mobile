@@ -11,7 +11,7 @@ import {
   Dimensions,
   Alert
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { sessionsService } from '../services/sessionsService';
@@ -19,14 +19,15 @@ import { workoutsService } from '../services/workoutsService';
 import { MaterialCommunityIcons, AntDesign, Feather, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import MonolithHeader from '../components/MonolithHeader';
+import RepsHeader from '../components/MonolithHeader';
 
 const { width } = Dimensions.get('window');
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-const PLANNED_STORAGE_KEY = '@monolith_plannedSessions';
+const PLANNED_STORAGE_KEY = '@reps_plannedSessions';
 
 const Calendar = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
+  const insets = useSafeAreaInsets();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [sessionsByDate, setSessionsByDate] = useState({});
   const [plannedSessions, setPlannedSessions] = useState([]);
@@ -297,8 +298,8 @@ const Calendar = ({ navigation }) => {
   const yearName = currentDate.getFullYear();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <MonolithHeader leftIcon="menu" />
+    <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <RepsHeader />
 
       <ScrollView 
         ref={scrollRef}
@@ -504,7 +505,7 @@ const Calendar = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 

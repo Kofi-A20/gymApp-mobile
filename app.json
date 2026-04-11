@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "gymApp-mobile",
-    "slug": "gymApp-mobile",
-    "scheme": "monolith",
+    "name": "Reps",
+    "slug": "reps-app",
+    "scheme": "reps",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

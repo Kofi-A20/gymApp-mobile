@@ -16,15 +16,17 @@ const getIconLibrary = (libraryName) => {
   }
 };
 
-const MonolithHeader = ({
-  title = 'MONOLITH',
+const RepsHeader = ({
+  title = 'REPS',
   selectionMode = false,
   selectedCount = 0,
   onCancelSelection,
   onDeleteSelected,
-  leftIcon = 'menu',
+  onSelectAll,
+  leftIcon = null,
   onLeftPress,
-  rightActions = []
+  rightActions = [],
+  centerContent = null
 }) => {
   const { colors } = useTheme();
 
@@ -39,37 +41,54 @@ const MonolithHeader = ({
           <Text style={[styles.title, { color: colors.text, fontSize: 14 }]}>{selectedCount} SELECTED</Text>
         </View>
 
-        <TouchableOpacity 
-          onPress={onDeleteSelected} 
-          style={styles.rightBtn}
-          disabled={selectedCount === 0}
-        >
-          <MaterialCommunityIcons 
-            name="delete" 
-            size={24} 
-            color={selectedCount > 0 ? "#FF3B30" : colors.secondaryText} 
-          />
-        </TouchableOpacity>
+        <View style={styles.rightActionsRow}>
+          {onSelectAll && (
+            <TouchableOpacity onPress={onSelectAll} style={{ marginRight: 10 }}>
+              <Text style={{ color: '#CCFF00', fontWeight: '900', fontSize: 11, letterSpacing: 1 }}>SELECT ALL</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity 
+            onPress={onDeleteSelected} 
+            disabled={selectedCount === 0}
+          >
+            <MaterialCommunityIcons 
+              name="delete" 
+              size={24} 
+              color={selectedCount > 0 ? "#FF3B30" : colors.secondaryText} 
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TouchableOpacity 
-        onPress={onLeftPress} 
-        disabled={!onLeftPress}
-        style={styles.leftBtn}
-      >
-        <Ionicons name={leftIcon} size={24} color={colors.text} />
-      </TouchableOpacity>
+      <View style={styles.leftBtn}>
+        {(leftIcon || onLeftPress) && (
+          <TouchableOpacity onPress={onLeftPress} disabled={!onLeftPress}>
+            <Ionicons name={leftIcon || 'arrow-back'} size={24} color={colors.text} />
+          </TouchableOpacity>
+        )}
+      </View>
       
       <View style={styles.centerContainer}>
-        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+        {centerContent ? centerContent : (
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+        )}
       </View>
 
       <View style={styles.rightActionsRow}>
         {rightActions.map((action, index) => {
+          if (action.text) {
+            return (
+              <TouchableOpacity key={index} onPress={action.onPress}>
+                <Text style={[styles.rightActionText, { color: action.color || colors.text }]}>
+                  {action.text.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            );
+          }
           const IconComp = getIconLibrary(action.library);
           return (
             <TouchableOpacity 
@@ -78,7 +97,7 @@ const MonolithHeader = ({
             >
               <IconComp 
                 name={action.icon} 
-                size={24} 
+                size={22} 
                 color={action.color || colors.text} 
               />
             </TouchableOpacity>
@@ -121,8 +140,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 20,
+    gap: 16,
+  },
+  rightActionText: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1.5,
   }
 });
 
-export default MonolithHeader;
+export default RepsHeader;

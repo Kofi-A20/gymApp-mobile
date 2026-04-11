@@ -4,7 +4,7 @@ import { setsService } from '../services/setsService';
 import { workoutsService } from '../services/workoutsService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const STORAGE_KEY = '@monolith_activeWorkoutState';
+const STORAGE_KEY = '@reps_activeWorkoutState';
 
 const WorkoutContext = createContext({});
 
@@ -52,7 +52,7 @@ export const WorkoutProvider = ({ children }) => {
       }
 
       // Clear any stale UI state from the previous session before starting fresh
-      await AsyncStorage.removeItem('@monolith_activeWorkout_ui');
+      await AsyncStorage.removeItem('@reps_activeWorkout_ui');
 
       setActiveSession(session);
 

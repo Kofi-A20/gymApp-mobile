@@ -9,14 +9,14 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
-import { useMonolithAlert } from '../context/AlertContext';
+import { useRepsAlert } from '../context/AlertContext';
 import { weightLogsService } from '../services/weightLogsService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
-import MonolithHeader from '../components/MonolithHeader';
+import RepsHeader from '../components/MonolithHeader';
 
 const ACTIVITY_OPTIONS = [
   { label: '1–2 days/week', value: 1.2 },
@@ -40,8 +40,9 @@ const deriveStrategy = (weightKg, goalWeightKg) => {
 
 const Calories = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
+  const insets = useSafeAreaInsets();
   const { profile, refreshProfile, updateProfile } = useProfile();
-  const { showAlert } = useMonolithAlert();
+  const { showAlert } = useRepsAlert();
 
   const [weightLogs, setWeightLogs] = useState([]);
   const [weightInput, setWeightInput] = useState('');
@@ -102,6 +103,14 @@ const Calories = ({ navigation }) => {
 
   const toggleWlSelection = (id) => {
     setWlSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  const handleSelectAllLogs = () => {
+    if (wlSelectedIds.length === weightLogs.length) {
+      setWlSelectedIds([]);
+    } else {
+      setWlSelectedIds(weightLogs.map(l => l.id));
+    }
   };
 
   const handleDeleteSelectedLogs = () => {
@@ -217,8 +226,14 @@ const Calories = ({ navigation }) => {
   });
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <MonolithHeader leftIcon="menu" />
+    <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <RepsHeader 
+        selectionMode={wlSelectionMode}
+        selectedCount={wlSelectedIds.length}
+        onCancelSelection={() => { setWlSelectionMode(false); setWlSelectedIds([]); }}
+        onDeleteSelected={handleDeleteSelectedLogs}
+        onSelectAll={handleSelectAllLogs}
+      />
 
       <ScrollView 
         style={styles.container} 
@@ -344,18 +359,7 @@ const Calories = ({ navigation }) => {
               </View>
             </View>
 
-            {/* Selection Action Bar for Timeline */}
-            {wlSelectionMode && (
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                <TouchableOpacity onPress={() => { setWlSelectionMode(false); setWlSelectedIds([]); }}>
-                  <Text style={{ color: colors.text, fontWeight: '900', fontSize: 12, letterSpacing: 1.5 }}>CANCEL</Text>
-                </TouchableOpacity>
-                <Text style={{ color: colors.text, fontSize: 14, fontWeight: '900', letterSpacing: 2 }}>{wlSelectedIds.length} SELECTED</Text>
-                <TouchableOpacity onPress={handleDeleteSelectedLogs} disabled={wlSelectedIds.length === 0}>
-                  <MaterialCommunityIcons name="delete" size={24} color={wlSelectedIds.length > 0 ? "#FF3B30" : colors.secondaryText} />
-                </TouchableOpacity>
-              </View>
-            )}
+
 
             {/* Timeline */}
             {logLoading && weightLogs.length === 0 ? (
@@ -458,7 +462,7 @@ const Calories = ({ navigation }) => {
           <View style={{ height: 120 }} />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

@@ -43,7 +43,7 @@ const AppContent = ({ linking }) => {
   const { settingsLoaded } = useTheme();
 
   if (!settingsLoaded) {
-    return null;
+    return <View style={{ flex: 1, backgroundColor: '#000000' }} />;
   }
 
   return (
@@ -78,7 +78,7 @@ export default function App() {
   }, []);
 
   const linking = {
-    prefixes: [prefix, 'monolith://'],
+    prefixes: [prefix, 'reps://'],
     config: {
       screens: {
         Main: {

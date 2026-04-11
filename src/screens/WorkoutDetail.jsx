@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, TextInput, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useWorkout } from '../context/WorkoutContext';
 import { MaterialCommunityIcons, AntDesign, Ionicons, Feather } from '@expo/vector-icons';
+import RepsHeader from '../components/MonolithHeader';
 import { workoutsService } from '../services/workoutsService';
 import { exercisesService } from '../services/exercisesService';
-import { useMonolithAlert } from '../context/AlertContext';
+import { useRepsAlert } from '../context/AlertContext';
 
 const FILTERS = ['ALL', 'CHEST', 'BACK', 'LEGS', 'SHOULDERS', 'ARMS'];
 
 const WorkoutDetail = ({ route, navigation }) => {
   const { colors, isDarkMode } = useTheme();
+  const insets = useSafeAreaInsets();
   const { startWorkout } = useWorkout();
-  const { showAlert } = useMonolithAlert();
+  const { showAlert } = useRepsAlert();
   
   const [currentWorkout, setCurrentWorkout] = useState(route.params?.workout || null);
   const [loadingWorkout, setLoadingWorkout] = useState(!route.params?.workout);
@@ -152,9 +154,9 @@ const WorkoutDetail = ({ route, navigation }) => {
 
   if (loadingWorkout) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color="#CCFF00" />
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -389,40 +391,28 @@ const WorkoutDetail = ({ route, navigation }) => {
 
   if (loadingWorkout) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color="#CCFF00" />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      {/* Custom Header */}
-      <View style={styles.header}>
-        <View style={{flex: 1, alignItems: 'flex-start'}}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <AntDesign name="arrowleft" size={24} color={colors.text} />
+    <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <RepsHeader 
+        onLeftPress={() => navigation.goBack()} 
+        centerContent={isEditMode ? (
+          <TouchableOpacity onPress={() => { setIsEditMode(false); setEditedExercises(workout?.exercises ? JSON.parse(JSON.stringify(workout.exercises)) : []); }}>
+            <Text style={{color: colors.text, fontWeight: '700', fontSize: 12, letterSpacing: 1}}>CANCEL</Text>
           </TouchableOpacity>
-        </View>
-
-        <View style={{flex: 1, alignItems: 'center'}}>
-          {isEditMode ? (
-             <TouchableOpacity onPress={() => { setIsEditMode(false); setEditedExercises(workout?.exercises ? JSON.parse(JSON.stringify(workout.exercises)) : []); }} style={{padding: 5}}>
-                <Text style={{color: colors.text, fontWeight: '700', fontSize: 12, letterSpacing: 1}}>CANCEL</Text>
-             </TouchableOpacity>
-          ) : (
-             <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-          )}
-        </View>
-
-        <View style={{flex: 1, alignItems: 'flex-end'}}>
-          <TouchableOpacity onPress={() => isEditMode ? handleSave() : setIsEditMode(true)} style={{padding: 5}}>
-             <Text style={{color: isEditMode ? '#CCFF00' : colors.text, fontWeight: '700', fontSize: 12, letterSpacing: 1}}>
-               {isEditMode ? 'DONE' : 'EDIT'}
-             </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        ) : null}
+        title={isEditMode ? "" : "REPS"}
+        rightActions={[{
+          text: isEditMode ? 'DONE' : 'EDIT',
+          color: isEditMode ? '#CCFF00' : colors.text,
+          onPress: () => isEditMode ? handleSave() : setIsEditMode(true)
+        }]}
+      />
 
       <View style={styles.container}>
         <FlatList
@@ -434,7 +424,7 @@ const WorkoutDetail = ({ route, navigation }) => {
           showsVerticalScrollIndicator={false}
         />
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

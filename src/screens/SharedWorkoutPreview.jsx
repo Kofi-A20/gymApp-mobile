@@ -5,15 +5,19 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useWorkout } from '../context/WorkoutContext';
 import { sharingService } from '../services/sharingService';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useMonolithAlert } from '../context/AlertContext';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import RepsHeader from '../components/MonolithHeader';
+import { useRepsAlert } from '../context/AlertContext';
 
 const SharedWorkoutPreview = ({ route, navigation }) => {
   const { token } = route.params;
   const { colors, isDarkMode } = useTheme();
   const { user } = useAuth();
   const { startWorkout } = useWorkout();
-  const { showAlert } = useMonolithAlert();
+  const insets = useSafeAreaInsets();
+  const { profile } = useProfile(); // Just in case, though not used yet
+  const { showAlert } = useRepsAlert();
   const [workout, setWorkout] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -73,14 +77,11 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <MaterialCommunityIcons name="chevron-left" size={28} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>SHARED PROTOCOL</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <RepsHeader 
+        onLeftPress={() => navigation.goBack()} 
+        title="SHARED PROTOCOL" 
+      />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
@@ -123,7 +124,7 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
           )}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

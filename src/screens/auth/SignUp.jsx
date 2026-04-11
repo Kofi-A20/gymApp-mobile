@@ -3,7 +3,9 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useMonolithAlert } from '../../context/AlertContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import RepsHeader from '../../components/MonolithHeader';
+import { useRepsAlert } from '../../context/AlertContext';
 
 const SignUp = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
@@ -14,7 +16,8 @@ const SignUp = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const { colors } = useTheme();
-  const { showAlert } = useMonolithAlert();
+  const insets = useSafeAreaInsets();
+  const { showAlert } = useRepsAlert();
 
   const handleSignUp = async () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
@@ -45,21 +48,15 @@ const SignUp = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <RepsHeader onLeftPress={() => navigation.goBack()} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={{ color: colors.text, opacity: 0.7 }}>← BACK</Text>
-          </TouchableOpacity>
-
           <View style={styles.header}>
-            <Text style={[styles.logo, { color: colors.text }]}>JOIN THE MONOLITH</Text>
+            <Text style={[styles.logo, { color: colors.text }]}>JOIN REPS</Text>
             <Text style={[styles.subtitle, { color: colors.secondaryText }]}>DEFINE YOUR LEGACY</Text>
           </View>
 
@@ -145,7 +142,7 @@ const SignUp = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 

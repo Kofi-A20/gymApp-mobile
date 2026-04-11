@@ -34,7 +34,7 @@ export const sharingService = {
     
     return {
       token: data.token,
-      url: `monolith://share/${data.token}`
+      url: `reps://share/${data.token}`
     };
   },
 

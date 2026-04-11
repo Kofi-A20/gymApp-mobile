@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { exercisesService } from '../services/exercisesService';
 import { workoutsService } from '../services/workoutsService';
-import { MaterialCommunityIcons, AntDesign, Feather } from '@expo/vector-icons';
-import { useMonolithAlert } from '../context/AlertContext';
+import { MaterialCommunityIcons, AntDesign, Feather, Ionicons } from '@expo/vector-icons';
+import RepsHeader from '../components/MonolithHeader';
+import { useRepsAlert } from '../context/AlertContext';
 
 const FILTERS = ['ALL', 'CHEST', 'BACK', 'LEGS', 'SHOULDERS', 'ARMS'];
 
 const AddWorkout = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
-  const { showAlert } = useMonolithAlert();
+  const insets = useSafeAreaInsets();
+  const { showAlert } = useRepsAlert();
   const [workoutName, setWorkoutName] = useState('');
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
@@ -117,16 +119,12 @@ const AddWorkout = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-           <AntDesign name="close" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-           <Text style={[styles.cancelBtn, { color: colors.text }]}>CANCEL</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <RepsHeader 
+        leftIcon="close" 
+        onLeftPress={() => navigation.goBack()} 
+        rightActions={[{ text: 'CANCEL', onPress: () => navigation.goBack() }]} 
+      />
 
       <ScrollView 
         style={styles.container} 
@@ -139,7 +137,7 @@ const AddWorkout = ({ navigation }) => {
           <Text style={[styles.mainTitle, { color: colors.text }]}>DEFINE{"\n"}THE SESSION</Text>
           
           <Text style={[styles.description, { color: colors.secondaryText }]}>
-             Precision starts before the first lift. Name your routine and select your movements from the monolith library.
+             Precision starts before the first lift. Name your routine and select your movements from the reps library.
           </Text>
 
           {/* Workout Name Input */}
@@ -311,7 +309,7 @@ const AddWorkout = ({ navigation }) => {
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

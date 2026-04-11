@@ -1,19 +1,20 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
 import { sessionsService } from '../services/sessionsService';
 import { setsService } from '../services/setsService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
-import { useMonolithAlert } from '../context/AlertContext';
-import MonolithHeader from '../components/MonolithHeader';
+import { useRepsAlert } from '../context/AlertContext';
+import RepsHeader from '../components/MonolithHeader';
 
 const WeightsLog = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
+  const insets = useSafeAreaInsets();
   const { profile } = useProfile();
-  const { showAlert } = useMonolithAlert();
+  const { showAlert } = useRepsAlert();
   const [sessions, setSessions] = useState([]);
   const [progression, setProgression] = useState([]);
   const [viewMode, setViewMode] = useState('ARCHIVE'); // ARCHIVE | PROGRESSION
@@ -55,6 +56,14 @@ const WeightsLog = ({ navigation }) => {
       console.error('Failed to fetch progression:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === displayedSessions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(displayedSessions.map(s => s.id));
     }
   };
 
@@ -182,13 +191,13 @@ const WeightsLog = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <MonolithHeader 
-        leftIcon="menu" 
+    <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <RepsHeader 
         selectionMode={isSelectionMode} 
         selectedCount={selectedIds.length} 
         onCancelSelection={() => { setIsSelectionMode(false); setSelectedIds([]); }} 
         onDeleteSelected={handleDeleteSelected} 
+        onSelectAll={handleSelectAll}
       />
 
       <ScrollView
@@ -281,7 +290,7 @@ const WeightsLog = ({ navigation }) => {
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

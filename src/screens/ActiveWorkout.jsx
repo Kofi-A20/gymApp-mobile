@@ -11,19 +11,21 @@ import {
   Platform,
   BackHandler,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { useWorkout } from '../context/WorkoutContext';
-import { useMonolithAlert } from '../context/AlertContext';
-import { MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
+import { useRepsAlert } from '../context/AlertContext';
+import { MaterialCommunityIcons, AntDesign, Ionicons } from '@expo/vector-icons';
+import RepsHeader from '../components/MonolithHeader';
 
-const UI_STORAGE_KEY = '@monolith_activeWorkout_ui';
+const UI_STORAGE_KEY = '@reps_activeWorkout_ui';
 
 const ActiveWorkout = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
+  const insets = useSafeAreaInsets();
   const { activeSession, finishWorkout, cancelWorkout } = useWorkout();
-  const { showAlert } = useMonolithAlert();
+  const { showAlert } = useRepsAlert();
 
   // Session timer
   const [sessionTimer, setSessionTimer] = useState(0);
@@ -189,7 +191,7 @@ const ActiveWorkout = ({ navigation }) => {
     } else {
       showAlert(
         'FINISH SESSION',
-        'Are you sure you want to commit this session to the Monolith?',
+        'Are you sure you want to commit this session to Reps?',
         [
           { text: 'CANCEL', style: 'cancel' },
           { text: 'COMMIT', onPress: commitSession },
@@ -239,35 +241,31 @@ const ActiveWorkout = ({ navigation }) => {
 
   if (!activeSession) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
         <ActivityIndicator color="#CCFF00" />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <AntDesign name="close" size={22} color={colors.secondaryText} />
-        </TouchableOpacity>
-
-        <View style={styles.headerCenter}>
-          {restRemaining > 0 && (
-            <View style={[styles.restBadge, { backgroundColor: '#CCFF00' }]}>
-              <MaterialCommunityIcons name="timer-sand" size={11} color="#000" />
-              <Text style={styles.restBadgeText}>{formatTime(restRemaining)}</Text>
-            </View>
-          )}
-          <MaterialCommunityIcons name="clock-outline" size={14} color={colors.text} />
-          <Text style={[styles.timerText, { color: colors.text }]}>{formatTime(sessionTimer)}</Text>
-        </View>
-
-        <TouchableOpacity onPress={handleFinish} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Text style={styles.finishBtn}>FINISH</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <RepsHeader 
+        leftIcon="close" 
+        onLeftPress={handleCancel} 
+        centerContent={
+          <View style={styles.headerCenter}>
+            {restRemaining > 0 && (
+              <View style={[styles.restBadge, { backgroundColor: '#CCFF00' }]}>
+                <MaterialCommunityIcons name="timer-sand" size={11} color="#000" />
+                <Text style={styles.restBadgeText}>{formatTime(restRemaining)}</Text>
+              </View>
+            )}
+            <MaterialCommunityIcons name="clock-outline" size={14} color={colors.text} />
+            <Text style={[styles.timerText, { color: colors.text }]}>{formatTime(sessionTimer)}</Text>
+          </View>
+        }
+        rightActions={[{ text: 'FINISH', color: '#CCFF00', onPress: handleFinish }]}
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -416,7 +414,7 @@ const ActiveWorkout = ({ navigation }) => {
           <View style={{ height: 120 }} />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 

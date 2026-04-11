@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useMonolithAlert } from '../../context/AlertContext';
+import { useRepsAlert } from '../../context/AlertContext';
 
 const Login = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -12,7 +12,7 @@ const Login = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const { colors } = useTheme();
-  const { showAlert } = useMonolithAlert();
+  const { showAlert } = useRepsAlert();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -38,7 +38,7 @@ const Login = ({ navigation }) => {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Text style={[styles.logo, { color: colors.text }]}>MONOLITH</Text>
+            <Text style={[styles.logo, { color: colors.text }]}>REPS</Text>
             <Text style={[styles.subtitle, { color: colors.secondaryText }]}>CONTINUE YOUR EVOLUTION</Text>
           </View>
 
@@ -81,7 +81,7 @@ const Login = ({ navigation }) => {
             </TouchableOpacity>
 
             <View style={styles.footer}>
-              <Text style={{ color: colors.secondaryText }}>NEW TO THE MONOLITH? </Text>
+              <Text style={{ color: colors.secondaryText }}>NEW TO REPS? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
                 <Text style={[styles.link, { color: colors.text }]}>SIGN UP</Text>
               </TouchableOpacity>
