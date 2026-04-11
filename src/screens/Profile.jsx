@@ -13,12 +13,14 @@ import {
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
 import { MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';
 import { useMonolithAlert } from '../context/AlertContext';
+import MonolithHeader from '../components/MonolithHeader';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -169,6 +171,11 @@ const Profile = ({ navigation }) => {
       const finalGoalWeight = units === 'lbs' ? parseFloat(goalWeight) / 2.20462 : parseFloat(goalWeight);
       const dobStr = dob ? dob.toISOString().split('T')[0] : null;
 
+      // Save goal start weight if the goal changes
+      if (profile?.goal_weight !== finalGoalWeight && finalWeight) {
+        await AsyncStorage.setItem('goalStartWeight', String(finalWeight));
+      }
+
       await updateProfile({
         first_name: firstName,
         last_name: lastName,
@@ -257,13 +264,11 @@ const Profile = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={{ width: 24 }} />
-        <Text style={[styles.headerTitle, { color: colors.text }]}>USER PROFILE</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
-          <Ionicons name="settings-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
-      </View>
+      <MonolithHeader 
+        title="MONOLITH" 
+        leftIcon="settings-outline" 
+        onLeftPress={() => navigation.navigate('Settings')} 
+      />
 
       <ScrollView
         ref={scrollViewRef}

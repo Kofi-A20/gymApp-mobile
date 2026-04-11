@@ -8,6 +8,7 @@ import { workoutsService } from '../services/workoutsService';
 import { sessionsService } from '../services/sessionsService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useMonolithAlert } from '../context/AlertContext';
+import MonolithHeader from '../components/MonolithHeader';
 
 const WorkoutsLibrary = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
@@ -234,37 +235,14 @@ const WorkoutsLibrary = ({ navigation }) => {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        {/* Monolith Brand Header */}
-        <View style={styles.brandHeader}>
-          {isSelectionMode ? (
-            <>
-              <TouchableOpacity onPress={() => { setIsSelectionMode(false); setSelectedIds([]); }}>
-                <Text style={[{ color: colors.text, fontWeight: '700', fontSize: 12, letterSpacing: 1 }]}>CANCEL</Text>
-              </TouchableOpacity>
-              <Text style={[styles.brandTitle, { color: colors.text }]}>{selectedIds.length} SELECTED</Text>
-              {selectedIds.length > 0 ? (
-                <TouchableOpacity onPress={handleDeleteSelected}>
-                  <MaterialCommunityIcons name="delete" size={24} color="#FF3B30" />
-                </TouchableOpacity>
-              ) : (
-                <View style={{ width: 24 }} />
-              )}
-            </>
-          ) : (
-            <>
-              <Ionicons name="menu" size={24} color={colors.text} />
-              <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
-                <TouchableOpacity onPress={() => navigation.navigate('AddWorkout')}>
-                  <AntDesign name="plus-circle" size={24} color={colors.text} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-                  <MaterialCommunityIcons name="account" size={24} color={colors.text} />
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-        </View>
+        <MonolithHeader 
+          leftIcon="menu" 
+          rightActions={[{ icon: 'plus-circle', library: 'AntDesign', onPress: () => navigation.navigate('AddWorkout') }]} 
+          selectionMode={isSelectionMode} 
+          selectedCount={selectedIds.length} 
+          onCancelSelection={() => { setIsSelectionMode(false); setSelectedIds([]); }} 
+          onDeleteSelected={handleDeleteSelected} 
+        />
 
         <View style={styles.content}>
           <Text style={[styles.subLabel, { color: colors.secondaryText }]}>WORKOUT LIBRARY / Q3 CYCLE</Text>

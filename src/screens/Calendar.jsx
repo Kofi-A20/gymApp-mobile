@@ -19,6 +19,7 @@ import { workoutsService } from '../services/workoutsService';
 import { MaterialCommunityIcons, AntDesign, Feather, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import MonolithHeader from '../components/MonolithHeader';
 
 const { width } = Dimensions.get('window');
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -297,13 +298,7 @@ const Calendar = ({ navigation }) => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <Feather name="menu" size={24} color={colors.text} />
-        <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <MaterialCommunityIcons name="account-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
-      </View>
+      <MonolithHeader leftIcon="menu" />
 
       <ScrollView 
         ref={scrollRef}

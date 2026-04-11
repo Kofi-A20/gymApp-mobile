@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -7,11 +7,16 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { useMonolithAlert } from '../context/AlertContext';
+import { weightLogsService } from '../services/weightLogsService';
+import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
+import MonolithHeader from '../components/MonolithHeader';
 
 const ACTIVITY_OPTIONS = [
   { label: '1–2 days/week', value: 1.2 },
@@ -26,7 +31,6 @@ const STRATEGIES = [
   { label: 'BULK',     offset: 300,  color: '#CCFF00' },
 ];
 
-// Derive strategy from comparing current vs goal weight
 const deriveStrategy = (weightKg, goalWeightKg) => {
   const diff = goalWeightKg - weightKg;
   if (diff < -0.5) return 0;      // CUT
@@ -36,31 +40,101 @@ const deriveStrategy = (weightKg, goalWeightKg) => {
 
 const Calories = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
-  const { profile, refreshProfile } = useProfile();
+  const { profile, refreshProfile, updateProfile } = useProfile();
+  const { showAlert } = useMonolithAlert();
 
-  const [weight, setWeight] = useState(75);
+  const [weightLogs, setWeightLogs] = useState([]);
+  const [weightInput, setWeightInput] = useState('');
+  const [logLoading, setLogLoading] = useState(false);
+  const [goalStartWeight, setGoalStartWeight] = useState(null);
+
+  // Selection mode states
+  const [wlSelectionMode, setWlSelectionMode] = useState(false);
+  const [wlSelectedIds, setWlSelectedIds] = useState([]);
 
   useFocusEffect(
     useCallback(() => {
       if (refreshProfile) {
         refreshProfile();
       }
+      fetchWeightLogs();
+      fetchGoalStartWeight();
     }, [refreshProfile])
   );
 
-  useEffect(() => {
-    if (profile) {
-      setWeight(units === 'lbs'
-        ? (profile.weight_kg || 75) * 2.20462
-        : (profile.weight_kg || 75));
+  const fetchGoalStartWeight = async () => {
+    try {
+      const sw = await AsyncStorage.getItem('goalStartWeight');
+      if (sw !== null) setGoalStartWeight(parseFloat(sw));
+    } catch(e) {}
+  };
+
+  const fetchWeightLogs = async () => {
+    setLogLoading(true);
+    try {
+      const data = await weightLogsService.getWeightLogs();
+      setWeightLogs(data || []);
+    } catch (e) {
+      console.error('Failed to fetch weight logs:', e);
+    } finally {
+      setLogLoading(false);
     }
-  }, [profile, units]);
+  };
+
+  const handleLogWeight = async () => {
+    const raw = parseFloat(weightInput);
+    if (!raw || raw <= 0) return;
+    const kg = units === 'lbs' ? raw / 2.20462 : raw;
+    setLogLoading(true);
+    try {
+      await weightLogsService.logWeight(kg);
+      if (updateProfile) {
+        await updateProfile({ weight_kg: kg });
+      }
+      setWeightInput('');
+      await fetchWeightLogs();
+    } catch (e) {
+      showAlert('ERROR', 'Failed to log weight entry.');
+    } finally {
+      setLogLoading(false);
+    }
+  };
+
+  const toggleWlSelection = (id) => {
+    setWlSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  const handleDeleteSelectedLogs = () => {
+    showAlert(
+      'DELETE ENTRIES',
+      `Remove ${wlSelectedIds.length} entry/entries?`,
+      [
+        { text: 'CANCEL', style: 'cancel' },
+        {
+          text: 'DELETE',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLogLoading(true);
+              await Promise.all(wlSelectedIds.map(id => weightLogsService.deleteWeightLog(id)));
+              setWeightLogs(prev => prev.filter(l => !wlSelectedIds.includes(l.id)));
+              setWlSelectionMode(false);
+              setWlSelectedIds([]);
+            } catch (e) {
+              showAlert('ERROR', 'Failed to delete entries.');
+            } finally {
+              setLogLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // ── All other values come from profile ──
   const gender = profile?.gender || 'male';
   const height = profile?.height_cm || 175;
 
-  // Age from DOB or from age field (legacy fallback)
   const age = useMemo(() => {
     if (profile?.dob) {
       const today = new Date();
@@ -80,13 +154,33 @@ const Calories = ({ navigation }) => {
   const activityIdx = actIdxRaw !== -1 ? actIdxRaw : 1;
   const activityLabel = ACTIVITY_OPTIONS[activityIdx].label;
 
-  // ── Calculations ──
-  const weightKg     = units === 'lbs' ? weight / 2.20462 : weight;
+  const weightKg     = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight_kg : (profile?.weight_kg || 75);
   const goalWeightKg = units === 'lbs' ? goalWeight / 2.20462 : goalWeight;
 
   const strategyIdx   = deriveStrategy(weightKg, goalWeightKg);
   const strategyLabel = STRATEGIES[strategyIdx].label;
 
+  // ── Goal Progress Logic ──
+  const anchorWeight = goalStartWeight !== null ? goalStartWeight : profile?.weight_kg;
+  const currentGoalKg = profile?.goal_weight;
+
+  let progressPercent = 0;
+  let showProgress = false;
+  if (anchorWeight !== undefined && weightKg !== undefined && currentGoalKg !== undefined && currentGoalKg !== null) {
+    showProgress = true;
+    if (anchorWeight === currentGoalKg) {
+      progressPercent = 100;
+    } else {
+      progressPercent = ((weightKg - anchorWeight) / (currentGoalKg - anchorWeight)) * 100;
+      if (progressPercent < 0) progressPercent = 0;
+      if (progressPercent > 100) progressPercent = 100;
+    }
+  }
+
+  const diffGoalKg = Math.abs(weightKg - (currentGoalKg || 0));
+  const toGoalDisplay = units === 'lbs' ? (diffGoalKg * 2.20462).toFixed(1) : diffGoalKg.toFixed(1);
+
+  // ── Macros & Calories ──
   const bmr = useMemo(() => {
     const offset = gender === 'female' ? -161 : 5;
     return Math.round(10 * weightKg + 6.25 * height - 5 * age + offset);
@@ -95,7 +189,6 @@ const Calories = ({ navigation }) => {
   const tdee         = useMemo(() => Math.round(bmr * ACTIVITY_OPTIONS[activityIdx].value), [bmr, activityIdx]);
   const targetIntake = tdee + STRATEGIES[strategyIdx].offset;
 
-  // Macro Ranges
   const proLow  = Math.round(weightKg * 1.6);
   const proHigh = Math.round(weightKg * 2.2);
   const fatLow  = Math.round(weightKg * 0.7);
@@ -111,15 +204,21 @@ const Calories = ({ navigation }) => {
     return `EATING ${targetIntake.toLocaleString()} KCAL/DAY SUPPORTS YOUR CURRENT STRATEGY. MAINTAIN CONSISTENCY FOR BEST RESULTS.`;
   };
 
+  // Pre-calculate deltas on ascending logs
+  const logsWithDeltas = weightLogs.map((log, idx) => {
+    let prevKg = profile?.weight_kg;
+    if (idx > 0) {
+      prevKg = weightLogs[idx - 1].weight_kg;
+    }
+    return {
+      ...log,
+      deltaKg: prevKg !== undefined ? log.weight_kg - prevKg : null,
+    };
+  });
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <View style={{ width: 24 }} />
-        <Text style={[styles.brandTitle, { color: colors.text }]}>MONOLITH</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <MaterialCommunityIcons name="account-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
-      </View>
+      <MonolithHeader leftIcon="menu" />
 
       <ScrollView 
         style={styles.container} 
@@ -128,10 +227,11 @@ const Calories = ({ navigation }) => {
         keyboardDismissMode="interactive"
       >
         <View style={styles.content}>
+          {/* 1. Sub label + Main title */}
           <Text style={[styles.subLabel, { color: colors.secondaryText }]}>HEALTH DIAGNOSTICS</Text>
           <Text style={[styles.mainTitle, { color: colors.text }]}>CALORIE{'\n'}COMMAND</Text>
 
-          {/* ── TOP METRICS ── */}
+          {/* 2. Top Metrics */}
           <View style={styles.metricsGrid}>
             <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground }]}>
               <Text style={styles.metricLabel}>BMR</Text>
@@ -150,41 +250,7 @@ const Calories = ({ navigation }) => {
             </View>
           </View>
 
-          {/* ── WEIGHT INPUT ── */}
-          <View style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
-            <Text style={styles.cardHeader}>CURRENT WEIGHT ({units.toUpperCase()})</Text>
-            <TextInput
-              style={[styles.weightInput, { color: colors.text, borderColor: colors.border }]}
-              keyboardType="numeric"
-              value={weight.toString()}
-              onChangeText={v => {
-                const val = v.replace(/[^0-9.]/g, '');
-                setWeight(parseFloat(val) || 0);
-              }}
-            />
-            <Text style={[styles.weightHint, { color: colors.secondaryText }]}>UPDATE WEIGHT</Text>
-          </View>
-
-          {/* ── PROFILE SNAPSHOT ── */}
-          <View style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
-            <Text style={styles.cardHeader}>PROFILE SNAPSHOT</Text>
-            <View style={styles.snapshotGrid}>
-              <View style={styles.snapshotItem}>
-                <Text style={styles.inputLabel}>GENDER</Text>
-                <Text style={[styles.snapshotValue, { color: colors.text }]}>{gender.toUpperCase()}</Text>
-              </View>
-              <View style={styles.snapshotItem}>
-                <Text style={styles.inputLabel}>ACTIVITY</Text>
-                <Text style={[styles.snapshotValue, { color: colors.text }]}>{activityLabel}</Text>
-              </View>
-              <View style={styles.snapshotItem}>
-                <Text style={styles.inputLabel}>STRATEGY</Text>
-                <Text style={[styles.snapshotValue, { color: '#CCFF00' }]}>{strategyLabel}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* ── MACROS ── */}
+          {/* 3. MACROS */}
           <View style={[styles.card, { backgroundColor: '#000', borderColor: '#CCFF00' }]}>
             <Text style={[styles.cardHeader, { color: '#CCFF00' }]}>MACRO RATIOS</Text>
 
@@ -213,7 +279,177 @@ const Calories = ({ navigation }) => {
             </View>
           </View>
 
-          {/* ── NOTE ── */}
+          {/* 4. PROFILE SNAPSHOT */}
+          <View style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+            <Text style={styles.cardHeader}>PROFILE SNAPSHOT</Text>
+            <View style={styles.snapshotGrid}>
+              <View style={styles.snapshotItem}>
+                <Text style={styles.inputLabel}>GENDER</Text>
+                <Text style={[styles.snapshotValue, { color: colors.text }]}>{gender.toUpperCase()}</Text>
+              </View>
+              <View style={styles.snapshotItem}>
+                <Text style={styles.inputLabel}>ACTIVITY</Text>
+                <Text style={[styles.snapshotValue, { color: colors.text }]}>{activityLabel}</Text>
+              </View>
+              <View style={styles.snapshotItem}>
+                <Text style={styles.inputLabel}>STRATEGY</Text>
+                <Text style={[styles.snapshotValue, { color: '#CCFF00' }]}>{strategyLabel}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* 5. GOAL PROGRESS */}
+          {showProgress && (
+            <View style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+              <Text style={styles.cardHeader}>GOAL PROGRESS</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <View style={[styles.mBarBg, { flex: 1, backgroundColor: '#333' }]}>
+                  <View style={[styles.mBarFill, { width: `${progressPercent}%`, backgroundColor: '#CCFF00' }]} />
+                </View>
+              </View>
+              <Text style={{ fontSize: 9, fontWeight: '800', color: colors.secondaryText, textAlign: 'right', marginTop: 4 }}>
+                {toGoalDisplay} {units.toUpperCase()} TO GOAL
+              </Text>
+            </View>
+          )}
+
+          {/* 6. WEIGHT SECTION */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={[styles.cardHeader, { marginBottom: 10 }]}>
+              CURRENT WEIGHT: {units === 'lbs' ? (weightKg * 2.20462).toFixed(1) : parseFloat(weightKg).toFixed(1)} {units.toUpperCase()}
+            </Text>
+            
+            {/* Log new weight */}
+            <View style={[styles.weightLogCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+              <Text style={[styles.wlLabel, { color: colors.secondaryText }]}>LOG THIS WEEK</Text>
+              <View style={styles.wlInputRow}>
+                <TextInput
+                  style={[styles.wlInput, { color: colors.text, borderColor: colors.border }]}
+                  placeholder={`Weight (${units})`}
+                  placeholderTextColor={colors.secondaryText}
+                  keyboardType="numeric"
+                  value={weightInput}
+                  onChangeText={setWeightInput}
+                />
+                <TouchableOpacity
+                  style={[styles.wlLogBtn, { backgroundColor: weightInput ? '#CCFF00' : colors.secondaryBackground, borderColor: colors.border }]}
+                  onPress={handleLogWeight}
+                  disabled={logLoading || !weightInput}
+                >
+                  {logLoading
+                    ? <ActivityIndicator size="small" color="#000" />
+                    : <Text style={[styles.wlLogBtnText, { color: weightInput ? '#000' : colors.secondaryText }]}>LOG</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Selection Action Bar for Timeline */}
+            {wlSelectionMode && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                <TouchableOpacity onPress={() => { setWlSelectionMode(false); setWlSelectedIds([]); }}>
+                  <Text style={{ color: colors.text, fontWeight: '900', fontSize: 12, letterSpacing: 1.5 }}>CANCEL</Text>
+                </TouchableOpacity>
+                <Text style={{ color: colors.text, fontSize: 14, fontWeight: '900', letterSpacing: 2 }}>{wlSelectedIds.length} SELECTED</Text>
+                <TouchableOpacity onPress={handleDeleteSelectedLogs} disabled={wlSelectedIds.length === 0}>
+                  <MaterialCommunityIcons name="delete" size={24} color={wlSelectedIds.length > 0 ? "#FF3B30" : colors.secondaryText} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Timeline */}
+            {logLoading && weightLogs.length === 0 ? (
+              <ActivityIndicator color={colors.text} style={{ marginTop: 40 }} />
+            ) : weightLogs.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={{ color: colors.secondaryText }}>NO WEIGHT ENTRIES YET</Text>
+              </View>
+            ) : (
+              <View style={{ marginTop: 10, maxHeight: 400, borderWidth: 1, borderColor: colors.border, borderRadius: 4 }}>
+                <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
+                  {[...logsWithDeltas].reverse().map((log, idx) => {
+                  const displayWeight = units === 'lbs'
+                    ? (log.weight_kg * 2.20462).toFixed(1)
+                    : log.weight_kg.toFixed(1);
+                  const dateStr = new Date(log.logged_at).toLocaleDateString('en-US', {
+                    weekday: 'short', month: 'short', day: 'numeric',
+                  }).toUpperCase();
+                  const isFirst = idx === 0;
+
+                  // Delta formatting
+                  let deltaDisplay = null;
+                  let deltaColor = colors.secondaryText;
+                  
+                  if (log.deltaKg !== null) {
+                    const deltaVal = units === 'lbs' ? log.deltaKg * 2.20462 : log.deltaKg;
+                    
+                    if (Math.abs(deltaVal) >= 0.1) {
+                      const prefix = deltaVal > 0 ? '+' : '';
+                      deltaDisplay = `${prefix}${deltaVal.toFixed(1)} ${units.toUpperCase()}`;
+                      
+                      if (strategyIdx === 0) { // CUT
+                        deltaColor = deltaVal < 0 ? '#CCFF00' : '#FF3B30';
+                      } else if (strategyIdx === 2) { // BULK
+                        deltaColor = deltaVal > 0 ? '#CCFF00' : '#FF3B30';
+                      }
+                    } else {
+                      deltaDisplay = `0.0 ${units.toUpperCase()}`;
+                    }
+                  }
+
+                  return (
+                    <TouchableOpacity 
+                      key={log.id} 
+                      style={styles.wlEntry}
+                      onPress={() => {
+                        if (wlSelectionMode) toggleWlSelection(log.id);
+                      }}
+                      onLongPress={() => {
+                        if (!wlSelectionMode) {
+                          setWlSelectionMode(true);
+                          setWlSelectedIds([log.id]);
+                        }
+                      }}
+                      delayLongPress={300}
+                      activeOpacity={wlSelectionMode ? 0.7 : 0.9}
+                    >
+                      <View style={styles.wlTimeline}>
+                        <View style={[styles.wlDot, { backgroundColor: isFirst ? '#CCFF00' : colors.border }]} />
+                        {idx < weightLogs.length - 1 && <View style={[styles.wlLine, { backgroundColor: colors.border }]} />}
+                      </View>
+                      <View style={styles.wlEntryContent}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <View>
+                            <Text style={[styles.wlWeight, { color: isFirst ? '#CCFF00' : colors.text }]}>
+                              {displayWeight} <Text style={{ fontSize: 14 }}>{units.toUpperCase()}</Text>
+                            </Text>
+                            <Text style={[styles.wlDate, { color: colors.secondaryText }]}>{dateStr}</Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            {deltaDisplay !== null && (
+                              <Text style={[styles.wlDelta, { color: deltaColor }]}>
+                                {deltaDisplay}
+                              </Text>
+                            )}
+                            {wlSelectionMode && (
+                              <MaterialCommunityIcons
+                                name={wlSelectedIds.includes(log.id) ? "checkbox-marked" : "checkbox-blank-outline"}
+                                size={24}
+                                color={wlSelectedIds.includes(log.id) ? '#CCFF00' : colors.secondaryText}
+                              />
+                            )}
+                          </View>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+
+          {/* 7. NOTE box */}
           <View style={styles.noteBox}>
             <Ionicons name="information-circle-outline" size={18} color={colors.secondaryText} />
             <Text style={styles.noteText}>{getNote()}</Text>
@@ -247,10 +483,6 @@ const styles = StyleSheet.create({
   card: { padding: 20, borderWidth: 1, marginBottom: 12 },
   cardHeader: { fontSize: 10, fontWeight: '900', letterSpacing: 2, marginBottom: 16, opacity: 0.8 },
 
-  weightInput: {
-    borderBottomWidth: 2, fontSize: 36, fontWeight: '900',
-    paddingVertical: 8, textAlign: 'center',
-  },
   weightHint: { fontSize: 9, fontWeight: '800', letterSpacing: 1, textAlign: 'center', marginTop: 10 },
 
   snapshotGrid: { flexDirection: 'row', gap: 10 },
@@ -267,6 +499,96 @@ const styles = StyleSheet.create({
 
   noteBox: { flexDirection: 'row', gap: 10, marginVertical: 30, paddingHorizontal: 10 },
   noteText: { fontSize: 11, fontWeight: '700', lineHeight: 18, flex: 1, color: '#888' },
+
+  // ── Weight Log ──────────────────────────────────────
+  weightLogCard: {
+    padding: 20,
+    borderWidth: 1,
+    borderRadius: 4,
+    marginBottom: 20,
+  },
+  wlLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginBottom: 14,
+  },
+  wlInputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  wlInput: {
+    flex: 1,
+    height: 52,
+    borderBottomWidth: 2,
+    fontSize: 28,
+    fontWeight: '900',
+    paddingHorizontal: 4,
+  },
+  wlLogBtn: {
+    height: 52,
+    paddingHorizontal: 22,
+    borderWidth: 1,
+    borderRadius: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  wlLogBtnText: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  wlEntry: {
+    flexDirection: 'row',
+    marginBottom: 0,
+  },
+  wlTimeline: {
+    width: 24,
+    alignItems: 'center',
+  },
+  wlDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 6,
+    zIndex: 1,
+  },
+  wlLine: {
+    width: 2,
+    flex: 1,
+    marginTop: 2,
+    minHeight: 40,
+  },
+  wlEntryContent: {
+    flex: 1,
+    paddingLeft: 14,
+    paddingBottom: 28,
+  },
+  wlWeight: {
+    fontSize: 28,
+    fontWeight: '900',
+  },
+  wlDate: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginTop: 4,
+  },
+  wlDelta: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  emptyState: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#333',
+    borderRadius: 4,
+  },
 });
 
 export default Calories;

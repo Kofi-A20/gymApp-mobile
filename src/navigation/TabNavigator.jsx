@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import { View, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons, Ionicons, AntDesign, FontAwesome } from '@expo/vector-icons';
@@ -62,10 +62,33 @@ const TAB_ICONS = {
 const CustomTabBar = ({ state, descriptors, navigation }) => {
   const { colors, isDarkMode } = useTheme();
 
+  const [containerWidth, setContainerWidth] = useState(0);
+  const slideAnim = useRef(new Animated.Value(state.index)).current;
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: state.index,
+      useNativeDriver: true,
+      stiffness: 180,
+      damping: 20,
+      mass: 0.8,
+    }).start();
+  }, [state.index]);
+
+  const pillWidth = 44;
+
+  const translateX = slideAnim.interpolate({
+    inputRange: [0, 1, 2, 3, 4],
+    outputRange: [0, 1, 2, 3, 4].map(i => {
+      const slotWidth = (containerWidth - 16) / 5;
+      return 8 + (slotWidth * i) + (slotWidth / 2) - (pillWidth / 2);
+    }),
+  });
+
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
       <View style={[
-        styles.pill,
+        styles.pillContainer,
         {
           shadowColor: isDarkMode ? '#000' : '#555',
         }
@@ -87,7 +110,22 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         ]} />
 
         {/* Icon Row — our layout, full control */}
-        <View style={styles.iconRow}>
+        <View
+          style={styles.iconRow}
+          onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+        >
+          {containerWidth > 0 && (
+            <Animated.View
+              style={[
+                styles.slidingPill,
+                {
+                  backgroundColor: isDarkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
+                  transform: [{ translateX }],
+                }
+              ]}
+            />
+          )}
+
           {state.routes.map((route, index) => {
             const isFocused = state.index === index;
             const IconComponent = TAB_ICONS[route.name];
@@ -116,26 +154,17 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                 onPress={onPress}
                 onLongPress={onLongPress}
                 style={styles.tabItem}
-                activeOpacity={0.7}
+                activeOpacity={1}
                 accessibilityRole="button"
                 accessibilityState={isFocused ? { selected: true } : {}}
                 accessibilityLabel={descriptors[route.key].options.tabBarAccessibilityLabel}
               >
-                <View style={[
-                  styles.activeIndicator,
-                  isFocused && {
-                    backgroundColor: isDarkMode
-                      ? 'rgba(255, 255, 255, 0.12)'
-                      : 'rgba(0, 0, 0, 0.10)',
-                  }
-                ]}>
-                  {IconComponent && (
-                    <IconComponent
-                      color={isFocused ? colors.text : colors.secondaryText}
-                      size={22}
-                    />
-                  )}
-                </View>
+                {IconComponent && (
+                  <IconComponent
+                    color={isFocused ? colors.text : colors.secondaryText}
+                    size={22}
+                  />
+                )}
               </TouchableOpacity>
             );
           })}
@@ -155,7 +184,7 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
   },
-  pill: {
+  pillContainer: {
     flexDirection: 'row',
     width: '75%',
     borderRadius: 32,
@@ -171,7 +200,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 60,
     alignItems: 'center',
-    justifyContent: 'space-around',
     paddingHorizontal: 8,
   },
   tabItem: {
@@ -179,14 +207,16 @@ const styles = StyleSheet.create({
     height: 60,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1, // Make sure icons stay above pill
   },
-  activeIndicator: {
+  slidingPill: {
+    position: 'absolute',
+    left: 0,
     width: 44,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+    zIndex: 0,
+  }
 });
 
 // ─── Tab Navigator ────────────────────────────────────────────────────────────
@@ -200,7 +230,16 @@ const TabNavigator = () => (
     <Tab.Screen name="Calendar" component={Calendar} />
     <Tab.Screen name="Log" component={WeightsLog} />
     <Tab.Screen name="Calories" component={Calories} />
-    <Tab.Screen name="Profile" component={ProfileStack} />
+    <Tab.Screen
+      name="Profile"
+      component={ProfileStack}
+      listeners={({ navigation }) => ({
+        tabPress: (e) => {
+          e.preventDefault();
+          navigation.navigate('Profile', { screen: 'ProfileMain' });
+        },
+      })}
+    />
   </Tab.Navigator>
 );
 
