@@ -22,6 +22,8 @@ const AddWorkout = ({ navigation }) => {
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [expandedExerciseId, setExpandedExerciseId] = useState(null);
+  const [draftTargets, setDraftTargets] = useState({ sets: '', reps: '' });
 
   useEffect(() => {
     fetchExercises();
@@ -48,8 +50,8 @@ const AddWorkout = ({ navigation }) => {
     }
 
     if (search) {
-      result = result.filter(ex => 
-        ex.name.toUpperCase().includes(search.toUpperCase()) || 
+      result = result.filter(ex =>
+        ex.name.toUpperCase().includes(search.toUpperCase()) ||
         ex.muscle_group?.toUpperCase().includes(search.toUpperCase())
       );
     }
@@ -67,20 +69,35 @@ const AddWorkout = ({ navigation }) => {
     return unsubscribe;
   }, [navigation]);
 
-  const toggleExerciseSelection = (exercise) => {
-    const isSelected = selectedExercises.find(ex => ex.id === exercise.id);
-    if (isSelected) {
-      setSelectedExercises(selectedExercises.filter(ex => ex.id !== exercise.id));
+  const handleRowPress = (ex) => {
+    const isSelected = selectedExercises.find(s => s.id === ex.id);
+
+    if (expandedExerciseId === ex.id) {
+      setExpandedExerciseId(null);
     } else {
-      setSelectedExercises([...selectedExercises, { ...exercise, sets_target: '', reps_target: '' }]);
+      setExpandedExerciseId(ex.id);
+      setDraftTargets({
+        sets: isSelected?.sets_target?.toString() || '',
+        reps: isSelected?.reps_target?.toString() || ''
+      });
     }
   };
 
-  const updateExerciseTarget = (id, field, value) => {
-    const numValue = value.replace(/[^0-9]/g, '');
-    setSelectedExercises(prev => 
-      prev.map(ex => ex.id === id ? { ...ex, [field]: numValue } : ex)
-    );
+  const handleSaveTargets = (exId) => {
+    const isAlreadySelected = selectedExercises.find(ex => ex.id === exId);
+    const updatedSets = draftTargets.sets;
+    const updatedReps = draftTargets.reps;
+
+    if (isAlreadySelected) {
+      setSelectedExercises(prev =>
+        prev.map(ex => ex.id === exId ? { ...ex, sets_target: updatedSets, reps_target: updatedReps } : ex)
+      );
+    } else {
+      const exercise = allExercises.find(ex => ex.id === exId);
+      setSelectedExercises(prev => [...prev, { ...exercise, sets_target: updatedSets, reps_target: updatedReps }]);
+    }
+
+    setExpandedExerciseId(null);
   };
 
   const handleCreateWorkout = async () => {
@@ -107,7 +124,7 @@ const AddWorkout = ({ navigation }) => {
         sets_target: parseInt(ex.sets_target, 10),
         reps_target: parseInt(ex.reps_target, 10),
       }));
-      
+
       await workoutsService.createWorkout(workoutName, '', exercisesList);
       showAlert('Success', 'Workout template created');
       navigation.goBack();
@@ -120,14 +137,14 @@ const AddWorkout = ({ navigation }) => {
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      <RepsHeader 
-        leftIcon="close" 
-        onLeftPress={() => navigation.goBack()} 
-        rightActions={[{ text: 'CANCEL', onPress: () => navigation.goBack() }]} 
+      <RepsHeader
+        leftIcon="close"
+        onLeftPress={() => navigation.goBack()}
+        rightActions={[{ text: 'CANCEL', onPress: () => navigation.goBack() }]}
       />
 
-      <ScrollView 
-        style={styles.container} 
+      <ScrollView
+        style={styles.container}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
@@ -135,176 +152,177 @@ const AddWorkout = ({ navigation }) => {
         <View style={styles.content}>
           <Text style={[styles.subLabel, { color: colors.secondaryText }]}>NEW ENTRY</Text>
           <Text style={[styles.mainTitle, { color: colors.text }]}>DEFINE{"\n"}THE SESSION</Text>
-          
+
           <Text style={[styles.description, { color: colors.secondaryText }]}>
-             Precision starts before the first lift. Name your routine and select your movements from the reps library.
+            Precision starts before the first lift. Name your routine and select your movements from the reps library.
           </Text>
 
           {/* Workout Name Input */}
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: colors.secondaryText }]}>WORKOUT NAME</Text>
-            <TextInput 
-               style={[styles.mainInput, { color: colors.text, borderBottomColor: colors.border }]}
-               placeholder="E.G. HYPERTROPHY A"
-               placeholderTextColor={isDarkMode ? '#333' : '#CCC'}
-               value={workoutName}
-               onChangeText={setWorkoutName}
-               autoCapitalize="characters"
+            <TextInput
+              style={[styles.mainInput, { color: colors.text, borderBottomColor: colors.border }]}
+              placeholder="E.G. HYPERTROPHY A"
+              placeholderTextColor={isDarkMode ? '#333' : '#CCC'}
+              value={workoutName}
+              onChangeText={setWorkoutName}
+              autoCapitalize="characters"
             />
           </View>
 
           {/* Movement Search */}
           <View style={[styles.searchBox, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
-             <Text style={[styles.searchLabel, { color: colors.secondaryText }]}>MOVEMENT SEARCH</Text>
-             <View style={styles.searchRow}>
-                <Feather name="search" size={16} color={colors.secondaryText} style={{ marginRight: 8 }} />
-                <TextInput 
-                   placeholder="FIND EXERCISE..."
-                   placeholderTextColor={colors.secondaryText}
-                   style={[styles.searchInput, { color: colors.text }]}
-                   value={search}
-                   onChangeText={setSearch}
-                />
-             </View>
+            <Text style={[styles.searchLabel, { color: colors.secondaryText }]}>MOVEMENT SEARCH</Text>
+            <View style={styles.searchRow}>
+              <Feather name="search" size={16} color={colors.secondaryText} style={{ marginRight: 8 }} />
+              <TextInput
+                placeholder="FIND EXERCISE..."
+                placeholderTextColor={colors.secondaryText}
+                style={[styles.searchInput, { color: colors.text }]}
+                value={search}
+                onChangeText={setSearch}
+              />
+            </View>
           </View>
 
           {/* Body Focus Filters */}
           <View style={styles.filterSection}>
-             <Text style={[styles.filterLabel, { color: colors.secondaryText }]}>BODY FOCUS</Text>
-             <View style={styles.filterGrid}>
-                {FILTERS.map((f) => (
-                  <TouchableOpacity 
-                    key={f} 
-                    onPress={() => setActiveFilter(f)}
-                    style={[
-                      styles.filterChip, 
-                      { 
-                        backgroundColor: activeFilter === f ? (isDarkMode ? '#FFF' : '#000') : 'transparent',
-                        borderColor: colors.border
-                      }
-                    ]}
-                  >
-                    <Text style={[
-                      styles.filterChipText, 
-                      { color: activeFilter === f ? (isDarkMode ? '#000' : '#FFF') : colors.text }
-                    ]}>{f}</Text>
-                  </TouchableOpacity>
-                ))}
-             </View>
+            <Text style={[styles.filterLabel, { color: colors.secondaryText }]}>BODY FOCUS</Text>
+            <View style={styles.filterGrid}>
+              {FILTERS.map((f) => (
+                <TouchableOpacity
+                  key={f}
+                  onPress={() => setActiveFilter(f)}
+                  style={[
+                    styles.filterChip,
+                    {
+                      backgroundColor: activeFilter === f ? (isDarkMode ? '#FFF' : '#000') : 'transparent',
+                      borderColor: colors.border
+                    }
+                  ]}
+                >
+                  <Text style={[
+                    styles.filterChipText,
+                    { color: activeFilter === f ? (isDarkMode ? '#000' : '#FFF') : colors.text }
+                  ]}>{f}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           {/* Exercise Selection List */}
           <View style={[styles.selectionCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
-             <View style={styles.selectionHeader}>
-                <Text style={[styles.selectionTitle, { color: colors.text }]}>EXERCISE{"\n"}SELECTION</Text>
-                <Text style={[styles.selectionCount, { color: colors.secondaryText }]}>
-                  {String(selectedExercises.length).padStart(2, '0')} ITEMS{"\n"}SELECTED
-                </Text>
-             </View>
-             
-             <View style={styles.selectedList}>
-                {loading ? (
-                  <ActivityIndicator color={colors.text} style={{ padding: 40 }} />
-                ) : (
-                  filteredExercises.map((ex, index) => {
-                    const isSelected = selectedExercises.find(s => s.id === ex.id);
-                    return (
-                      <View 
-                        key={ex.id} 
-                        style={[
-                          styles.exerciseItemContainer, 
-                          { 
-                            backgroundColor: isSelected ? isDarkMode ? '#111' : '#F5F5F5' : colors.background, 
-                            borderColor: colors.border,
-                            borderWidth: 1,
-                            marginBottom: 12
-                          }
-                        ]}
-                      >
-                        <TouchableOpacity 
-                          style={{ flexDirection: 'row', alignItems: 'center', padding: 15 }}
-                          onPress={() => toggleExerciseSelection(ex)}
+            <View style={styles.selectionHeader}>
+              <Text style={[styles.selectionTitle, { color: colors.text }]}>EXERCISE{"\n"}SELECTION</Text>
+              <Text style={[styles.selectionCount, { color: colors.secondaryText }]}>
+                {String(selectedExercises.length).padStart(2, '0')} ITEMS{"\n"}SELECTED
+              </Text>
+            </View>
+
+            <View style={styles.selectedList}>
+              {loading ? (
+                <ActivityIndicator color={colors.text} style={{ padding: 40 }} />
+              ) : (
+                <View style={{ maxHeight: 400 }}>
+                  <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
+                    {filteredExercises.map((ex, index) => {
+                      const isSelected = selectedExercises.find(s => s.id === ex.id);
+                      return (
+                        <View
+                          key={ex.id}
+                          style={[
+                            styles.exerciseItemContainer,
+                            {
+                              backgroundColor: isSelected ? isDarkMode ? '#111' : '#F5F5F5' : colors.background,
+                              borderColor: colors.border,
+                              borderWidth: 1,
+                              marginBottom: 12
+                            }
+                          ]}
                         >
-                           <Text style={[
-                             styles.exerciseId, 
-                             { color: isSelected ? colors.text : colors.secondaryText }
-                           ]}>
-                             {String(index + 1).padStart(2, '0')}
-                           </Text>
-                           <View style={{ flex: 1 }}>
+                          <TouchableOpacity
+                            style={{ flexDirection: 'row', alignItems: 'center', padding: 15 }}
+                            onPress={() => handleRowPress(ex)}
+                          >
+                            <Text style={[
+                              styles.exerciseId,
+                              { color: isSelected ? colors.text : colors.secondaryText }
+                            ]}>
+                              {String(index + 1).padStart(2, '0')}
+                            </Text>
+                            <View style={{ flex: 1 }}>
                               <Text style={[
-                                styles.exerciseName, 
+                                styles.exerciseName,
                                 { color: colors.text }
                               ]}>{ex.name.toUpperCase()}</Text>
                               <Text style={[
-                                styles.exerciseFocus, 
+                                styles.exerciseFocus,
                                 { color: colors.secondaryText }
                               ]}>{ex.muscle_group?.toUpperCase() || 'GENERAL'}</Text>
-                           </View>
-                           {isSelected && (
-                             <AntDesign name="check" size={20} color={colors.text} style={{ marginLeft: 'auto' }} />
-                           )}
-                        </TouchableOpacity>
+                            </View>
+                            {isSelected && expandedExerciseId !== ex.id && (
+                              <Text style={{ color: '#CCFF00', fontWeight: '900', fontSize: 16 }}>
+                                {isSelected.sets_target} × {isSelected.reps_target}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
 
-                        {isSelected && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingBottom: 15, gap: 15 }}>
-                            <TextInput
-                              style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
-                              placeholder="SETS"
-                              placeholderTextColor={colors.secondaryText}
-                              keyboardType="numeric"
-                              value={String(isSelected.sets_target || '')}
-                              onChangeText={(val) => updateExerciseTarget(ex.id, 'sets_target', val)}
-                            />
-                            <Text style={{color: colors.secondaryText, fontSize: 16}}>×</Text>
-                            <TextInput
-                              style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
-                              placeholder="REPS"
-                              placeholderTextColor={colors.secondaryText}
-                              keyboardType="numeric"
-                              value={String(isSelected.reps_target || '')}
-                              onChangeText={(val) => updateExerciseTarget(ex.id, 'reps_target', val)}
-                            />
-                          </View>
-                        )}
-                      </View>
-                    );
-                  })
-                )}
+                          {expandedExerciseId === ex.id && (
+                            <View style={{ alignItems: 'center', justifyContent: 'center', paddingBottom: 15, gap: 15 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 15 }}>
+                                <TextInput
+                                  style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
+                                  placeholder="SETS"
+                                  placeholderTextColor={colors.secondaryText}
+                                  keyboardType="numeric"
+                                  value={draftTargets.sets}
+                                  onChangeText={(val) => setDraftTargets(prev => ({ ...prev, sets: val.replace(/[^0-9]/g, '') }))}
+                                />
+                                <Text style={{ color: colors.secondaryText, fontSize: 16 }}>×</Text>
+                                <TextInput
+                                  style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
+                                  placeholder="REPS"
+                                  placeholderTextColor={colors.secondaryText}
+                                  keyboardType="numeric"
+                                  value={draftTargets.reps}
+                                  onChangeText={(val) => setDraftTargets(prev => ({ ...prev, reps: val.replace(/[^0-9]/g, '') }))}
+                                />
+                              </View>
+                              <TouchableOpacity
+                                style={{ backgroundColor: '#CCFF00', paddingHorizontal: 30, paddingVertical: 10, borderRadius: 2 }}
+                                onPress={() => handleSaveTargets(ex.id)}
+                              >
+                                <Text style={{ fontWeight: '800', fontSize: 12, color: '#000', letterSpacing: 1 }}>SAVE</Text>
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
 
-                {filteredExercises.length === 0 && !loading && (
-                  <Text style={{ color: colors.secondaryText, textAlign: 'center', marginVertical: 20 }}>
-                    NO MOVEMENTS MATCH YOUR SEARCH
-                  </Text>
-                )}
-             </View>
+              {filteredExercises.length === 0 && !loading && (
+                <Text style={{ color: colors.secondaryText, textAlign: 'center', marginVertical: 20 }}>
+                  NO MOVEMENTS MATCH YOUR SEARCH
+                </Text>
+              )}
+            </View>
           </View>
 
           {/* Action Button */}
-          <TouchableOpacity 
-            style={[styles.saveBtn, { backgroundColor: '#CCFF00' }]} 
+          <TouchableOpacity
+            style={[styles.saveBtn, { backgroundColor: '#CCFF00' }]}
             onPress={handleCreateWorkout}
             disabled={saving}
           >
-             {saving ? (
-               <ActivityIndicator color="#000" />
-             ) : (
-               <Text style={styles.saveBtnText}>COMMIT WORKOUT</Text>
-             )}
+            {saving ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <Text style={styles.saveBtnText}>CREATE WORKOUT ROUTINE</Text>
+            )}
           </TouchableOpacity>
-
-          {/* Branded Footer */}
-          <View style={styles.brandedFooter}>
-             <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&q=80&w=600' }}
-                style={styles.footerImage}
-             />
-             <View style={styles.footerOverlay}>
-                <Text style={styles.footerTitle}>VISUAL{"\n"}DISCIPLINE</Text>
-                <View style={styles.footerLine} />
-                <Text style={styles.footerSub}>FORM FOLLOWS FOCUS</Text>
-             </View>
-          </View>
 
           <View style={{ height: 100 }} />
         </View>
@@ -468,58 +486,19 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     paddingVertical: 5,
   },
-  appendBtn: {
-    marginTop: 10,
-    padding: 40,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  appendBtnText: {
-    fontSize: 10,
-    fontWeight: '800',
-    marginTop: 10,
-    letterSpacing: 1,
-  },
-  brandedFooter: {
-    marginTop: 60,
-    height: 400,
-    position: 'relative',
-  },
-  footerImage: {
+  saveBtn: {
+    paddingVertical: 20,
     width: '100%',
-    height: '100%',
-    borderRadius: 4,
-    opacity: 0.8,
-  },
-  footerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 40,
+    borderRadius: 2,
   },
-  footerTitle: {
+  saveBtnText: {
     color: '#000',
-    fontSize: 48,
+    fontSize: 14,
     fontWeight: '900',
-    textAlign: 'center',
-    letterSpacing: -1,
-  },
-  footerLine: {
-    width: 60,
-    height: 3,
-    backgroundColor: '#000',
-    marginVertical: 20,
-  },
-  footerSub: {
-    color: '#000',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 2,
   },
 });
 
