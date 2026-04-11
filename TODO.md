@@ -58,3 +58,5 @@ Screens to fix and build out:
 
 9. Batch Delete UX (all screens)
    - [ ] Select-all button when selection mode is active
+
+10. remove the damned burger icon (three horizontal lines) from the top left of the screen
