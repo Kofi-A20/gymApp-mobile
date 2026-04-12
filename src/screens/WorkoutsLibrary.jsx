@@ -118,9 +118,12 @@ const WorkoutsLibrary = ({ navigation }) => {
   };
 
   const WorkoutCard = ({ item }) => {
-    const muscles = item.exercises?.map(ex => ex.name.split(' ')[0]).slice(0, 3).join(' / ') || 'MIXED';
     const isSelected = selectedIds.includes(item.id);
     const menuRef = useRef(null);
+
+    // Dynamic Metadata
+    const totalSets = item.exercises?.reduce((sum, ex) => sum + (ex.sets_target || 3), 0) || 0;
+    const estimatedMins = Math.round((totalSets * 135) / 60);
 
     return (
       <TouchableOpacity
@@ -146,7 +149,7 @@ const WorkoutsLibrary = ({ navigation }) => {
         delayLongPress={300}
       >
         <View style={styles.cardHeader}>
-          <Text style={[styles.sequenceId, { color: colors.secondaryText }]}>TEMPLATE_ID: {item.id.split('-')[0].toUpperCase()}</Text>
+          <Text style={[styles.workoutName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {isSelectionMode ? (
               <MaterialCommunityIcons
@@ -164,17 +167,12 @@ const WorkoutsLibrary = ({ navigation }) => {
         </View>
 
         <View style={styles.cardInfo}>
-          <Text style={[styles.workoutName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
-          <Text style={[styles.muscleGroups, { color: colors.secondaryText }]}>{muscles.toUpperCase()}</Text>
-        </View>
-
-        <View style={styles.cardFooter}>
-          <View style={styles.progressContainer}>
-            <Text style={[styles.sequenceId, { color: colors.secondaryText }]}>
-              {item.exercises?.length || 0} MOVEMENTS
-            </Text>
-          </View>
-          <Text style={[styles.startBtn, { color: '#CCFF00' }]}>START SESSION</Text>
+          <Text style={[styles.cardMetadata, { color: colors.secondaryText }]}>
+            {item.exercises?.length || 0} EXERCISES
+          </Text>
+          <Text style={[styles.cardMetadata, { color: colors.secondaryText }]}>
+            ~{estimatedMins} MIN
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -239,20 +237,20 @@ const WorkoutsLibrary = ({ navigation }) => {
         </Pressable>
       </Modal>
 
+      <RepsHeader 
+        rightActions={[{ icon: 'plus-circle', library: 'AntDesign', onPress: () => navigation.navigate('AddWorkout') }]} 
+        selectionMode={isSelectionMode} 
+        selectedCount={selectedIds.length} 
+        onCancelSelection={() => { setIsSelectionMode(false); setSelectedIds([]); }} 
+        onDeleteSelected={handleDeleteSelected} 
+        onSelectAll={handleSelectAll}
+      />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        <RepsHeader 
-          rightActions={[{ icon: 'plus-circle', library: 'AntDesign', onPress: () => navigation.navigate('AddWorkout') }]} 
-          selectionMode={isSelectionMode} 
-          selectedCount={selectedIds.length} 
-          onCancelSelection={() => { setIsSelectionMode(false); setSelectedIds([]); }} 
-          onDeleteSelected={handleDeleteSelected} 
-          onSelectAll={handleSelectAll}
-        />
-
         <View style={styles.content}>
           <Text style={[styles.subLabel, { color: colors.secondaryText }]}>WORKOUT LIBRARY / Q3 CYCLE</Text>
           <Text style={[styles.mainTitle, { color: colors.text }]}>STRENGTH{"\n"}ARCHIVE.</Text>
@@ -261,13 +259,15 @@ const WorkoutsLibrary = ({ navigation }) => {
             A curated selection of high-intensity protocols designed for structural hypertrophy and neurological adaptation.
           </Text>
 
-          <View style={styles.listContainer}>
+          <View style={[styles.listContainer, { maxHeight: 500, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
             {loading ? (
               <ActivityIndicator color={colors.text} style={{ marginTop: 50 }} />
             ) : workouts.length > 0 ? (
-              workouts.map((workout) => (
-                <WorkoutCard key={workout.id} item={workout} />
-              ))
+              <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
+                {workouts.map((workout) => (
+                  <WorkoutCard key={workout.id} item={workout} />
+                ))}
+              </ScrollView>
             ) : (
               <View style={{ alignItems: 'center', marginTop: 80, marginBottom: 40 }}>
                 <Text style={{ color: colors.secondaryText, fontSize: 14 }}>No workout routines yet.</Text>
@@ -377,42 +377,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
   },
-  sequenceId: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  cardInfo: {
-    marginBottom: 40,
-  },
   workoutName: {
     fontSize: 32,
     fontWeight: '900',
     letterSpacing: -0.5,
+    flex: 1,
   },
-  muscleGroups: {
+  cardMetadata: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     letterSpacing: 1,
     marginTop: 4,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  progressBar: {
-    width: 30,
-    height: 3,
-  },
-  startBtn: {
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1,
   },
   volumeContainer: {
     marginTop: 60,
@@ -463,6 +438,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 15,
+    borderBottomColor: 'rgba(150,150,150,0.2)',
     borderBottomWidth: 1,
   },
   dropdownItemText: {
