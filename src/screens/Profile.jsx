@@ -21,6 +21,7 @@ import { useProfile } from '../context/ProfileContext';
 import { MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';
 import { useRepsAlert } from '../context/AlertContext';
 import RepsHeader from '../components/MonolithHeader';
+import { weightLogsService } from '../services/weightLogsService';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -48,20 +49,23 @@ const calcAge = (dob) => {
   return age;
 };
 
-const InputField = ({ label, value, onChangeText, keyboardType, editable = true, colors }) => (
-  <View style={styles.inputContainer}>
-    <Text style={[styles.fieldLabel, { color: colors.secondaryText }]}>{label.toUpperCase()}</Text>
-    <TextInput
-      style={[styles.textInput, { color: editable ? colors.text : colors.secondaryText, borderColor: colors.border }]}
-      value={value}
-      onChangeText={onChangeText}
-      keyboardType={keyboardType}
-      editable={editable}
-      returnKeyType="done"
-      onSubmitEditing={() => Keyboard.dismiss()}
-      blurOnSubmit={true}
-    />
-  </View>
+const InputField = ({ label, value, onChangeText, keyboardType, editable = true, colors, onPress }) => (
+  <TouchableOpacity activeOpacity={onPress ? 0.7 : 1} onPress={onPress}>
+    <View style={styles.inputContainer}>
+      <Text style={[styles.fieldLabel, { color: colors.secondaryText }]}>{label.toUpperCase()}</Text>
+      <TextInput
+        style={[styles.textInput, { color: editable ? colors.text : (onPress ? '#CCFF00' : colors.secondaryText), borderColor: colors.border }]}
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+        editable={editable}
+        pointerEvents={onPress ? 'none' : 'auto'}
+        returnKeyType="done"
+        onSubmitEditing={() => Keyboard.dismiss()}
+        blurOnSubmit={true}
+      />
+    </View>
+  </TouchableOpacity>
 );
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -85,6 +89,11 @@ const Profile = ({ navigation }) => {
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
+  // Weight Log Integration
+  const [weightLogs, setWeightLogs] = useState([]);
+  const hasLogs = weightLogs.length > 0;
+  const latestLogWeight = hasLogs ? weightLogs[weightLogs.length - 1].weight_kg : null;
+
   // Scroll references for tap-to-edit
   const scrollViewRef = useRef(null);
   const [layoutOffsets, setLayoutOffsets] = useState({});
@@ -106,7 +115,7 @@ const Profile = ({ navigation }) => {
   const [showGenderPicker, setShowGenderPicker] = useState(false);
   const [showActivityPicker, setShowActivityPicker] = useState(false);
 
-  // Populate from profile
+  // Populate from profile & latest logs
   useEffect(() => {
     if (profile) {
       setFirstName(profile.first_name || '');
@@ -114,10 +123,14 @@ const Profile = ({ navigation }) => {
       setPhone(profile.phone || '');
       setDob(profile.dob ? new Date(profile.dob) : null);
       setHeight(profile.height_cm ? String(profile.height_cm) : '');
-      const w = units === 'lbs' && profile.weight_kg
-        ? profile.weight_kg * 2.20462
-        : (profile.weight_kg || '');
+
+      // Weight Logic: Latest Log > Profile Value
+      const weightInKg = latestLogWeight !== null ? latestLogWeight : profile.weight_kg;
+      const w = units === 'lbs' && weightInKg
+        ? weightInKg * 2.20462
+        : (weightInKg || '');
       setWeight(w ? String(Math.round(w)) : '');
+
       const gw = units === 'lbs' && profile.goal_weight
         ? profile.goal_weight * 2.20462
         : (profile.goal_weight || '');
@@ -126,11 +139,13 @@ const Profile = ({ navigation }) => {
       setActivity(profile.activity_level || 1.375);
       setIsDirty(false);
     }
-  }, [profile, units]);
+  }, [profile, units, latestLogWeight]);
 
-  // Unsaved-changes guard
+  // Unsaved-changes guard & refresh weight logs
   useFocusEffect(
     useCallback(() => {
+      fetchWeightLogs();
+
       const unsubscribe = navigation.addListener('beforeRemove', (e) => {
         if (!isDirty) return;
         e.preventDefault();
@@ -158,6 +173,15 @@ const Profile = ({ navigation }) => {
       return unsubscribe;
     }, [isDirty, navigation])
   );
+
+  const fetchWeightLogs = async () => {
+    try {
+      const logs = await weightLogsService.getWeightLogs();
+      setWeightLogs(logs || []);
+    } catch (e) {
+      console.error('Failed to fetch weight logs in profile:', e);
+    }
+  };
 
   // Mark dirty when user edits any field
   const markDirty = (setter) => (val) => {
@@ -314,9 +338,12 @@ const Profile = ({ navigation }) => {
             <BiometricTile label="Height" value={profile?.height_cm || '--'} unit="cm" onPress={() => scrollToField('height')} />
             <BiometricTile
               label="Weight"
-              value={profile?.weight_kg ? Math.round(profile.weight_kg * (units === 'lbs' ? 2.20462 : 1)) : '--'}
+              value={latestLogWeight !== null 
+                ? Math.round(latestLogWeight * (units === 'lbs' ? 2.20462 : 1)) 
+                : (profile?.weight_kg ? Math.round(profile.weight_kg * (units === 'lbs' ? 2.20462 : 1)) : '--')
+              }
               unit={units}
-              onPress={() => scrollToField('weight')}
+              onPress={() => navigation.navigate('Calories', { scrollToLog: true })}
             />
             <BiometricTile label="Age" value={age !== null ? age : '--'} unit="yrs" onPress={() => scrollToField('dob')} />
             <BiometricTile label="Activity" value={actLabel} isDark onPress={() => scrollToField('activity')} />
@@ -403,7 +430,15 @@ const Profile = ({ navigation }) => {
 
           {/* Weight */}
           <View onLayout={handleLayout('weight')}>
-            <InputField label={`Weight (${units})`} value={weight} onChangeText={markDirty(setWeight)} keyboardType="numeric" colors={colors} />
+            <InputField 
+              label={`Weight (${units})`} 
+              value={weight} 
+              onChangeText={markDirty(setWeight)} 
+              keyboardType="numeric" 
+              colors={colors} 
+              editable={!hasLogs}
+              onPress={hasLogs ? () => navigation.navigate('Calories', { scrollToLog: true }) : null}
+            />
           </View>
 
           {/* Goal Weight */}

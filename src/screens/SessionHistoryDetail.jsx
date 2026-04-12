@@ -109,9 +109,9 @@ const SessionHistoryDetail = ({ route, navigation }) => {
 
   if (fetching) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
         <ActivityIndicator color="#CCFF00" size="large" />
-      </SafeAreaView>
+      </View>
     );
   }
 

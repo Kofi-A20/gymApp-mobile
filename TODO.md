@@ -10,7 +10,7 @@ Screens to fix and build out:
 2. Weights Log Screen
    - [x] Display logged session history
    - [x] Show volume, sets, reps per session
-   - [ ] Filter/sort options
+   - [x] Filter/sort options (filter chips by workout name already in archive)
    - [x] History cards with detail drill-down
    - [x] Delete and edit specific historical sets
    - [x] PR Progression Archive
@@ -33,11 +33,15 @@ Screens to fix and build out:
    - [x] Weekly weight reminder (day + time picker)
 
 5. Header Component Refactor
-   - [ ] Build shared Header component accepting props: title, leftAction, rightAction
-   - [ ] Replace all individual screen headers with this component
+   - [x] Build shared RepsHeader component
+   - [x] Replace all individual screen headers
+   - [x] Remove burger icon from all main tab screens
+   - [x] Select-all in selection mode headers
 
 6. Exercise Library
-   - [ ] Expand global exercise list in Supabase
+   - [x] Expand global exercise list in Supabase (856 exercises seeded)
+   - [x] Core exercises seeded (15 exercises)
+   - [x] Granular muscle group filters in AddWorkout
    - [ ] Muscle heat map diagram showing targeted muscles per exercise
    - [ ] Global routine publishing — users opt-in to share routines publicly (FUTURE)
 
@@ -57,6 +61,27 @@ Screens to fix and build out:
    - [ ] Muscle diagram in expanded view
 
 9. Batch Delete UX (all screens)
-   - [ ] Select-all button when selection mode is active
+   - [x] Select-all in WorkoutsLibrary
+   - [x] Select-all in WeightsLog
+   - [x] Select-all in Calories weight log
+   - [ ] Select-all in Calendar planned sessions (low priority)
 
-10. remove the damned burger icon (three horizontal lines) from the top left of the screen and fix icons in settings and all other screens
+10. Profile & Weight Flow
+    - [x] Weight field read-only after first log
+    - [x] Tapping weight navigates to Calories weight log with auto-scroll
+    - [x] Weight log auto-syncs profile.weight_kg
+    - [x] Profile always shows latest logged weight
+
+11. Navigation & UI
+    - [x] Animated pill tab bar with correct centering
+    - [x] Profile stack reset on tab press
+    - [x] SafeAreaView migration to useSafeAreaInsets
+    - [x] Black base layer to prevent white flash
+    - [x] Workout routine create flow overhauled
+    - [x] Exercise expand/collapse with save in AddWorkout
+
+12. Sharing & Social (FUTURE)
+    - [ ] Deep link sharing of routines between users
+    - [ ] Global public routine library
+    - [ ] Users can publish and download community routines
+    - [ ] Muscle heat map in exercise library

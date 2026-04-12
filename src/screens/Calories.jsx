@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -26,19 +26,19 @@ const ACTIVITY_OPTIONS = [
 ];
 
 const STRATEGIES = [
-  { label: 'CUT',      offset: -500, color: '#CCFF00' },
-  { label: 'MAINTAIN', offset: 0,    color: '#FFF' },
-  { label: 'BULK',     offset: 300,  color: '#CCFF00' },
+  { label: 'CUT', offset: -500, color: '#CCFF00' },
+  { label: 'MAINTAIN', offset: 0, color: '#FFF' },
+  { label: 'BULK', offset: 300, color: '#CCFF00' },
 ];
 
 const deriveStrategy = (weightKg, goalWeightKg) => {
   const diff = goalWeightKg - weightKg;
   if (diff < -0.5) return 0;      // CUT
-  if (diff > 0.5)  return 2;      // BULK
+  if (diff > 0.5) return 2;      // BULK
   return 1;                        // MAINTAIN
 };
 
-const Calories = ({ navigation }) => {
+const Calories = ({ navigation, route }) => {
   const { colors, isDarkMode, units } = useTheme();
   const insets = useSafeAreaInsets();
   const { profile, refreshProfile, updateProfile } = useProfile();
@@ -48,6 +48,9 @@ const Calories = ({ navigation }) => {
   const [weightInput, setWeightInput] = useState('');
   const [logLoading, setLogLoading] = useState(false);
   const [goalStartWeight, setGoalStartWeight] = useState(null);
+
+  const scrollViewRef = useRef(null);
+  const [weightSectionY, setWeightSectionY] = useState(0);
 
   // Selection mode states
   const [wlSelectionMode, setWlSelectionMode] = useState(false);
@@ -60,14 +63,23 @@ const Calories = ({ navigation }) => {
       }
       fetchWeightLogs();
       fetchGoalStartWeight();
-    }, [refreshProfile])
+
+      // Handle scrolling if requested
+      if (route.params?.scrollToLog && weightSectionY > 0) {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({ y: weightSectionY, animated: true });
+          // Clear params to avoid re-scrolling
+          navigation.setParams({ scrollToLog: undefined });
+        }, 100);
+      }
+    }, [refreshProfile, route.params?.scrollToLog, weightSectionY])
   );
 
   const fetchGoalStartWeight = async () => {
     try {
       const sw = await AsyncStorage.getItem('goalStartWeight');
       if (sw !== null) setGoalStartWeight(parseFloat(sw));
-    } catch(e) {}
+    } catch (e) { }
   };
 
   const fetchWeightLogs = async () => {
@@ -163,10 +175,10 @@ const Calories = ({ navigation }) => {
   const activityIdx = actIdxRaw !== -1 ? actIdxRaw : 1;
   const activityLabel = ACTIVITY_OPTIONS[activityIdx].label;
 
-  const weightKg     = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight_kg : (profile?.weight_kg || 75);
+  const weightKg = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight_kg : (profile?.weight_kg || 75);
   const goalWeightKg = units === 'lbs' ? goalWeight / 2.20462 : goalWeight;
 
-  const strategyIdx   = deriveStrategy(weightKg, goalWeightKg);
+  const strategyIdx = deriveStrategy(weightKg, goalWeightKg);
   const strategyLabel = STRATEGIES[strategyIdx].label;
 
   // ── Goal Progress Logic ──
@@ -195,15 +207,15 @@ const Calories = ({ navigation }) => {
     return Math.round(10 * weightKg + 6.25 * height - 5 * age + offset);
   }, [weightKg, height, age, gender]);
 
-  const tdee         = useMemo(() => Math.round(bmr * ACTIVITY_OPTIONS[activityIdx].value), [bmr, activityIdx]);
+  const tdee = useMemo(() => Math.round(bmr * ACTIVITY_OPTIONS[activityIdx].value), [bmr, activityIdx]);
   const targetIntake = tdee + STRATEGIES[strategyIdx].offset;
 
-  const proLow  = Math.round(weightKg * 1.6);
+  const proLow = Math.round(weightKg * 1.6);
   const proHigh = Math.round(weightKg * 2.2);
-  const fatLow  = Math.round(weightKg * 0.7);
+  const fatLow = Math.round(weightKg * 0.7);
   const fatHigh = Math.round(weightKg * 1.0);
-  const carbLow  = Math.max(0, Math.round((targetIntake - proHigh * 4 - fatHigh * 9) / 4));
-  const carbHigh = Math.max(0, Math.round((targetIntake - proLow  * 4 - fatLow  * 9) / 4));
+  const carbLow = Math.max(0, Math.round((targetIntake - proHigh * 4 - fatHigh * 9) / 4));
+  const carbHigh = Math.max(0, Math.round((targetIntake - proLow * 4 - fatLow * 9) / 4));
 
   const getNote = () => {
     if (targetIntake < 1200)
@@ -227,7 +239,7 @@ const Calories = ({ navigation }) => {
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      <RepsHeader 
+      <RepsHeader
         selectionMode={wlSelectionMode}
         selectedCount={wlSelectedIds.length}
         onCancelSelection={() => { setWlSelectionMode(false); setWlSelectedIds([]); }}
@@ -235,8 +247,9 @@ const Calories = ({ navigation }) => {
         onSelectAll={handleSelectAllLogs}
       />
 
-      <ScrollView 
-        style={styles.container} 
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.container}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
@@ -329,11 +342,14 @@ const Calories = ({ navigation }) => {
           )}
 
           {/* 6. WEIGHT SECTION */}
-          <View style={{ marginBottom: 20 }}>
+          <View
+            style={{ marginBottom: 20 }}
+            onLayout={(e) => setWeightSectionY(e.nativeEvent.layout.y)}
+          >
             <Text style={[styles.cardHeader, { marginBottom: 10 }]}>
               CURRENT WEIGHT: {units === 'lbs' ? (weightKg * 2.20462).toFixed(1) : parseFloat(weightKg).toFixed(1)} {units.toUpperCase()}
             </Text>
-            
+
             {/* Log new weight */}
             <View style={[styles.weightLogCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
               <Text style={[styles.wlLabel, { color: colors.secondaryText }]}>LOG THIS WEEK</Text>
@@ -372,82 +388,82 @@ const Calories = ({ navigation }) => {
               <View style={{ marginTop: 10, maxHeight: 400, borderWidth: 1, borderColor: colors.border, borderRadius: 4 }}>
                 <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
                   {[...logsWithDeltas].reverse().map((log, idx) => {
-                  const displayWeight = units === 'lbs'
-                    ? (log.weight_kg * 2.20462).toFixed(1)
-                    : log.weight_kg.toFixed(1);
-                  const dateStr = new Date(log.logged_at).toLocaleDateString('en-US', {
-                    weekday: 'short', month: 'short', day: 'numeric',
-                  }).toUpperCase();
-                  const isFirst = idx === 0;
+                    const displayWeight = units === 'lbs'
+                      ? (log.weight_kg * 2.20462).toFixed(1)
+                      : log.weight_kg.toFixed(1);
+                    const dateStr = new Date(log.logged_at).toLocaleDateString('en-US', {
+                      weekday: 'short', month: 'short', day: 'numeric',
+                    }).toUpperCase();
+                    const isFirst = idx === 0;
 
-                  // Delta formatting
-                  let deltaDisplay = null;
-                  let deltaColor = colors.secondaryText;
-                  
-                  if (log.deltaKg !== null) {
-                    const deltaVal = units === 'lbs' ? log.deltaKg * 2.20462 : log.deltaKg;
-                    
-                    if (Math.abs(deltaVal) >= 0.1) {
-                      const prefix = deltaVal > 0 ? '+' : '';
-                      deltaDisplay = `${prefix}${deltaVal.toFixed(1)} ${units.toUpperCase()}`;
-                      
-                      if (strategyIdx === 0) { // CUT
-                        deltaColor = deltaVal < 0 ? '#CCFF00' : '#FF3B30';
-                      } else if (strategyIdx === 2) { // BULK
-                        deltaColor = deltaVal > 0 ? '#CCFF00' : '#FF3B30';
-                      }
-                    } else {
-                      deltaDisplay = `0.0 ${units.toUpperCase()}`;
-                    }
-                  }
+                    // Delta formatting
+                    let deltaDisplay = null;
+                    let deltaColor = colors.secondaryText;
 
-                  return (
-                    <TouchableOpacity 
-                      key={log.id} 
-                      style={styles.wlEntry}
-                      onPress={() => {
-                        if (wlSelectionMode) toggleWlSelection(log.id);
-                      }}
-                      onLongPress={() => {
-                        if (!wlSelectionMode) {
-                          setWlSelectionMode(true);
-                          setWlSelectedIds([log.id]);
+                    if (log.deltaKg !== null) {
+                      const deltaVal = units === 'lbs' ? log.deltaKg * 2.20462 : log.deltaKg;
+
+                      if (Math.abs(deltaVal) >= 0.1) {
+                        const prefix = deltaVal > 0 ? '+' : '';
+                        deltaDisplay = `${prefix}${deltaVal.toFixed(1)} ${units.toUpperCase()}`;
+
+                        if (strategyIdx === 0) { // CUT
+                          deltaColor = deltaVal < 0 ? '#CCFF00' : '#FF3B30';
+                        } else if (strategyIdx === 2) { // BULK
+                          deltaColor = deltaVal > 0 ? '#CCFF00' : '#FF3B30';
                         }
-                      }}
-                      delayLongPress={300}
-                      activeOpacity={wlSelectionMode ? 0.7 : 0.9}
-                    >
-                      <View style={styles.wlTimeline}>
-                        <View style={[styles.wlDot, { backgroundColor: isFirst ? '#CCFF00' : colors.border }]} />
-                        {idx < weightLogs.length - 1 && <View style={[styles.wlLine, { backgroundColor: colors.border }]} />}
-                      </View>
-                      <View style={styles.wlEntryContent}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <View>
-                            <Text style={[styles.wlWeight, { color: isFirst ? '#CCFF00' : colors.text }]}>
-                              {displayWeight} <Text style={{ fontSize: 14 }}>{units.toUpperCase()}</Text>
-                            </Text>
-                            <Text style={[styles.wlDate, { color: colors.secondaryText }]}>{dateStr}</Text>
-                          </View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                            {deltaDisplay !== null && (
-                              <Text style={[styles.wlDelta, { color: deltaColor }]}>
-                                {deltaDisplay}
+                      } else {
+                        deltaDisplay = `0.0 ${units.toUpperCase()}`;
+                      }
+                    }
+
+                    return (
+                      <TouchableOpacity
+                        key={log.id}
+                        style={styles.wlEntry}
+                        onPress={() => {
+                          if (wlSelectionMode) toggleWlSelection(log.id);
+                        }}
+                        onLongPress={() => {
+                          if (!wlSelectionMode) {
+                            setWlSelectionMode(true);
+                            setWlSelectedIds([log.id]);
+                          }
+                        }}
+                        delayLongPress={300}
+                        activeOpacity={wlSelectionMode ? 0.7 : 0.9}
+                      >
+                        <View style={styles.wlTimeline}>
+                          <View style={[styles.wlDot, { backgroundColor: isFirst ? '#CCFF00' : colors.border }]} />
+                          {idx < weightLogs.length - 1 && <View style={[styles.wlLine, { backgroundColor: colors.border }]} />}
+                        </View>
+                        <View style={styles.wlEntryContent}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <View>
+                              <Text style={[styles.wlWeight, { color: isFirst ? '#CCFF00' : colors.text }]}>
+                                {displayWeight} <Text style={{ fontSize: 14 }}>{units.toUpperCase()}</Text>
                               </Text>
-                            )}
-                            {wlSelectionMode && (
-                              <MaterialCommunityIcons
-                                name={wlSelectedIds.includes(log.id) ? "checkbox-marked" : "checkbox-blank-outline"}
-                                size={24}
-                                color={wlSelectedIds.includes(log.id) ? '#CCFF00' : colors.secondaryText}
-                              />
-                            )}
+                              <Text style={[styles.wlDate, { color: colors.secondaryText }]}>{dateStr}</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                              {deltaDisplay !== null && (
+                                <Text style={[styles.wlDelta, { color: deltaColor }]}>
+                                  {deltaDisplay}
+                                </Text>
+                              )}
+                              {wlSelectionMode && (
+                                <MaterialCommunityIcons
+                                  name={wlSelectedIds.includes(log.id) ? "checkbox-marked" : "checkbox-blank-outline"}
+                                  size={24}
+                                  color={wlSelectedIds.includes(log.id) ? '#CCFF00' : colors.secondaryText}
+                                />
+                              )}
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
               </View>
             )}
