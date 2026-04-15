@@ -8,7 +8,7 @@ import { MaterialCommunityIcons, AntDesign, Feather, Ionicons } from '@expo/vect
 import RepsHeader from '../components/MonolithHeader';
 import { useRepsAlert } from '../context/AlertContext';
 
-const FILTERS = ['ALL', 'CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'QUADS', 'HAMSTRINGS', 'GLUTES', 'CALVES', 'CORE'];
+const FILTERS = ['ALL', 'CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'QUADS', 'HAMSTRINGS', 'GLUTES', 'CALVES', 'CORE', 'FOREARMS'];
 
 const AddWorkout = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
@@ -49,6 +49,9 @@ const AddWorkout = ({ navigation }) => {
       result = result.filter(ex => {
         const mg = ex.muscle_group?.toUpperCase() || '';
         const cat = ex.category?.toUpperCase() || '';
+        if (activeFilter === 'FOREARMS') {
+          return mg === 'FOREARMS' || ex.name.toUpperCase().includes('FOREARM');
+        }
         return mg.includes(activeFilter) || cat.includes(activeFilter);
       });
     }

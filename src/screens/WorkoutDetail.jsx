@@ -3,20 +3,68 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, TextInput, A
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useWorkout } from '../context/WorkoutContext';
+import { useProfile } from '../context/ProfileContext';
 import { MaterialCommunityIcons, AntDesign, Ionicons, Feather } from '@expo/vector-icons';
 import RepsHeader from '../components/MonolithHeader';
+import Body from 'react-native-body-highlighter';
 import { workoutsService } from '../services/workoutsService';
 import { exercisesService } from '../services/exercisesService';
 import { useRepsAlert } from '../context/AlertContext';
 
-const FILTERS = ['ALL', 'CHEST', 'BACK', 'LEGS', 'SHOULDERS', 'ARMS'];
+const FILTERS = ['ALL', 'CHEST', 'BACK', 'LEGS', 'SHOULDERS', 'ARMS', 'FOREARMS'];
+
+const mapMuscleSlug = (muscleName) => {
+  const name = muscleName.toLowerCase();
+  if (name.includes('anterior deltoid') || name.includes('front delt')) return 'front-deltoids';
+  if (name.includes('posterior deltoid') || name.includes('rear delt')) return 'rear-deltoids';
+  if (name.includes('deltoid') || name.includes('shoulder')) return 'front-deltoids';
+  if (name.includes('pectoralis') || name.includes('chest')) return 'chest';
+  if (name.includes('biceps')) return 'biceps';
+  if (name.includes('triceps')) return 'triceps';
+  if (name.includes('latissimus') || name.includes('lat')) return 'upper-back';
+  if (name.includes('trapezius') || name.includes('trap')) return 'trapezius';
+  if (name.includes('rectus abdominis') || name.includes('abs') || name.includes('core')) return 'abs';
+  if (name.includes('oblique')) return 'obliques';
+  if (name.includes('quadriceps') || name.includes('quad')) return 'quadriceps';
+  if (name.includes('hamstring')) return 'hamstring';
+  if (name.includes('gluteus') || name.includes('glute')) return 'gluteal';
+  if (name.includes('gastrocnemius') || name.includes('calf')) return 'calves';
+  if (name.includes('erector') || name.includes('lower back')) return 'lower-back';
+  if (name.includes('forearm')) return 'forearm';
+  return null;
+};
+
+const frontSlugs = new Set(['chest', 'biceps', 'abs', 'obliques', 'quadriceps', 'tibialis', 'knees', 'front-deltoids']);
+const backSlugs = new Set(['upper-back', 'triceps', 'lower-back', 'gluteal', 'hamstring', 'calves', 'rear-deltoids']);
+const bothSlugs = new Set(['trapezius', 'forearm']);
+
+const getViewsToShow = (data) => {
+  let showFront = false;
+  let showBack = false;
+  
+  if (!data || data.length === 0) return { showFront: true, showBack: true };
+
+  for (const d of data) {
+    if (frontSlugs.has(d.slug)) showFront = true;
+    if (backSlugs.has(d.slug)) showBack = true;
+    if (bothSlugs.has(d.slug)) {
+      showFront = true;
+      showBack = true;
+    }
+  }
+  
+  if (!showFront && !showBack) return { showFront: true, showBack: true };
+  return { showFront, showBack };
+};
 
 const WorkoutDetail = ({ route, navigation }) => {
   const { colors, isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
+  const { profile } = useProfile();
+  const gender = profile?.gender === 'female' ? 'female' : 'male';
   const { startWorkout } = useWorkout();
   const { showAlert } = useRepsAlert();
-  
+
   const [currentWorkout, setCurrentWorkout] = useState(route.params?.workout || null);
   const [loadingWorkout, setLoadingWorkout] = useState(!route.params?.workout);
   const [starting, setStarting] = useState(false);
@@ -84,11 +132,17 @@ const WorkoutDetail = ({ route, navigation }) => {
   useEffect(() => {
     let result = allExercises;
     if (activeFilter !== 'ALL') {
-      result = result.filter(ex => ex.muscle_group?.toUpperCase() === activeFilter);
+      result = result.filter(ex => {
+        const mg = ex.muscle_group?.toUpperCase() || '';
+        if (activeFilter === 'FOREARMS') {
+          return mg === 'FOREARMS' || ex.name.toUpperCase().includes('FOREARM');
+        }
+        return mg === activeFilter;
+      });
     }
     if (search) {
-      result = result.filter(ex => 
-        ex.name.toUpperCase().includes(search.toUpperCase()) || 
+      result = result.filter(ex =>
+        ex.name.toUpperCase().includes(search.toUpperCase()) ||
         ex.muscle_group?.toUpperCase().includes(search.toUpperCase())
       );
     }
@@ -140,12 +194,12 @@ const WorkoutDetail = ({ route, navigation }) => {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-             try {
-                await workoutsService.deleteWorkout(currentWorkout.id);
-                navigation.goBack();
-             } catch (err) {
-                showAlert("Error", "Failed to delete workout");
-             }
+            try {
+              await workoutsService.deleteWorkout(currentWorkout.id);
+              navigation.goBack();
+            } catch (err) {
+              showAlert("Error", "Failed to delete workout");
+            }
           }
         }
       ]
@@ -168,34 +222,34 @@ const WorkoutDetail = ({ route, navigation }) => {
       {/* Stats Row */}
       <View style={styles.statsRow}>
         <View style={[styles.statItem, { borderLeftColor: colors.text }]}>
-           <Text style={[styles.statLabel, { color: colors.secondaryText }]}>MOVEMENTS</Text>
-           <Text style={[styles.statValue, { color: colors.text }]}>{editedExercises.length}</Text>
+          <Text style={[styles.statLabel, { color: colors.secondaryText }]}>MOVEMENTS</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{editedExercises.length}</Text>
         </View>
         <View style={styles.statItem}>
-           <Text style={[styles.statLabel, { color: colors.secondaryText }]}>ESTIMATED TIME</Text>
-           <Text style={[styles.statValue, { color: colors.text }]}>~ {editedExercises.length * 12} MIN</Text>
+          <Text style={[styles.statLabel, { color: colors.secondaryText }]}>ESTIMATED TIME</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>~ {editedExercises.length * 12} MIN</Text>
         </View>
       </View>
 
       {/* Featured Focus Section */}
       <View style={styles.focusContainer}>
         <View style={styles.imageWrapper}>
-           <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=600' }} 
-              style={styles.focusImage} 
-           />
-           <View style={styles.focusOverlay}>
-              <Text style={styles.focusOverlayText}>PRIMARY FOCUS</Text>
-           </View>
+          <Image
+            source={{ uri: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=600' }}
+            style={styles.focusImage}
+          />
+          <View style={styles.focusOverlay}>
+            <Text style={styles.focusOverlayText}>PRIMARY FOCUS</Text>
+          </View>
         </View>
         <View style={styles.focusTextWrapper}>
-           <Text style={[styles.focusDescription, { color: colors.text }]}>
-              {currentWorkout.description || "A high-intensity protocol designed for structural hypertrophy and architectural strength. Maintain rigid core tension throughout all movements."}
-           </Text>
+          <Text style={[styles.focusDescription, { color: colors.text }]}>
+            {currentWorkout.description || "A high-intensity protocol designed for structural hypertrophy and architectural strength. Maintain rigid core tension throughout all movements."}
+          </Text>
         </View>
       </View>
 
-      <View style={{height: 20}} />
+      <View style={{ height: 20 }} />
     </View>
   );
 
@@ -203,7 +257,7 @@ const WorkoutDetail = ({ route, navigation }) => {
     <View style={styles.content}>
       {isEditMode ? (
         <View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.logBtn, { backgroundColor: '#FF3B30' }]}
             onPress={handleDeleteWorkout}
           >
@@ -213,61 +267,61 @@ const WorkoutDetail = ({ route, navigation }) => {
 
           {/* Inline Library Append UI */}
           <View style={{ marginTop: 60, borderTopWidth: 1, borderColor: colors.border, paddingTop: 40 }}>
-             <Text style={[styles.statLabel, { color: colors.secondaryText, marginBottom: 20 }]}>APPEND MOVEMENTS</Text>
-             
-             <View style={[styles.searchBox, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                   <Feather name="search" size={16} color={colors.secondaryText} style={{ marginRight: 8 }} />
-                   <TextInput 
-                      placeholder="FIND EXERCISE..."
-                      placeholderTextColor={colors.secondaryText}
-                      style={{ flex: 1, color: colors.text, fontSize: 14, fontWeight: '600' }}
-                      value={search}
-                      onChangeText={setSearch}
-                   />
-                </View>
-             </View>
+            <Text style={[styles.statLabel, { color: colors.secondaryText, marginBottom: 20 }]}>APPEND MOVEMENTS</Text>
 
-             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 20, marginBottom: 30 }}>
-                {FILTERS.map((f) => (
-                  <TouchableOpacity 
-                    key={f} 
-                    onPress={() => setActiveFilter(f)}
-                    style={{ paddingHorizontal: 15, paddingVertical: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: activeFilter === f ? (isDarkMode ? '#FFF' : '#000') : 'transparent' }}
-                  >
-                    <Text style={{ fontSize: 9, fontWeight: '800', color: activeFilter === f ? (isDarkMode ? '#000' : '#FFF') : colors.text }}>{f}</Text>
-                  </TouchableOpacity>
-                ))}
-             </View>
+            <View style={[styles.searchBox, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Feather name="search" size={16} color={colors.secondaryText} style={{ marginRight: 8 }} />
+                <TextInput
+                  placeholder="FIND EXERCISE..."
+                  placeholderTextColor={colors.secondaryText}
+                  style={{ flex: 1, color: colors.text, fontSize: 14, fontWeight: '600' }}
+                  value={search}
+                  onChangeText={setSearch}
+                />
+              </View>
+            </View>
 
-             <View>
-                {loadingExercises ? (
-                  <ActivityIndicator color={colors.text} style={{ padding: 40 }} />
-                ) : (
-                  filteredExercises.map((ex) => {
-                    const alreadyAdded = editedExercises.find(s => (s.exercise_id || s.id) === ex.id);
-                    if (alreadyAdded) return null;
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 20, marginBottom: 30 }}>
+              {FILTERS.map((f) => (
+                <TouchableOpacity
+                  key={f}
+                  onPress={() => setActiveFilter(f)}
+                  style={{ paddingHorizontal: 15, paddingVertical: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: activeFilter === f ? (isDarkMode ? '#FFF' : '#000') : 'transparent' }}
+                >
+                  <Text style={{ fontSize: 9, fontWeight: '800', color: activeFilter === f ? (isDarkMode ? '#000' : '#FFF') : colors.text }}>{f}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-                    return (
-                      <TouchableOpacity 
-                        key={ex.id} 
-                        style={{ flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background }}
-                        onPress={() => setEditedExercises(prev => [...prev, { ...ex, sets_target: '', reps_target: '' }])}
-                      >
-                         <Text style={{ fontSize: 18, fontWeight: '800', marginRight: 20, color: colors.secondaryText }}>+</Text>
-                         <View>
-                            <Text style={{ fontSize: 16, fontWeight: '900', color: colors.text }}>{ex.name.toUpperCase()}</Text>
-                            <Text style={{ fontSize: 8, fontWeight: '600', color: colors.secondaryText, marginTop: 2 }}>{ex.muscle_group?.toUpperCase() || 'GENERAL'}</Text>
-                         </View>
-                      </TouchableOpacity>
-                    );
-                  })
-                )}
-             </View>
+            <View>
+              {loadingExercises ? (
+                <ActivityIndicator color={colors.text} style={{ padding: 40 }} />
+              ) : (
+                filteredExercises.map((ex) => {
+                  const alreadyAdded = editedExercises.find(s => (s.exercise_id || s.id) === ex.id);
+                  if (alreadyAdded) return null;
+
+                  return (
+                    <TouchableOpacity
+                      key={ex.id}
+                      style={{ flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background }}
+                      onPress={() => setEditedExercises(prev => [...prev, { ...ex, sets_target: '', reps_target: '' }])}
+                    >
+                      <Text style={{ fontSize: 18, fontWeight: '800', marginRight: 20, color: colors.secondaryText }}>+</Text>
+                      <View>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: colors.text }}>{ex.name.toUpperCase()}</Text>
+                        <Text style={{ fontSize: 8, fontWeight: '600', color: colors.secondaryText, marginTop: 2 }}>{ex.muscle_group?.toUpperCase() || 'GENERAL'}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </View>
           </View>
         </View>
       ) : (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.logBtn}
           onPress={handleStartSession}
           disabled={starting}
@@ -283,7 +337,7 @@ const WorkoutDetail = ({ route, navigation }) => {
   const moveExercise = (index, direction) => {
     if (direction === -1 && index === 0) return;
     if (direction === 1 && index === editedExercises.length - 1) return;
-    
+
     setEditedExercises(prev => {
       const newItems = [...prev];
       const temp = newItems[index];
@@ -297,95 +351,120 @@ const WorkoutDetail = ({ route, navigation }) => {
     const isExpanded = expandedExercises[index];
 
     return (
-        <TouchableOpacity
-          disabled={isEditMode}
-          onPress={() => toggleExpand(index)}
-          style={[
-            styles.exerciseCard,
-            { paddingHorizontal: 24, paddingVertical: 10, marginBottom: 20 },
-            isEditMode && { backgroundColor: isDarkMode ? '#1A1A1A' : '#FAFAFA', borderRadius: 8, borderWidth: 1, borderColor: colors.border }
-          ]}
-        >
-          <View style={styles.exerciseHeader}>
-            <View style={{flexDirection: 'row', alignItems: 'center', flex: 1}}>
-              <View style={{flex: 1}}>
-                <Text style={[styles.exerciseName, { color: colors.text }]}>{item.name?.toUpperCase()}</Text>
-                <Text style={[styles.exerciseDetails, { color: colors.secondaryText }]}>
-                  {isEditMode ? `MOVEMENT ARCHIVE ${index + 1}` : `${item.sets_target || 3} SETS × ${item.reps_target || 10} REPS`}
-                </Text>
-              </View>
+      <TouchableOpacity
+        disabled={isEditMode}
+        onPress={() => toggleExpand(index)}
+        style={[
+          styles.exerciseCard,
+          { paddingHorizontal: 24, paddingVertical: 10, marginBottom: 20 },
+          isEditMode && { backgroundColor: isDarkMode ? '#1A1A1A' : '#FAFAFA', borderRadius: 8, borderWidth: 1, borderColor: colors.border }
+        ]}
+      >
+        <View style={styles.exerciseHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.exerciseName, { color: colors.text }]}>{item.name?.toUpperCase()}</Text>
+              <Text style={[styles.exerciseDetails, { color: colors.secondaryText }]}>
+                {isEditMode ? `MOVEMENT ARCHIVE ${index + 1}` : `${item.sets_target || 3} SETS × ${item.reps_target || 10} REPS`}
+              </Text>
             </View>
-            {isEditMode ? (
-              <View style={{flexDirection: 'row', alignItems: 'center', gap: 15}}>
-                 <View style={{flexDirection: 'row', gap: 10}}>
-                   <TouchableOpacity onPress={() => moveExercise(index, -1)} disabled={index === 0}>
-                     <Ionicons name="arrow-up-circle-outline" size={24} color={index === 0 ? colors.border : colors.text} />
-                   </TouchableOpacity>
-                   <TouchableOpacity onPress={() => moveExercise(index, 1)} disabled={index === editedExercises.length - 1}>
-                     <Ionicons name="arrow-down-circle-outline" size={24} color={index === editedExercises.length - 1 ? colors.border : colors.text} />
-                   </TouchableOpacity>
-                 </View>
-                 <TouchableOpacity onPress={() => {
-                    setEditedExercises(prev => prev.filter((_, i) => i !== index));
-                 }}>
-                   <Ionicons name="remove-circle-outline" size={24} color="#FF3B30" />
-                 </TouchableOpacity>
-              </View>
-            ) : (
-              <AntDesign name={isExpanded ? "down" : "right"} size={16} color={colors.text} />
-            )}
           </View>
-
           {isEditMode ? (
-             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 15, gap: 15, marginTop: 15, backgroundColor: colors.secondaryBackground }}>
-                <TextInput
-                  style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
-                  placeholder="SETS"
-                  placeholderTextColor={colors.secondaryText}
-                  keyboardType="numeric"
-                  value={String(item.sets_target || '')}
-                  onChangeText={(val) => {
-                    const numValue = val.replace(/[^0-9]/g, '');
-                    setEditedExercises(prev => {
-                      const copy = [...prev];
-                      copy[index] = { ...copy[index], sets_target: numValue };
-                      return copy;
-                    });
-                  }}
-                />
-                <Text style={{color: colors.secondaryText, fontSize: 16}}>×</Text>
-                <TextInput
-                  style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
-                  placeholder="REPS"
-                  placeholderTextColor={colors.secondaryText}
-                  keyboardType="numeric"
-                  value={String(item.reps_target || '')}
-                  onChangeText={(val) => {
-                    const numValue = val.replace(/[^0-9]/g, '');
-                    setEditedExercises(prev => {
-                      const copy = [...prev];
-                      copy[index] = { ...copy[index], reps_target: numValue };
-                      return copy;
-                    });
-                  }}
-                />
-             </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity onPress={() => moveExercise(index, -1)} disabled={index === 0}>
+                  <Ionicons name="arrow-up-circle-outline" size={24} color={index === 0 ? colors.border : colors.text} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => moveExercise(index, 1)} disabled={index === editedExercises.length - 1}>
+                  <Ionicons name="arrow-down-circle-outline" size={24} color={index === editedExercises.length - 1 ? colors.border : colors.text} />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={() => {
+                setEditedExercises(prev => prev.filter((_, i) => i !== index));
+              }}>
+                <Ionicons name="remove-circle-outline" size={24} color="#FF3B30" />
+              </TouchableOpacity>
+            </View>
           ) : (
-             isExpanded && (
-               <View style={[styles.cuesContainer, { backgroundColor: colors.secondaryBackground }]}>
-                  <Text style={[styles.cuesTitle, { color: colors.secondaryText }]}>COACHING CUES</Text>
-                  <View style={styles.cueRow}>
-                     <Text style={[styles.cueId, { color: colors.text }]}>01</Text>
-                     <Text style={[styles.cueText, { color: colors.text }]}>Maintain absolute control throughout the full range of motion.</Text>
-                  </View>
-                  <View style={styles.cueRow}>
-                     <Text style={[styles.cueId, { color: colors.text }]}>02</Text>
-                     <Text style={[styles.cueText, { color: colors.text }]}>Mind-muscle synchronization is mandatory for adaptation.</Text>
-                  </View>
-               </View>
-             )
+            <AntDesign name={isExpanded ? "down" : "right"} size={16} color={colors.text} />
           )}
-        </TouchableOpacity>
+        </View>
+
+        {isEditMode ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 15, gap: 15, marginTop: 15, backgroundColor: colors.secondaryBackground }}>
+            <TextInput
+              style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
+              placeholder="SETS"
+              placeholderTextColor={colors.secondaryText}
+              keyboardType="numeric"
+              value={String(item.sets_target || '')}
+              onChangeText={(val) => {
+                const numValue = val.replace(/[^0-9]/g, '');
+                setEditedExercises(prev => {
+                  const copy = [...prev];
+                  copy[index] = { ...copy[index], sets_target: numValue };
+                  return copy;
+                });
+              }}
+            />
+            <Text style={{ color: colors.secondaryText, fontSize: 16 }}>×</Text>
+            <TextInput
+              style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
+              placeholder="REPS"
+              placeholderTextColor={colors.secondaryText}
+              keyboardType="numeric"
+              value={String(item.reps_target || '')}
+              onChangeText={(val) => {
+                const numValue = val.replace(/[^0-9]/g, '');
+                setEditedExercises(prev => {
+                  const copy = [...prev];
+                  copy[index] = { ...copy[index], reps_target: numValue };
+                  return copy;
+                });
+              }}
+            />
+          </View>
+        ) : (
+          isExpanded && (() => {
+            const bodyData = [
+              ...(item.primary_muscles || []).map(m => ({ slug: mapMuscleSlug(m), intensity: 2 })),
+              ...(item.secondary_muscles || []).map(m => ({ slug: mapMuscleSlug(m), intensity: 1 })),
+            ].filter(d => d.slug);
+            const { showFront, showBack } = getViewsToShow(bodyData);
+
+            return (
+              <View style={{ paddingVertical: 10, backgroundColor: colors.secondaryBackground }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', paddingHorizontal: 10 }}>
+                  {showFront && (
+                    <View style={{ alignItems: 'center', overflow: 'hidden' }}>
+                      <Body
+                        data={bodyData}
+                        side="front"
+                        gender={gender}
+                        scale={0.5}
+                        colors={['#FF9500', '#FF3B30']}
+                        border="#1C2733"
+                      />
+                    </View>
+                  )}
+                  {showBack && (
+                    <View style={{ alignItems: 'center', overflow: 'hidden' }}>
+                      <Body
+                        data={bodyData}
+                        side="back"
+                        gender={gender}
+                        scale={0.5}
+                        colors={['#FF9500', '#FF3B30']}
+                        border="#1C2733"
+                      />
+                    </View>
+                  )}
+                </View>
+              </View>
+            );
+          })()
+        )}
+      </TouchableOpacity>
     );
   };
 
@@ -399,11 +478,11 @@ const WorkoutDetail = ({ route, navigation }) => {
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      <RepsHeader 
-        onLeftPress={() => navigation.goBack()} 
+      <RepsHeader
+        onLeftPress={() => navigation.goBack()}
         centerContent={isEditMode ? (
           <TouchableOpacity onPress={() => { setIsEditMode(false); setEditedExercises(workout?.exercises ? JSON.parse(JSON.stringify(workout.exercises)) : []); }}>
-            <Text style={{color: colors.text, fontWeight: '700', fontSize: 12, letterSpacing: 1}}>CANCEL</Text>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 12, letterSpacing: 1 }}>CANCEL</Text>
           </TouchableOpacity>
         ) : null}
         title={isEditMode ? "" : "REPS"}
