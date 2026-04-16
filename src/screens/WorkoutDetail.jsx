@@ -28,7 +28,7 @@ const mapMuscleSlug = (muscleName) => {
   if (name.includes('quadriceps') || name.includes('quad')) return 'quadriceps';
   if (name.includes('hamstring')) return 'hamstring';
   if (name.includes('gluteus') || name.includes('glute')) return 'gluteal';
-  if (name.includes('gastrocnemius') || name.includes('calf')) return 'calves';
+  if (name.includes('gastrocnemius') || name.includes('calf') || name.includes('calves')) return 'calves';
   if (name.includes('erector') || name.includes('lower back')) return 'lower-back';
   if (name.includes('forearm')) return 'forearm';
   return null;
@@ -41,7 +41,7 @@ const bothSlugs = new Set(['trapezius', 'forearm']);
 const getViewsToShow = (data) => {
   let showFront = false;
   let showBack = false;
-  
+
   if (!data || data.length === 0) return { showFront: true, showBack: true };
 
   for (const d of data) {
@@ -52,7 +52,7 @@ const getViewsToShow = (data) => {
       showBack = true;
     }
   }
-  
+
   if (!showFront && !showBack) return { showFront: true, showBack: true };
   return { showFront, showBack };
 };
