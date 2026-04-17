@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Activi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { AntDesign, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import RepsHeader from '../components/MonolithHeader';
+import RepsHeader from '../components/RepsHeader';
 import { sessionsService } from '../services/sessionsService';
 import { setsService } from '../services/setsService';
 import { useRepsAlert } from '../context/AlertContext';
@@ -29,7 +29,7 @@ const SessionHistoryDetail = ({ route, navigation }) => {
         const data = await sessionsService.getSessionDetail(session.id);
         setDetailedSession(data);
       } catch (err) {
-        showAlert('ERROR', 'Failed to load session details.');
+        showAlert('Error', 'Failed to load session details.');
       } finally {
         setFetching(false);
       }
@@ -72,7 +72,7 @@ const SessionHistoryDetail = ({ route, navigation }) => {
       }));
       setEditingSet(null);
     } catch (err) {
-      showAlert('ERROR', 'Failed to update set details.');
+      showAlert('Error', 'Failed to update set details.');
     } finally {
       setLoading(false);
     }
@@ -80,12 +80,12 @@ const SessionHistoryDetail = ({ route, navigation }) => {
 
   const handleDeleteSession = () => {
     showAlert(
-      "DELETE RECORD",
-      "Are you sure you want to permanently delete this historical session block? This action is irreversible.",
+      "Delete Session",
+      "Are you sure you want to permanently delete this record? This action cannot be undone.",
       [
-        { text: "CANCEL", style: "cancel" },
+        { text: "Cancel", style: "cancel" },
         { 
-          text: "DESTROY", 
+          text: "Delete", 
           style: "destructive",
           onPress: async () => {
             try {
@@ -110,7 +110,7 @@ const SessionHistoryDetail = ({ route, navigation }) => {
   if (fetching) {
     return (
       <View style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
-        <ActivityIndicator color="#CCFF00" size="large" />
+        <ActivityIndicator color={colors.accent} size="large" />
       </View>
     );
   }
@@ -162,20 +162,20 @@ const SessionHistoryDetail = ({ route, navigation }) => {
                           {isEditing ? (
                              <>
                                <TextInput
-                                  style={[styles.smallInput, { color: '#CCFF00', borderColor: colors.border }]}
+                                  style={[styles.smallInput, { color: colors.accent, borderColor: colors.border }]}
                                   keyboardType="numeric"
                                   value={editWeight}
                                   onChangeText={setEditWeight}
                                   autoFocus
                                />
                                <TextInput
-                                  style={[styles.smallInput, { color: '#CCFF00', borderColor: colors.border }]}
+                                  style={[styles.smallInput, { color: colors.accent, borderColor: colors.border }]}
                                   keyboardType="numeric"
                                   value={editReps}
                                   onChangeText={setEditReps}
                                />
                                <TouchableOpacity 
-                                  style={[styles.actionBtn, { backgroundColor: '#CCFF00' }]}
+                                  style={[styles.actionBtn, { backgroundColor: colors.accent }]}
                                   onPress={() => saveSetEdit(set.id)}
                                   disabled={loading}
                                >

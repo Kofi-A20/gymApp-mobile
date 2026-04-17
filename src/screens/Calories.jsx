@@ -16,7 +16,7 @@ import { useProfile } from '../context/ProfileContext';
 import { useRepsAlert } from '../context/AlertContext';
 import { weightLogsService } from '../services/weightLogsService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
-import RepsHeader from '../components/MonolithHeader';
+import RepsHeader from '../components/RepsHeader';
 
 const ACTIVITY_OPTIONS = [
   { label: '1–2 days/week', value: 1.2 },
@@ -26,9 +26,9 @@ const ACTIVITY_OPTIONS = [
 ];
 
 const STRATEGIES = [
-  { label: 'CUT', offset: -500, color: '#CCFF00' },
-  { label: 'MAINTAIN', offset: 0, color: '#FFF' },
-  { label: 'BULK', offset: 300, color: '#CCFF00' },
+  { label: 'CUT', offset: -500 },
+  { label: 'MAINTAIN', offset: 0 },
+  { label: 'BULK', offset: 300 },
 ];
 
 const deriveStrategy = (weightKg, goalWeightKg) => {
@@ -182,7 +182,8 @@ const Calories = ({ navigation, route }) => {
   const strategyLabel = STRATEGIES[strategyIdx].label;
 
   // ── Goal Progress Logic ──
-  const anchorWeight = goalStartWeight !== null ? goalStartWeight : profile?.weight_kg;
+  const firstLoggedKg = weightLogs.length > 0 ? weightLogs[0].weight_kg : null;
+  const anchorWeight = goalStartWeight !== null ? goalStartWeight : (firstLoggedKg !== null ? firstLoggedKg : profile?.weight_kg);
   const currentGoalKg = profile?.goal_weight;
 
   let progressPercent = 0;
@@ -271,23 +272,23 @@ const Calories = ({ navigation, route }) => {
               <Text style={[styles.metricValue, { color: colors.text }]}>{tdee.toLocaleString()}</Text>
               <Text style={styles.metricSub}>CALORIES BURNED DAILY</Text>
             </View>
-            <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground, borderColor: '#CCFF00', borderWidth: 1 }]}>
-              <Text style={[styles.metricLabel, { color: '#CCFF00' }]}>CALORIE TARGET</Text>
-              <Text style={[styles.metricValue, { color: '#CCFF00' }]}>{targetIntake.toLocaleString()}</Text>
-              <Text style={[styles.metricSub, { color: '#CCFF00' }]}>CALORIES TO EAT DAILY</Text>
+            <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground, borderColor: colors.accent, borderWidth: 1 }]}>
+              <Text style={[styles.metricLabel, { color: colors.accent }]}>CALORIE TARGET</Text>
+              <Text style={[styles.metricValue, { color: colors.accent }]}>{targetIntake.toLocaleString()}</Text>
+              <Text style={[styles.metricSub, { color: colors.accent }]}>CALORIES TO EAT DAILY</Text>
             </View>
           </View>
 
           {/* 3. MACROS */}
-          <View style={[styles.card, { backgroundColor: '#000', borderColor: '#CCFF00' }]}>
-            <Text style={[styles.cardHeader, { color: '#CCFF00' }]}>MACRO RATIOS</Text>
+          <View style={[styles.card, { backgroundColor: '#000', borderColor: colors.accent }]}>
+            <Text style={[styles.cardHeader, { color: colors.accent }]}>MACRO RATIOS</Text>
 
             <View style={styles.macroRow}>
               <View style={styles.macroHeader}>
                 <Text style={styles.macroName}>PROTEIN</Text>
-                <Text style={styles.macroVal}>{proLow}G – {proHigh}G</Text>
+                <Text style={[styles.macroVal, { color: colors.accent }]}>{proLow}G – {proHigh}G</Text>
               </View>
-              <View style={styles.mBarBg}><View style={[styles.mBarFill, { width: '85%', backgroundColor: '#CCFF00' }]} /></View>
+              <View style={styles.mBarBg}><View style={[styles.mBarFill, { width: '85%', backgroundColor: colors.accent }]} /></View>
             </View>
 
             <View style={styles.macroRow}>
@@ -321,7 +322,7 @@ const Calories = ({ navigation, route }) => {
               </View>
               <View style={styles.snapshotItem}>
                 <Text style={styles.inputLabel}>STRATEGY</Text>
-                <Text style={[styles.snapshotValue, { color: '#CCFF00' }]}>{strategyLabel}</Text>
+                <Text style={[styles.snapshotValue, { color: strategyIdx === 1 ? colors.text : colors.accent }]}>{strategyLabel}</Text>
               </View>
             </View>
           </View>
@@ -332,7 +333,7 @@ const Calories = ({ navigation, route }) => {
               <Text style={styles.cardHeader}>GOAL PROGRESS</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                 <View style={[styles.mBarBg, { flex: 1, backgroundColor: '#333' }]}>
-                  <View style={[styles.mBarFill, { width: `${progressPercent}%`, backgroundColor: '#CCFF00' }]} />
+                  <View style={[styles.mBarFill, { width: `${progressPercent}%`, backgroundColor: colors.accent }]} />
                 </View>
               </View>
               <Text style={{ fontSize: 9, fontWeight: '800', color: colors.secondaryText, textAlign: 'right', marginTop: 4 }}>
@@ -363,7 +364,7 @@ const Calories = ({ navigation, route }) => {
                   onChangeText={setWeightInput}
                 />
                 <TouchableOpacity
-                  style={[styles.wlLogBtn, { backgroundColor: weightInput ? '#CCFF00' : colors.secondaryBackground, borderColor: colors.border }]}
+                  style={[styles.wlLogBtn, { backgroundColor: weightInput ? colors.accent : colors.secondaryBackground, borderColor: colors.border }]}
                   onPress={handleLogWeight}
                   disabled={logLoading || !weightInput}
                 >
@@ -408,9 +409,9 @@ const Calories = ({ navigation, route }) => {
                         deltaDisplay = `${prefix}${deltaVal.toFixed(1)} ${units.toUpperCase()}`;
 
                         if (strategyIdx === 0) { // CUT
-                          deltaColor = deltaVal < 0 ? '#CCFF00' : '#FF3B30';
+                          deltaColor = deltaVal < 0 ? colors.accent : '#FF3B30';
                         } else if (strategyIdx === 2) { // BULK
-                          deltaColor = deltaVal > 0 ? '#CCFF00' : '#FF3B30';
+                          deltaColor = deltaVal > 0 ? colors.accent : '#FF3B30';
                         }
                       } else {
                         deltaDisplay = `0.0 ${units.toUpperCase()}`;
@@ -434,13 +435,13 @@ const Calories = ({ navigation, route }) => {
                         activeOpacity={wlSelectionMode ? 0.7 : 0.9}
                       >
                         <View style={styles.wlTimeline}>
-                          <View style={[styles.wlDot, { backgroundColor: isFirst ? '#CCFF00' : colors.border }]} />
+                          <View style={[styles.wlDot, { backgroundColor: isFirst ? colors.accent : colors.border }]} />
                           {idx < weightLogs.length - 1 && <View style={[styles.wlLine, { backgroundColor: colors.border }]} />}
                         </View>
                         <View style={styles.wlEntryContent}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <View>
-                              <Text style={[styles.wlWeight, { color: isFirst ? '#CCFF00' : colors.text }]}>
+                              <Text style={[styles.wlWeight, { color: isFirst ? colors.accent : colors.text }]}>
                                 {displayWeight} <Text style={{ fontSize: 14 }}>{units.toUpperCase()}</Text>
                               </Text>
                               <Text style={[styles.wlDate, { color: colors.secondaryText }]}>{dateStr}</Text>
@@ -455,7 +456,7 @@ const Calories = ({ navigation, route }) => {
                                 <MaterialCommunityIcons
                                   name={wlSelectedIds.includes(log.id) ? "checkbox-marked" : "checkbox-blank-outline"}
                                   size={24}
-                                  color={wlSelectedIds.includes(log.id) ? '#CCFF00' : colors.secondaryText}
+                                  color={wlSelectedIds.includes(log.id) ? colors.accent : colors.secondaryText}
                                 />
                               )}
                             </View>
@@ -513,7 +514,7 @@ const styles = StyleSheet.create({
   macroRow: { marginBottom: 20 },
   macroHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   macroName: { fontSize: 12, fontWeight: '900', color: '#FFF' },
-  macroVal: { fontSize: 12, fontWeight: '900', color: '#CCFF00' },
+  macroVal: { fontSize: 12, fontWeight: '900' },
   mBarBg: { height: 4, backgroundColor: '#333' },
   mBarFill: { height: '100%' },
 

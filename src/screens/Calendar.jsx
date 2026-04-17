@@ -19,7 +19,7 @@ import { workoutsService } from '../services/workoutsService';
 import { MaterialCommunityIcons, AntDesign, Feather, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import RepsHeader from '../components/MonolithHeader';
+import RepsHeader from '../components/RepsHeader';
 
 const { width } = Dimensions.get('window');
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -47,9 +47,13 @@ const Calendar = ({ navigation }) => {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [schedulingDate, setSchedulingDate] = useState(null); // The date selected from calendar
   const [planHour, setPlanHour] = useState(new Date().getHours());
-  const [planMinute, setPlanMinute] = useState(0); 
+  const [planMinute, setPlanMinute] = useState(0);
   const [planDateIndex, setPlanDateIndex] = useState(0); // For manual selection if needed
-  
+
+  // Batch Deletion State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedSessions, setSelectedSessions] = useState([]);
+
   // For scrolling to Upcoming section
   const scrollRef = useRef(null);
   const [upcomingSectionY, setUpcomingSectionY] = useState(0);
@@ -160,13 +164,13 @@ const Calendar = ({ navigation }) => {
         dateTime: dateTime.toISOString(),
         notificationId,
       };
-      
+
       const updated = [...plannedSessions, newPlanned].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
       setPlannedSessions(updated);
       await AsyncStorage.setItem(PLANNED_STORAGE_KEY, JSON.stringify(updated));
       setShowAddModal(false);
       setSelectedWorkout(null);
-      
+
       // Auto-scroll to the upcoming sessions section
       setTimeout(() => {
         scrollRef.current?.scrollTo({ y: upcomingSectionY, animated: true });
@@ -192,6 +196,56 @@ const Calendar = ({ navigation }) => {
       console.error('Delete planned session error:', e);
       Alert.alert('ERROR', 'FAILED TO DELETE PLANNED SESSION.');
     }
+  };
+
+  const toggleSelection = (id) => {
+    if (selectedSessions.includes(id)) {
+      setSelectedSessions(prev => prev.filter(sId => sId !== id));
+      if (selectedSessions.length === 1) setIsSelectionMode(false);
+    } else {
+      setSelectedSessions(prev => [...prev, id]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedSessions.length === plannedSessions.length) {
+      setSelectedSessions([]);
+      setIsSelectionMode(false);
+    } else {
+      setSelectedSessions(plannedSessions.map(p => p.id));
+      setIsSelectionMode(true);
+    }
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedSessions.length === 0) return;
+
+    Alert.alert(
+      "DELETE SESSIONS",
+      `Are you sure you want to delete ${selectedSessions.length} planned session(s)?`,
+      [
+        { text: "CANCEL", style: "cancel" },
+        {
+          text: "DELETE",
+          style: "destructive",
+          onPress: async () => {
+            const sessionsToDelete = plannedSessions.filter(p => selectedSessions.includes(p.id));
+            for (const s of sessionsToDelete) {
+              if (s.notificationId) {
+                await Notifications.cancelScheduledNotificationAsync(s.notificationId);
+              }
+            }
+
+            const updated = plannedSessions.filter(p => !selectedSessions.includes(p.id));
+            setPlannedSessions(updated);
+            await AsyncStorage.setItem(PLANNED_STORAGE_KEY, JSON.stringify(updated));
+
+            setSelectedSessions([]);
+            setIsSelectionMode(false);
+          }
+        }
+      ]
+    );
   };
 
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
@@ -266,13 +320,13 @@ const Calendar = ({ navigation }) => {
   const Indicator = ({ type, count }) => {
     if (type === 'completed') {
       return (
-        <View style={[styles.indicator, { backgroundColor: '#CCFF00' }]}>
+        <View style={[styles.indicator, { backgroundColor: colors.accent }]}>
           <MaterialCommunityIcons name="check" size={8} color="#000" />
         </View>
       );
     }
     return (
-      <View style={[styles.indicator, { borderWidth: 1, borderColor: '#CCFF00', backgroundColor: 'transparent' }]} />
+      <View style={[styles.indicator, { borderWidth: 1, borderColor: colors.accent, backgroundColor: 'transparent' }]} />
     );
   };
 
@@ -281,13 +335,13 @@ const Calendar = ({ navigation }) => {
       const data = await workoutsService.getUserWorkouts();
       setAvailableWorkouts(data);
       setSchedulingDate(targetDateStr);
-      
+
       // If we have a target date from the calendar, we'll use it.
       // If not (legacy button press), we'll default to today in the list.
       if (!targetDateStr) {
         setPlanDateIndex(0);
       }
-      
+
       setShowAddModal(true);
     } catch (e) {
       Alert.alert('ERROR', 'FAILED TO LOAD ROUTINES');
@@ -299,12 +353,20 @@ const Calendar = ({ navigation }) => {
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      <RepsHeader />
+      <RepsHeader
+        selectionMode={isSelectionMode}
+        selectedCount={selectedSessions.length}
+        onCancelSelection={() => { setIsSelectionMode(false); setSelectedSessions([]); }}
+        onDeleteSelected={handleBatchDelete}
+        onSelectAll={handleSelectAll}
+      />
 
-      <ScrollView 
+      <ScrollView
         ref={scrollRef}
-        style={styles.container} 
+        style={styles.container}
         showsVerticalScrollIndicator={false}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
           <View style={styles.monthNav}>
@@ -320,11 +382,11 @@ const Calendar = ({ navigation }) => {
           </View>
 
           <View style={styles.summaryRow}>
-            <View style={[styles.statBox, { borderLeftColor: '#CCFF00' }]}>
+            <View style={[styles.statBox, { borderLeftColor: colors.accent }]}>
               <Text style={[styles.statLabel, { color: colors.secondaryText }]}>COMPLETIONS</Text>
               <Text style={[styles.statValue, { color: colors.text }]}>{monthStats.count}</Text>
             </View>
-            <View style={[styles.statBox, { borderLeftColor: '#CCFF00' }]}>
+            <View style={[styles.statBox, { borderLeftColor: colors.accent }]}>
               <Text style={[styles.statLabel, { color: colors.secondaryText }]}>TOTAL VOLUME</Text>
               <Text style={[styles.statValue, { color: colors.text }]}>{monthStats.totalVolume.toLocaleString()} KG</Text>
             </View>
@@ -341,7 +403,7 @@ const Calendar = ({ navigation }) => {
                   style={[
                     styles.dayCell,
                     { borderColor: colors.border },
-                    item.isToday && { backgroundColor: isDarkMode ? '#1A1D0E' : '#F7FFD6', borderColor: '#CCFF00', borderWidth: 1 },
+                    item.isToday && { backgroundColor: isDarkMode ? '#1A1D0E' : '#F7FFD6', borderColor: colors.accent, borderWidth: 1 },
                     !item.isCurrentMonth && { opacity: 0.1 },
                     (idx % 7 === 6) && { borderRightWidth: 0 },
                     (idx >= 35) && { borderBottomWidth: 0 }
@@ -349,7 +411,7 @@ const Calendar = ({ navigation }) => {
                   onPress={() => item.isCurrentMonth && handleDayPress(item.dateStr)}
                   disabled={!item.isCurrentMonth}
                 >
-                  <Text style={[styles.dayNum, { color: item.isToday ? '#CCFF00' : (item.isCurrentMonth ? colors.text : colors.secondaryText) }]}>
+                  <Text style={[styles.dayNum, { color: item.isToday ? colors.accent : (item.isCurrentMonth ? colors.text : colors.secondaryText) }]}>
                     {item.day.toString().padStart(2, '0')}
                   </Text>
                   <View style={styles.indicatorContainer}>
@@ -361,7 +423,7 @@ const Calendar = ({ navigation }) => {
             </View>
           </View>
 
-          <View 
+          <View
             style={styles.plannedSection}
             onLayout={(event) => {
               const layout = event.nativeEvent.layout;
@@ -377,16 +439,42 @@ const Calendar = ({ navigation }) => {
                 <Text style={{ color: colors.secondaryText, textAlign: 'center', padding: 20, fontSize: 10 }}>NO UPCOMING SESSIONS SCHEDULED</Text>
               ) : (
                 plannedSessions.map(item => (
-                  <View key={item.id} style={[styles.plannedRow, { borderBottomColor: colors.border }]}>
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.plannedRow,
+                      { borderBottomColor: colors.border },
+                      selectedSessions.includes(item.id) && { backgroundColor: isDarkMode ? '#1A1D0E' : '#F7FFD6' }
+                    ]}
+                    onLongPress={() => {
+                      setIsSelectionMode(true);
+                      toggleSelection(item.id);
+                    }}
+                    onPress={() => {
+                      if (isSelectionMode) toggleSelection(item.id);
+                    }}
+                    activeOpacity={isSelectionMode ? 0.7 : 1}
+                  >
+                    {isSelectionMode && (
+                      <MaterialCommunityIcons
+                        name={selectedSessions.includes(item.id) ? "checkbox-marked" : "checkbox-blank-outline"}
+                        size={24}
+                        color={selectedSessions.includes(item.id) ? colors.accent : colors.border}
+                        style={{ marginRight: 15 }}
+                      />
+                    )}
                     <View style={styles.dateBlock}>
                       <Text style={[styles.pDate, { color: colors.text }]}>{new Date(item.dateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}</Text>
                       <Text style={[styles.pTime, { color: colors.secondaryText }]}>{new Date(item.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
                     </View>
                     <Text style={[styles.pName, { color: colors.text }]}>{item.workoutName.toUpperCase()}</Text>
-                    <TouchableOpacity onPress={() => deletePlannedSession(item)} style={styles.deleteBtn}>
-                      <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-                    </TouchableOpacity>
-                  </View>
+
+                    {!isSelectionMode && (
+                      <TouchableOpacity onPress={() => deletePlannedSession(item)} style={styles.deleteBtn}>
+                        <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+                      </TouchableOpacity>
+                    )}
+                  </TouchableOpacity>
                 ))
               )}
             </View>
@@ -415,7 +503,7 @@ const Calendar = ({ navigation }) => {
                     setShowPlanModal(true);
                   }}>
                   <Text style={[styles.pickerName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
-                  <AntDesign name="plus" size={16} color="#CCFF00" />
+                  <AntDesign name="plus" size={16} color={colors.accent} />
                 </TouchableOpacity>
               )}
             />
@@ -431,7 +519,7 @@ const Calendar = ({ navigation }) => {
 
             <Text style={[styles.pLabel, { color: colors.secondaryText }]}>DAY</Text>
             {schedulingDate ? (
-              <View style={[styles.dateChip, { backgroundColor: '#CCFF00', borderColor: '#CCFF00', alignSelf: 'flex-start', marginBottom: 10 }]}>
+              <View style={[styles.dateChip, { backgroundColor: colors.accent, borderColor: colors.accent, alignSelf: 'flex-start', marginBottom: 10 }]}>
                 <Text style={[styles.dateChipText, { color: '#000' }]}>
                   {new Date(schedulingDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()}
                 </Text>
@@ -445,7 +533,7 @@ const Calendar = ({ navigation }) => {
                     style={[
                       styles.dateChip,
                       { borderColor: colors.border },
-                      planDateIndex === index && { backgroundColor: '#CCFF00', borderColor: '#CCFF00' }
+                      planDateIndex === index && { backgroundColor: colors.accent, borderColor: colors.accent }
                     ]}
                   >
                     <Text style={[styles.dateChipText, { color: planDateIndex === index ? '#000' : colors.text }]}>{d.label}</Text>
@@ -478,7 +566,7 @@ const Calendar = ({ navigation }) => {
                 <Text style={[styles.pBtnText, { color: colors.secondaryText }]}>CANCEL</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.pBtn, { flex: 2, backgroundColor: '#CCFF00' }]}
+                style={[styles.pBtn, { flex: 2, backgroundColor: colors.accent }]}
                 onPress={handleConfirmPlan}
               >
                 <Text style={[styles.pBtnText, { color: '#000' }]}>CONFIRM</Text>
@@ -535,7 +623,7 @@ const styles = StyleSheet.create({
   indicator: { width: 14, height: 14, borderRadius: 7, justifyContent: 'center', alignItems: 'center' },
   plannedSection: { marginTop: 20 },
   plannedHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  addBtn: { backgroundColor: '#CCFF00', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 2, flexDirection: 'row', alignItems: 'center' },
+  addBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 2, flexDirection: 'row', alignItems: 'center' },
   addBtnText: { color: '#000', fontSize: 10, fontWeight: '900', marginLeft: 4 },
   plannedTable: { borderWidth: 1, minHeight: 100, maxHeight: 300, overflow: 'hidden' },
   plannedRow: { flexDirection: 'row', alignItems: 'center', padding: 15, borderBottomWidth: 1 },

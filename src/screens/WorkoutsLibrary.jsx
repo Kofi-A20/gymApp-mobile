@@ -1,14 +1,18 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Pressable, Dimensions, Share } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
 import { workoutsService } from '../services/workoutsService';
 import { sessionsService } from '../services/sessionsService';
+import { sharingService } from '../services/sharingService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useRepsAlert } from '../context/AlertContext';
-import RepsHeader from '../components/MonolithHeader';
+import QRCode from 'react-native-qrcode-svg';
+import RepsHeader from '../components/RepsHeader';
 
 const WorkoutsLibrary = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
@@ -19,6 +23,10 @@ const WorkoutsLibrary = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [pendingShare, setPendingShare] = useState(null);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [shareToken, setShareToken] = useState(null);
+  const [shareUrl, setShareUrl] = useState(null);
 
   const [dropdownConfig, setDropdownConfig] = useState({
     visible: false,
@@ -88,8 +96,34 @@ const WorkoutsLibrary = ({ navigation }) => {
     }
   };
 
-  const handleMenuPress = (item) => {
-    // Replaced by inline floating dropdown
+  // Share effect — fires after modal is fully gone from the tree
+  React.useEffect(() => {
+    if (!pendingShare) return;
+    if (dropdownConfig.visible) return;
+
+    const doShare = async () => {
+      const workout = pendingShare;
+      setPendingShare(null);
+      try {
+        console.log('[SHARE] Generating link for workout:', workout.id);
+        const result = await sharingService.createShareLink(workout.id);
+        console.log('[SHARE] Link generated:', result.url);
+
+        setShareToken(result.token);
+        setShareUrl(result.url);
+        setShareModalVisible(true);
+      } catch (error) {
+        console.error('[SHARE] Error:', error);
+        showAlert('ERROR', 'Failed to generate share link.');
+      }
+    };
+
+    setTimeout(doShare, 400);
+  }, [pendingShare, dropdownConfig.visible]);
+
+  const handleShareWorkout = (workout) => {
+    setPendingShare(workout);
+    closeDropdown();
   };
 
   const handleDeleteSelected = () => {
@@ -130,7 +164,7 @@ const WorkoutsLibrary = ({ navigation }) => {
         style={[
           styles.card,
           { backgroundColor: colors.secondaryBackground, borderColor: colors.border },
-          isSelected && { borderColor: '#CCFF00', borderWidth: 2 }
+          isSelected && { borderColor: colors.accent, borderWidth: 2 }
         ]}
         activeOpacity={0.8}
         onPress={() => {
@@ -155,7 +189,7 @@ const WorkoutsLibrary = ({ navigation }) => {
               <MaterialCommunityIcons
                 name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"}
                 size={24}
-                color={isSelected ? '#CCFF00' : colors.secondaryText} />
+                color={isSelected ? colors.accent : colors.secondaryText} />
             ) : (
               <View ref={menuRef} collapsable={false}>
                 <TouchableOpacity onPress={() => openDropdown(item, menuRef)}>
@@ -181,6 +215,47 @@ const WorkoutsLibrary = ({ navigation }) => {
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
 
+      {/* Share Protocol Modal */}
+      <Modal visible={shareModalVisible} transparent animationType="fade" onRequestClose={() => setShareModalVisible(false)}>
+        <View style={styles.shareModalContainer}>
+          <View style={[styles.shareModalContent, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+            <TouchableOpacity style={styles.closeShareBtn} onPress={() => setShareModalVisible(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+
+            <Text style={[styles.shareModalTitle, { color: colors.text }]}>SHARE PROTOCOL</Text>
+            <Text style={[styles.shareModalSubtitle, { color: colors.secondaryText }]}>Scan the QR code or share the 6-character code with friends.</Text>
+
+            <View style={{ alignItems: 'center', marginBottom: 24 }}>
+              <View style={{ padding: 16, backgroundColor: '#FFF', borderRadius: 8 }}>
+                <QRCode value={shareToken || 'NONE'} size={160} backgroundColor="#FFF" color="#000" />
+              </View>
+            </View>
+
+            <View style={[styles.tokenContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.tokenText, { color: colors.text }]}>{shareToken}</Text>
+            </View>
+
+            <TouchableOpacity style={[styles.logBtn, { backgroundColor: colors.accent, marginTop: 30, padding: 15 }]} onPress={async () => {
+              await Clipboard.setStringAsync(shareToken || '');
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+              showAlert('COPIED!', 'The share code has been copied to your clipboard.');
+            }}>
+              <MaterialCommunityIcons name="content-copy" size={20} color="#000" style={{ marginRight: 10 }} />
+              <Text style={[styles.logBtnText, { color: '#000', fontSize: 14 }]}>COPY CODE</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={{ marginTop: 20, alignItems: 'center' }} onPress={() => {
+              Share.share({
+                message: shareToken,
+              });
+            }}>
+              <Text style={{ color: colors.secondaryText, fontSize: 12, fontWeight: '700', letterSpacing: 1 }}>SHARE CODE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Dropdown Menu Modal */}
       <Modal visible={dropdownConfig.visible} transparent animationType="fade" onRequestClose={closeDropdown}>
         <Pressable style={StyleSheet.absoluteFill} onPress={closeDropdown}>
@@ -202,10 +277,7 @@ const WorkoutsLibrary = ({ navigation }) => {
               <Text style={[styles.dropdownItemText, { color: colors.text }]}>SELECT</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.dropdownItem, { borderBottomColor: colors.border }]} onPress={() => {
-              closeDropdown();
-              showAlert("SHARE", "Generating share link...");
-            }}>
+            <TouchableOpacity style={[styles.dropdownItem, { borderBottomColor: colors.border }]} onPress={() => handleShareWorkout(dropdownConfig.item)}>
               <MaterialCommunityIcons name="share-variant" size={16} color={colors.text} style={{ marginRight: 10 }} />
               <Text style={[styles.dropdownItemText, { color: colors.text }]}>SHARE</Text>
             </TouchableOpacity>
@@ -237,12 +309,12 @@ const WorkoutsLibrary = ({ navigation }) => {
         </Pressable>
       </Modal>
 
-      <RepsHeader 
-        rightActions={[{ icon: 'plus-circle', library: 'AntDesign', onPress: () => navigation.navigate('AddWorkout') }]} 
-        selectionMode={isSelectionMode} 
-        selectedCount={selectedIds.length} 
-        onCancelSelection={() => { setIsSelectionMode(false); setSelectedIds([]); }} 
-        onDeleteSelected={handleDeleteSelected} 
+      <RepsHeader
+        rightActions={[{ icon: 'plus-circle', library: 'AntDesign', onPress: () => navigation.navigate('AddWorkout') }]}
+        selectionMode={isSelectionMode}
+        selectedCount={selectedIds.length}
+        onCancelSelection={() => { setIsSelectionMode(false); setSelectedIds([]); }}
+        onDeleteSelected={handleDeleteSelected}
         onSelectAll={handleSelectAll}
       />
 
@@ -258,6 +330,16 @@ const WorkoutsLibrary = ({ navigation }) => {
           <Text style={[styles.description, { color: colors.secondaryText }]}>
             A curated selection of high-intensity protocols designed for structural hypertrophy and neurological adaptation.
           </Text>
+
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+            <TouchableOpacity
+              style={{ flex: 1, backgroundColor: colors.secondaryBackground, padding: 16, borderRadius: 4, borderWidth: 1, borderColor: colors.border, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
+              onPress={() => navigation.navigate('JoinWorkout')}
+            >
+              <MaterialCommunityIcons name="download" size={20} color={colors.text} style={{ marginRight: 10 }} />
+              <Text style={{ color: colors.text, fontWeight: '800', letterSpacing: 1 }}>IMPORT WORKOUT</Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={[styles.listContainer, { maxHeight: 500, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
             {loading ? (
@@ -444,6 +526,60 @@ const styles = StyleSheet.create({
   dropdownItemText: {
     fontSize: 10,
     fontWeight: '800',
+    letterSpacing: 1,
+  },
+  shareModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  shareModalContent: {
+    width: '100%',
+    padding: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  closeShareBtn: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 2,
+  },
+  shareModalTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    marginBottom: 10,
+  },
+  shareModalSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 18,
+    marginBottom: 30,
+  },
+  tokenContainer: {
+    padding: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tokenText: {
+    fontSize: 36,
+    fontWeight: '900',
+    letterSpacing: 8,
+    textAlign: 'center',
+  },
+  logBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 4,
+  },
+  logBtnText: {
+    fontWeight: '900',
     letterSpacing: 1,
   },
 });

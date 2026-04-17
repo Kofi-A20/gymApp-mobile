@@ -17,7 +17,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useWorkout } from '../context/WorkoutContext';
 import { useRepsAlert } from '../context/AlertContext';
 import { MaterialCommunityIcons, AntDesign, Ionicons } from '@expo/vector-icons';
-import RepsHeader from '../components/MonolithHeader';
+import RepsHeader from '../components/RepsHeader';
 
 const UI_STORAGE_KEY = '@reps_activeWorkout_ui';
 
@@ -242,7 +242,7 @@ const ActiveWorkout = ({ navigation }) => {
   if (!activeSession) {
     return (
       <View style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
-        <ActivityIndicator color="#CCFF00" />
+        <ActivityIndicator color={colors.accent} />
       </View>
     );
   }
@@ -255,7 +255,7 @@ const ActiveWorkout = ({ navigation }) => {
         centerContent={
           <View style={styles.headerCenter}>
             {restRemaining > 0 && (
-              <View style={[styles.restBadge, { backgroundColor: '#CCFF00' }]}>
+              <View style={[styles.restBadge, { backgroundColor: colors.accent }]}>
                 <MaterialCommunityIcons name="timer-sand" size={11} color="#000" />
                 <Text style={styles.restBadgeText}>{formatTime(restRemaining)}</Text>
               </View>
@@ -264,7 +264,7 @@ const ActiveWorkout = ({ navigation }) => {
             <Text style={[styles.timerText, { color: colors.text }]}>{formatTime(sessionTimer)}</Text>
           </View>
         }
-        rightActions={[{ text: 'FINISH', color: '#CCFF00', onPress: handleFinish }]}
+        rightActions={[{ text: 'FINISH', color: colors.accent, onPress: handleFinish }]}
       />
 
       <KeyboardAvoidingView
@@ -275,7 +275,7 @@ const ActiveWorkout = ({ navigation }) => {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          keyboardDismissMode="on-drag"
+          keyboardDismissMode="interactive"
         >
           {/* Title */}
           <Text style={[styles.subLabel, { color: colors.secondaryText }]}>ACTIVE PROTOCOL</Text>
@@ -308,7 +308,7 @@ const ActiveWorkout = ({ navigation }) => {
                 {/* Exercise name row */}
                 <View style={styles.exerciseNameRow}>
                   {allDone && (
-                    <MaterialCommunityIcons name="check-circle" size={16} color="#CCFF00" style={{ marginRight: 8 }} />
+                    <MaterialCommunityIcons name="check-circle" size={16} color={colors.accent} style={{ marginRight: 8 }} />
                   )}
                   <Text style={[styles.exerciseName, { color: colors.text }]}>
                     {exercise.name?.toUpperCase()}
@@ -339,7 +339,7 @@ const ActiveWorkout = ({ navigation }) => {
                       style={[styles.setRow, { opacity: rowOpacity, backgroundColor: rowBg }]}
                     >
                       {/* Set number */}
-                      <Text style={[styles.setNum, { color: done ? '#CCFF00' : colors.secondaryText }]}>
+                      <Text style={[styles.setNum, { color: done ? colors.accent : colors.secondaryText }]}>
                         {setIdx + 1}
                       </Text>
 
@@ -348,7 +348,7 @@ const ActiveWorkout = ({ navigation }) => {
                         style={[
                           styles.setInput,
                           {
-                            color: done ? '#CCFF00' : colors.text,
+                            color: done ? colors.accent : colors.text,
                             borderBottomColor: done ? 'transparent' : colors.border,
                           },
                         ]}
@@ -365,7 +365,7 @@ const ActiveWorkout = ({ navigation }) => {
                         style={[
                           styles.setInput,
                           {
-                            color: done ? '#CCFF00' : colors.text,
+                            color: done ? colors.accent : colors.text,
                             borderBottomColor: done ? 'transparent' : colors.border,
                           },
                         ]}
@@ -382,8 +382,8 @@ const ActiveWorkout = ({ navigation }) => {
                         style={[
                           styles.checkbox,
                           {
-                            borderColor: done ? '#CCFF00' : colors.border,
-                            backgroundColor: done ? '#CCFF00' : 'transparent',
+                            borderColor: done ? colors.accent : colors.border,
+                            backgroundColor: done ? colors.accent : 'transparent',
                           },
                         ]}
                         onPress={() => handleTick(exId, setIdx)}
@@ -455,7 +455,6 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   finishBtn: {
-    color: '#CCFF00',
     fontWeight: '900',
     fontSize: 13,
     letterSpacing: 1.5,

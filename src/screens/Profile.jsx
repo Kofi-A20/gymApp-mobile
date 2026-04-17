@@ -12,6 +12,7 @@ import {
   Modal,
   Keyboard,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -20,7 +21,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
 import { MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';
 import { useRepsAlert } from '../context/AlertContext';
-import RepsHeader from '../components/MonolithHeader';
+import RepsHeader from '../components/RepsHeader';
 import { weightLogsService } from '../services/weightLogsService';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -54,7 +55,7 @@ const InputField = ({ label, value, onChangeText, keyboardType, editable = true,
     <View style={styles.inputContainer}>
       <Text style={[styles.fieldLabel, { color: colors.secondaryText }]}>{label.toUpperCase()}</Text>
       <TextInput
-        style={[styles.textInput, { color: editable ? colors.text : (onPress ? '#CCFF00' : colors.secondaryText), borderColor: colors.border }]}
+        style={[styles.textInput, { color: editable ? colors.text : (onPress ? colors.accent : colors.secondaryText), borderColor: colors.border }]}
         value={value}
         onChangeText={onChangeText}
         keyboardType={keyboardType}
@@ -189,6 +190,66 @@ const Profile = ({ navigation }) => {
     setIsDirty(true);
   };
 
+  const handlePickAvatar = async () => {
+    showAlert('Choose Source', 'Would you like to take a new photo or choose from your gallery?', [
+      { text: 'Camera', onPress: () => captureImage() },
+      { text: 'Gallery', onPress: () => pickImage() },
+      { text: 'Cancel', style: 'cancel' }
+    ]);
+  };
+
+  const captureImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        showAlert('PERMISSION DENIED', 'WE NEED CAMERA ACCESS TO TAKE A PHOTO.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.1,
+        base64: true,
+      });
+
+      handleImageResult(result);
+    } catch (e) {
+      console.log('Camera error', e);
+      showAlert('ERROR', 'COULD NOT CAPTURE IMAGE.');
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.1,
+        base64: true,
+      });
+
+      handleImageResult(result);
+    } catch (e) {
+      console.log('Gallery error', e);
+      showAlert('ERROR', 'COULD NOT SELECT IMAGE.');
+    }
+  };
+
+  const handleImageResult = async (result) => {
+    if (!result.canceled && result.assets && result.assets[0]?.base64) {
+      try {
+        const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        await updateProfile({ avatar_url: base64Img });
+        showAlert('SUCCESS', 'PROFILE PICTURE UPDATED.');
+      } catch (error) {
+        console.error('Update profile avatar error:', error);
+        showAlert('ERROR', `FAILED TO SAVE AVATAR: ${error.message}`);
+      }
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -257,8 +318,8 @@ const Profile = ({ navigation }) => {
               key={String(opt.value)}
               style={[
                 styles.selectorChip,
-                { borderColor: isSelected ? '#CCFF00' : colors.border },
-                isSelected && { backgroundColor: '#CCFF00' },
+                { borderColor: isSelected ? colors.accent : colors.border },
+                isSelected && { backgroundColor: colors.accent },
               ]}
               onPress={() => { onChange(opt.value); setIsDirty(true); }}
             >
@@ -305,15 +366,27 @@ const Profile = ({ navigation }) => {
 
           {/* Identity Header */}
           <View style={styles.profileHero}>
-            <View style={styles.avatarWrapper}>
-              <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300' }}
-                style={styles.mainAvatar}
-              />
-              <TouchableOpacity style={[styles.editBtn, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                <Feather name="edit-2" size={16} color={colors.text} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              onPress={handlePickAvatar}
+              style={styles.avatarWrapper}
+            >
+              {profile?.avatar_url ? (
+                <Image
+                  source={{ uri: profile.avatar_url }}
+                  style={styles.mainAvatar}
+                />
+              ) : (
+                <View style={[styles.mainAvatar, { backgroundColor: colors.secondaryBackground, justifyContent: 'center', alignItems: 'center' }]}>
+                  <MaterialCommunityIcons name="account" size={40} color={colors.secondaryText} />
+                </View>
+              )}
+              <View 
+                style={[styles.editBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+              >
+                <Feather name="camera" size={14} color={colors.text} />
+              </View>
+            </TouchableOpacity>
 
             <View style={styles.identityText}>
               <Text style={[styles.identityLabel, { color: colors.secondaryText }]}>USER IDENTIFICATION</Text>
@@ -404,7 +477,7 @@ const Profile = ({ navigation }) => {
                   <View style={styles.modalHeader}>
                     <Text style={[styles.modalTitle, { color: colors.text }]}>DATE OF BIRTH</Text>
                     <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                      <Text style={{ color: '#CCFF00', fontWeight: '900', fontSize: 14 }}>DONE</Text>
+                      <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 14 }}>DONE</Text>
                     </TouchableOpacity>
                   </View>
                   <DateTimePicker
@@ -466,7 +539,7 @@ const Profile = ({ navigation }) => {
 
           {/* Save Button */}
           <TouchableOpacity
-            style={[styles.saveBtn, { backgroundColor: isDirty ? '#CCFF00' : colors.secondaryBackground }]}
+            style={[styles.saveBtn, { backgroundColor: isDirty ? colors.accent : colors.secondaryBackground }]}
             onPress={handleSave}
             disabled={saving}
           >
@@ -499,16 +572,16 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 24, paddingTop: 30 },
 
   profileHero: { marginBottom: 60 },
-  avatarWrapper: { width: 140, height: 140, marginBottom: 30 },
-  mainAvatar: { width: '100%', height: '100%', borderRadius: 4 },
+  avatarWrapper: { width: 100, height: 100, marginBottom: 30 },
+  mainAvatar: { width: '100%', height: '100%', borderRadius: 50 },
   editBtn: {
-    position: 'absolute', bottom: -15, right: -15,
-    width: 45, height: 45, borderRadius: 4,
+    position: 'absolute', bottom: 0, right: 0,
+    width: 32, height: 32, borderRadius: 16,
     justifyContent: 'center', alignItems: 'center', borderWidth: 1,
   },
   identityText: { marginTop: 10 },
   identityLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
-  userName: { fontSize: 42, fontWeight: '900', letterSpacing: -1, marginVertical: 4 },
+  userName: { fontSize: 24, fontWeight: '900', letterSpacing: 0, marginVertical: 4 },
   memberSince: { fontSize: 14, fontWeight: '500' },
 
   sectionTitleRow: {

@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { CommonActions } from '@react-navigation/native';
+import { StackActions } from '@react-navigation/native';
 import { MaterialCommunityIcons, Ionicons, AntDesign, FontAwesome } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 
@@ -231,21 +231,7 @@ const TabNavigator = () => (
     <Tab.Screen name="Calendar" component={Calendar} />
     <Tab.Screen name="Log" component={WeightsLog} />
     <Tab.Screen name="Calories" component={Calories} />
-    <Tab.Screen
-      name="Profile"
-      component={ProfileStack}
-      listeners={({ navigation }) => ({
-        tabPress: (e) => {
-          e.preventDefault();
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{ name: 'Profile', state: { routes: [{ name: 'ProfileMain' }], index: 0 } }],
-            })
-          );
-        },
-      })}
-    />
+    <Tab.Screen name="Profile" component={ProfileStack} />
   </Tab.Navigator>
 );
 

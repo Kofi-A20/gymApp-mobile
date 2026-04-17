@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { exercisesService } from '../services/exercisesService';
 import { workoutsService } from '../services/workoutsService';
 import { MaterialCommunityIcons, AntDesign, Feather, Ionicons } from '@expo/vector-icons';
-import RepsHeader from '../components/MonolithHeader';
+import RepsHeader from '../components/RepsHeader';
 import { useRepsAlert } from '../context/AlertContext';
 
 const FILTERS = ['ALL', 'CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'QUADS', 'HAMSTRINGS', 'GLUTES', 'CALVES', 'CORE', 'FOREARMS'];
@@ -268,7 +268,7 @@ const AddWorkout = ({ navigation }) => {
                               ]}>{ex.muscle_group?.toUpperCase() || 'GENERAL'}</Text>
                             </View>
                             {isSelected && expandedExerciseId !== ex.id && (
-                              <Text style={{ color: '#CCFF00', fontWeight: '900', fontSize: 16 }}>
+                              <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 16 }}>
                                 {isSelected.sets_target} × {isSelected.reps_target}
                               </Text>
                             )}
@@ -296,7 +296,7 @@ const AddWorkout = ({ navigation }) => {
                                 />
                               </View>
                               <TouchableOpacity
-                                style={{ backgroundColor: '#CCFF00', paddingHorizontal: 30, paddingVertical: 10, borderRadius: 2 }}
+                                style={{ backgroundColor: colors.accent, paddingHorizontal: 30, paddingVertical: 10, borderRadius: 2 }}
                                 onPress={() => handleSaveTargets(ex.id)}
                               >
                                 <Text style={{ fontWeight: '800', fontSize: 12, color: '#000', letterSpacing: 1 }}>SAVE</Text>
@@ -320,7 +320,7 @@ const AddWorkout = ({ navigation }) => {
 
           {/* Action Button */}
           <TouchableOpacity
-            style={[styles.saveBtn, { backgroundColor: '#CCFF00' }]}
+            style={[styles.saveBtn, { backgroundColor: colors.accent }]}
             onPress={handleCreateWorkout}
             disabled={saving}
           >

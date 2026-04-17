@@ -9,16 +9,18 @@ export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [units, setUnits] = useState('kg');
   const [notifications, setNotifications] = useState(true);
+  const [accentColor, setAccentColor] = useState('#CCFF00');
   const [loaded, setLoaded] = useState(false);
 
   // ── Load persisted values on mount ──────────────────────────────────────────
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const [savedTheme, savedUnits, savedNotifications] = await Promise.all([
+        const [savedTheme, savedUnits, savedNotifications, savedAccent] = await Promise.all([
           AsyncStorage.getItem('theme'),
           AsyncStorage.getItem('units'),
           AsyncStorage.getItem('notifications'),
+          AsyncStorage.getItem('accentColor'),
         ]);
 
         if (savedTheme !== null) {
@@ -33,6 +35,10 @@ export const ThemeProvider = ({ children }) => {
 
         if (savedNotifications !== null) {
           setNotifications(savedNotifications === 'true');
+        }
+
+        if (savedAccent !== null) {
+          setAccentColor(savedAccent);
         }
       } catch (e) {
         console.error('Failed to load theme settings:', e);
@@ -68,9 +74,18 @@ export const ThemeProvider = ({ children }) => {
     );
   }, [notifications, loaded]);
 
+  // ── Persist accentColor ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem('accentColor', accentColor).catch(e =>
+      console.error('Failed to save accent color:', e)
+    );
+  }, [accentColor, loaded]);
+
   const toggleTheme = () => setIsDarkMode(prev => !prev);
   const toggleUnits = () => setUnits(prev => (prev === 'kg' ? 'lbs' : 'kg'));
   const toggleNotifications = () => setNotifications(prev => !prev);
+  const changeAccentColor = (newColor) => setAccentColor(newColor);
 
   const colors = {
     background: isDarkMode ? '#000000' : '#FFFFFF',
@@ -78,7 +93,7 @@ export const ThemeProvider = ({ children }) => {
     secondaryBackground: isDarkMode ? '#1C1C1E' : '#F8F8F8',
     secondaryText: isDarkMode ? '#BCBCBC' : '#666666',
     border: isDarkMode ? '#333333' : '#E0E0E0',
-    accent: isDarkMode ? '#CCFF00' : '#000000',
+    accent: isDarkMode ? accentColor : '#000000',
     danger: '#FF3B30',
   };
 
@@ -89,6 +104,8 @@ export const ThemeProvider = ({ children }) => {
     toggleUnits,
     notifications,
     toggleNotifications,
+    accentColor,
+    changeAccentColor,
     colors,
     settingsLoaded: loaded,
   };

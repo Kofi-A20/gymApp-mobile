@@ -5,9 +5,9 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useWorkout } from '../context/WorkoutContext';
 import { sharingService } from '../services/sharingService';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import RepsHeader from '../components/MonolithHeader';
+import RepsHeader from '../components/RepsHeader';
 import { useRepsAlert } from '../context/AlertContext';
 
 const SharedWorkoutPreview = ({ route, navigation }) => {
@@ -16,7 +16,7 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
   const { user } = useAuth();
   const { startWorkout } = useWorkout();
   const insets = useSafeAreaInsets();
-  const { profile } = useProfile(); // Just in case, though not used yet
+
   const { showAlert } = useRepsAlert();
   const [workout, setWorkout] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,6 +24,16 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
 
   useEffect(() => {
     const fetchSharedWorkout = async () => {
+      if (route.params.workout) {
+        setWorkout(route.params.workout);
+        setLoading(false);
+        return;
+      }
+      if (!token) {
+        showAlert('ERROR', 'No token provided.');
+        navigation.goBack();
+        return;
+      }
       try {
         const data = await sharingService.getSharedWorkout(token);
         setWorkout(data);
@@ -51,7 +61,7 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
     try {
       await sharingService.saveSharedWorkout(token);
       showAlert('DEPLOYED', 'Routine successfully integrated into your library.');
-      navigation.navigate('Workouts');
+      navigation.navigate('Tabs', { screen: 'Workouts', params: { screen: 'WorkoutsLibrary' } });
     } catch (error) {
       showAlert('ERROR', error.message);
     } finally {
@@ -80,7 +90,7 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <RepsHeader 
         onLeftPress={() => navigation.goBack()} 
-        title="SHARED PROTOCOL" 
+        title="IMPORT PROTOCOL" 
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -93,7 +103,7 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
           {workout?.workout_exercises?.map((item, index) => (
             <View key={index} style={[styles.exerciseItem, { borderBottomColor: colors.border }]}>
                <View style={styles.exHeader}>
-                  <Text style={[styles.exIndex, { color: isDarkMode ? '#CCFF00' : '#10B981' }]}>{(index + 1).toString().padStart(2, '0')}</Text>
+                  <Text style={[styles.exIndex, { color: isDarkMode ? colors.accent : '#10B981' }]}>{(index + 1).toString().padStart(2, '0')}</Text>
                   <Text style={[styles.exName, { color: colors.text }]}>{item.exercises?.name?.toUpperCase()}</Text>
                </View>
                <Text style={[styles.exDetails, { color: colors.secondaryText }]}>
@@ -102,18 +112,11 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
             </View>
           ))}
         </View>
-
-        <TouchableOpacity 
-          style={[styles.quickStartBtn, { borderColor: isDarkMode ? '#CCFF00' : '#10B981' }]}
-          onPress={handleQuickStart}
-        >
-           <Text style={[styles.quickStartText, { color: isDarkMode ? '#CCFF00' : '#10B981' }]}>START SESSION NOW</Text>
-        </TouchableOpacity>
       </ScrollView>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <TouchableOpacity 
-          style={[styles.saveButton, { backgroundColor: isDarkMode ? '#CCFF00' : '#000' }]}
+          style={[styles.saveButton, { backgroundColor: isDarkMode ? colors.accent : '#000' }]}
           onPress={handleSave}
           disabled={saving}
         >
@@ -158,6 +161,8 @@ const styles = StyleSheet.create({
      padding: 20,
      borderWidth: 1.5,
      alignItems: 'center',
+     flexDirection: 'row',
+     justifyContent: 'center',
   },
   quickStartText: { fontSize: 12, fontWeight: '900', letterSpacing: 2 },
   footer: {

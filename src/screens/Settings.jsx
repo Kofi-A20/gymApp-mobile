@@ -4,11 +4,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { MaterialCommunityIcons, AntDesign, Ionicons } from '@expo/vector-icons';
-import RepsHeader from '../components/MonolithHeader';
+import RepsHeader from '../components/RepsHeader';
 import { useRepsAlert } from '../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { supabase } from '../lib/supabase';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const EXPO_WEEKDAYS = {
@@ -16,7 +17,7 @@ const EXPO_WEEKDAYS = {
 };
 
 const Settings = ({ navigation }) => {
-  const { isDarkMode, toggleTheme, units, toggleUnits, notifications, toggleNotifications, colors } = useTheme();
+  const { isDarkMode, toggleTheme, units, toggleUnits, notifications, toggleNotifications, colors, changeAccentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const { showAlert } = useRepsAlert();
@@ -27,6 +28,9 @@ const Settings = ({ navigation }) => {
   const [weightReminderHour, setWeightReminderHour] = useState(9);
   const [weightReminderMinute, setWeightReminderMinute] = useState(0);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  
+  // Color Picker State
+  const [showColorModal, setShowColorModal] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -116,6 +120,34 @@ const Settings = ({ navigation }) => {
     }
   };
 
+  const handleDeleteAccount = () => {
+    showAlert('Delete Account', 'Are you completely sure? This permanently deletes all your routines, sessions, and data. You cannot undo this.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete Everything', style: 'destructive', onPress: async () => {
+        console.log('[DELETE_FLOW] INIT: Starting account deletion process...');
+        try {
+          console.log('[DELETE_FLOW] RPC: Calling supabase.rpc("delete_user")...');
+          const { error } = await supabase.rpc('delete_user');
+          
+          if (error) {
+            console.error('[DELETE_FLOW] RPC_ERROR:', error);
+            throw error;
+          }
+          
+          console.log('[DELETE_FLOW] RPC_SUCCESS: Database record queued for removal.');
+          console.log('[DELETE_FLOW] SIGN_OUT: Clearing local session and keys...');
+          await signOut();
+          
+          console.log('[DELETE_FLOW] COMPLETE: User signed out. Redirection should occur.');
+        } catch (error) {
+          console.error('[DELETE_FLOW] CATCH_ERROR:', error);
+          const errorMsg = error.message || 'Unknown database error';
+          showAlert('Error', `Failed to delete account: ${errorMsg}. Ensure your DB schema is patched.`);
+        }
+      }}
+    ]);
+  };
+
   const SectionHeader = ({ id, title }) => (
     <View style={styles.sectionHeaderContainer}>
       <Text style={[styles.sectionHeader, { color: colors.text }]}>{id}. {title.toUpperCase()}</Text>
@@ -140,7 +172,7 @@ const Settings = ({ navigation }) => {
           <Text style={[styles.topLabel, { color: colors.secondaryText }]}>SYSTEM PREFERENCES</Text>
           <Text style={[styles.mainTitle, { color: colors.text }]}>OPTIONS</Text>
 
-          {/* Section 01: Interface */}
+          {/* Section: Interface */}
           <SectionHeader id="01" title="Interface" />
           <View style={styles.interfaceGrid}>
             <TouchableOpacity 
@@ -168,8 +200,30 @@ const Settings = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Section 02: Alerts & Units */}
-          <SectionHeader id="02" title="Alerts & Units" />
+          {/* Section: App Accent */}
+          <SectionHeader id="02" title="App Accent" />
+          <TouchableOpacity 
+            style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground }]}
+            onPress={() => setShowColorModal(true)}
+            activeOpacity={0.7}
+          >
+             <View style={styles.toggleRow}>
+                <View>
+                   <Text style={[styles.toggleLabel, { color: colors.text }]}>THEME COLOR</Text>
+                   <Text style={[styles.toggleSub, { color: colors.secondaryText }]}>ACCENT SHADE</Text>
+                </View>
+                <View 
+                   style={{
+                     width: 40, height: 40, borderRadius: 20,
+                     backgroundColor: colors.accent,
+                     borderWidth: 2, borderColor: colors.border
+                   }} 
+                />
+             </View>
+          </TouchableOpacity>
+
+          {/* Section: Alerts & Units */}
+          <SectionHeader id="03" title="Alerts & Units" />
           <View style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground }]}>
              <View style={styles.toggleRow}>
                 <View>
@@ -179,7 +233,7 @@ const Settings = ({ navigation }) => {
                 <Switch 
                   value={notifications} 
                   onValueChange={toggleNotifications}
-                  trackColor={{ false: '#767577', true: isDarkMode ? '#CCFF00' : '#000' }}
+                  trackColor={{ false: '#767577', true: colors.accent }}
                   thumbColor="#f4f3f4"
                 />
              </View>
@@ -197,8 +251,8 @@ const Settings = ({ navigation }) => {
              </View>
           </View>
 
-          {/* Section 03: Weight Reminder */}
-          <SectionHeader id="03" title="Weight Reminder" />
+          {/* Section: Weight Reminder */}
+          <SectionHeader id="04" title="Weight Reminder" />
           <View style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground }]}>
              <View style={styles.toggleRow}>
                 <View>
@@ -208,7 +262,7 @@ const Settings = ({ navigation }) => {
                 <Switch 
                   value={weightReminderEnabled} 
                   onValueChange={updateEnabled}
-                  trackColor={{ false: '#767577', true: isDarkMode ? '#CCFF00' : '#000' }}
+                  trackColor={{ false: '#767577', true: colors.accent }}
                   thumbColor="#f4f3f4"
                 />
              </View>
@@ -228,8 +282,8 @@ const Settings = ({ navigation }) => {
                         paddingHorizontal: 8,
                         borderRadius: 4,
                         borderWidth: 1,
-                        borderColor: isSelected ? '#CCFF00' : colors.border,
-                        backgroundColor: isSelected ? '#CCFF00' : 'transparent',
+                        borderColor: isSelected ? colors.accent : colors.border,
+                        backgroundColor: isSelected ? colors.accent : 'transparent',
                         flex: 1,
                         alignItems: 'center',
                         marginHorizontal: 2
@@ -250,12 +304,47 @@ const Settings = ({ navigation }) => {
                 style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
               >
                 <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>TIME</Text>
-                <Text style={{ fontSize: 16, fontWeight: '900', color: '#CCFF00' }}>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: colors.accent }}>
                   {weightReminderHour.toString().padStart(2, '0')}:{weightReminderMinute.toString().padStart(2, '0')}
                 </Text>
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Color Picker Modal */}
+          <Modal transparent animationType="fade" visible={showColorModal} onRequestClose={() => setShowColorModal(false)}>
+            <View style={styles.modalOverlay}>
+               <View style={[styles.modalBox, { backgroundColor: colors.background, paddingBottom: insets.bottom + 40 }]}>
+                 <View style={styles.modalHeader}>
+                    <Text style={[styles.modalTitle, { color: colors.text }]}>SELECT APP THEME</Text>
+                    <TouchableOpacity onPress={() => setShowColorModal(false)}>
+                      <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 14 }}>DONE</Text>
+                    </TouchableOpacity>
+                 </View>
+                 
+                 <View style={{ alignItems: 'center', paddingTop: 60, paddingBottom: 40 }}>
+                    <View style={{ width: 280, alignItems: 'center' }}>
+                       {/* Top Row: 2 Items */}
+                       <View style={{ flexDirection: 'row', gap: 30, marginBottom: -15 }}>
+                          <SquircleHex color="#CCFF00" selected={colors.accent === '#CCFF00'} onPress={() => changeAccentColor('#CCFF00')} />
+                          <SquircleHex color="#007AFF" selected={colors.accent === '#007AFF'} onPress={() => changeAccentColor('#007AFF')} />
+                       </View>
+                       {/* Middle Row: 3 Items */}
+                       <View style={{ flexDirection: 'row', gap: 30, marginBottom: -15 }}>
+                          <SquircleHex color="#FF9500" selected={colors.accent === '#FF9500'} onPress={() => changeAccentColor('#FF9500')} />
+                          <SquircleHex color="#FF2D55" selected={colors.accent === '#FF2D55'} onPress={() => changeAccentColor('#FF2D55')} />
+                          <SquircleHex color="#AF52DE" selected={colors.accent === '#AF52DE'} onPress={() => changeAccentColor('#AF52DE')} />
+                       </View>
+                       {/* Bottom Row: 2 Items */}
+                       <View style={{ flexDirection: 'row', gap: 30 }}>
+                          <SquircleHex color="#FF3B30" selected={colors.accent === '#FF3B30'} onPress={() => changeAccentColor('#FF3B30')} />
+                          <SquircleHex color="#34C759" selected={colors.accent === '#34C759'} onPress={() => changeAccentColor('#34C759')} />
+                       </View>
+                    </View>
+                 </View>
+               </View>
+            </View>
+          </Modal>
 
           {/* Time Picker Modals */}
           {showTimePicker && Platform.OS === 'android' && (
@@ -275,7 +364,7 @@ const Settings = ({ navigation }) => {
                   <View style={styles.modalHeader}>
                     <Text style={[styles.modalTitle, { color: colors.text }]}>REMINDER TIME</Text>
                     <TouchableOpacity onPress={() => setShowTimePicker(false)}>
-                      <Text style={{ color: '#CCFF00', fontWeight: '900', fontSize: 14 }}>DONE</Text>
+                      <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 14 }}>DONE</Text>
                     </TouchableOpacity>
                   </View>
                   <DateTimePicker
@@ -291,8 +380,12 @@ const Settings = ({ navigation }) => {
             </Modal>
           )}
 
-          <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.danger }]} onPress={handleLogout}>
-             <Text style={[styles.logoutText, { color: colors.danger }]}>TERMINATE ACCOUNT SESSION</Text>
+          <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.border }]} onPress={handleLogout}>
+             <Text style={[styles.logoutText, { color: colors.text }]}>SIGN OUT</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.deleteBtn, { backgroundColor: colors.danger }]} onPress={handleDeleteAccount}>
+             <Text style={[styles.logoutText, { color: '#FFF' }]}>DELETE ACCOUNT</Text>
           </TouchableOpacity>
 
           <View style={{ height: 100 }} />
@@ -301,6 +394,15 @@ const Settings = ({ navigation }) => {
     </View>
   );
 };
+
+const SquircleHex = ({ color, selected, onPress }) => (
+  <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ width: 70, height: 70, alignItems: 'center', justifyContent: 'center' }}>
+    {selected && (
+      <View style={{ position: 'absolute', width: 76, height: 76, borderWidth: 2, borderColor: color, borderRadius: 22, transform: [{ rotate: '45deg' }] }} />
+    )}
+    <View style={{ width: 62, height: 62, backgroundColor: color, borderRadius: 18, transform: [{ rotate: '45deg' }], alignItems: 'center', justifyContent: 'center' }} />
+  </TouchableOpacity>
+);
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
@@ -334,6 +436,7 @@ const styles = StyleSheet.create({
   unitToggle: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 4 },
   unitToggleText: { fontWeight: '900', fontSize: 14 },
   logoutBtn: { marginTop: 50, padding: 20, borderWidth: 2, alignItems: 'center', borderRadius: 4 },
+  deleteBtn: { marginTop: 15, padding: 20, alignItems: 'center', borderRadius: 4 },
   logoutText: { fontSize: 16, fontWeight: '900', letterSpacing: 1 },
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end',

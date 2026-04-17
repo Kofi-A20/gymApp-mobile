@@ -4,6 +4,7 @@ import TabNavigator from './TabNavigator';
 import SharedWorkoutPreview from '../screens/SharedWorkoutPreview';
 import ActiveWorkout from '../screens/ActiveWorkout';
 import SessionHistoryDetail from '../screens/SessionHistoryDetail';
+import JoinWorkout from '../screens/JoinWorkoutScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -12,6 +13,7 @@ const MainNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
       <Stack.Screen name="Tabs" component={TabNavigator} />
       <Stack.Screen name="SharedWorkoutPreview" component={SharedWorkoutPreview} />
+      <Stack.Screen name="JoinWorkout" component={JoinWorkout} />
       <Stack.Screen name="SessionHistoryDetail" component={SessionHistoryDetail} />
       <Stack.Screen 
         name="ActiveWorkout" 

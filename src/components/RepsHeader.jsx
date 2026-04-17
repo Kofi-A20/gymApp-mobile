@@ -33,8 +33,11 @@ const RepsHeader = ({
   if (selectionMode) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <TouchableOpacity onPress={onCancelSelection} style={styles.leftBtn}>
-          <Text style={{ color: colors.text, fontWeight: '900', fontSize: 12, letterSpacing: 1.5 }}>CANCEL</Text>
+        <TouchableOpacity 
+          onPress={onCancelSelection} 
+          style={[styles.leftBtn, { paddingVertical: 8, paddingHorizontal: 12, marginLeft: -12 }]}
+        >
+          <Text style={{ color: colors.text, fontWeight: '900', fontSize: 12, letterSpacing: 1.5 }}>Cancel</Text>
         </TouchableOpacity>
         
         <View style={styles.centerContainer}>
@@ -43,8 +46,11 @@ const RepsHeader = ({
 
         <View style={styles.rightActionsRow}>
           {onSelectAll && (
-            <TouchableOpacity onPress={onSelectAll} style={{ marginRight: 10 }}>
-              <Text style={{ color: '#CCFF00', fontWeight: '900', fontSize: 11, letterSpacing: 1 }}>SELECT ALL</Text>
+            <TouchableOpacity 
+              onPress={onSelectAll} 
+              style={{ paddingVertical: 8, paddingHorizontal: 12 }}
+            >
+              <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 11, letterSpacing: 1 }}>SELECT ALL</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity 
@@ -82,9 +88,13 @@ const RepsHeader = ({
         {rightActions.map((action, index) => {
           if (action.text) {
             return (
-              <TouchableOpacity key={index} onPress={action.onPress}>
+              <TouchableOpacity 
+                key={index} 
+                onPress={action.onPress}
+                style={{ paddingVertical: 8, paddingHorizontal: 12, marginRight: -12 }}
+              >
                 <Text style={[styles.rightActionText, { color: action.color || colors.text }]}>
-                  {action.text.toUpperCase()}
+                  {action.text}
                 </Text>
               </TouchableOpacity>
             );

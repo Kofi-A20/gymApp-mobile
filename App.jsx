@@ -81,16 +81,7 @@ export default function App() {
     prefixes: [prefix, 'reps://'],
     config: {
       screens: {
-        Main: {
-          screens: {
-            SharedWorkoutPreview: 'share/:token',
-          }
-        },
-        Auth: {
-          screens: {
-            SharedWorkoutPreview: 'share/:token',
-          }
-        }
+        SharedWorkoutPreview: 'share/:token',
       },
     },
   };

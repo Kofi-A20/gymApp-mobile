@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import RepsHeader from '../../components/MonolithHeader';
+import RepsHeader from '../../components/RepsHeader';
 import { useRepsAlert } from '../../context/AlertContext';
 
 const SignUp = ({ navigation }) => {

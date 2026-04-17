@@ -8,7 +8,7 @@ import { sessionsService } from '../services/sessionsService';
 import { setsService } from '../services/setsService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useRepsAlert } from '../context/AlertContext';
-import RepsHeader from '../components/MonolithHeader';
+import RepsHeader from '../components/RepsHeader';
 
 const WeightsLog = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
@@ -117,7 +117,7 @@ const WeightsLog = ({ navigation }) => {
         style={[
           styles.sessionCard,
           { backgroundColor: colors.secondaryBackground, borderColor: colors.border },
-          isSelected && { borderColor: '#CCFF00', borderWidth: 2 }
+          isSelected && { borderColor: colors.accent, borderWidth: 2 }
         ]}
         onPress={() => {
           if (isSelectionMode) {
@@ -139,14 +139,14 @@ const WeightsLog = ({ navigation }) => {
             <Text style={[styles.sessionTitle, { color: colors.text }]}>{session.workout_name?.toUpperCase() || 'FREE SESSION'}</Text>
             <View style={styles.sessionHeader}>
               <Text style={[styles.sessionDate, { color: colors.secondaryText }]}>{date}</Text>
-              <MaterialCommunityIcons name="check-decagram" size={16} color="#CCFF00" />
+              <MaterialCommunityIcons name="check-decagram" size={16} color={colors.accent} />
             </View>
           </View>
           {isSelectionMode && (
             <MaterialCommunityIcons
               name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"}
               size={24}
-              color={isSelected ? '#CCFF00' : colors.secondaryText}
+              color={isSelected ? colors.accent : colors.secondaryText}
             />
           )}
         </View>
@@ -173,9 +173,9 @@ const WeightsLog = ({ navigation }) => {
           <View style={styles.progStatItem}>
             <Text style={[styles.progStatLabel, { color: colors.secondaryText }]}>BEST</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={[styles.progStatValue, { color: '#CCFF00' }]}>{item.bestWeight}</Text>
-              <Text style={[styles.progStatUnit, { color: '#CCFF00' }]}>{units.toUpperCase()}</Text>
-              <MaterialCommunityIcons name="trophy" size={14} color="#CCFF00" style={{ marginLeft: 4 }} />
+              <Text style={[styles.progStatValue, { color: colors.accent }]}>{item.bestWeight}</Text>
+              <Text style={[styles.progStatUnit, { color: colors.accent }]}>{units.toUpperCase()}</Text>
+              <MaterialCommunityIcons name="trophy" size={14} color={colors.accent} style={{ marginLeft: 4 }} />
             </View>
           </View>
           <View style={styles.progStatItem}>
@@ -192,11 +192,11 @@ const WeightsLog = ({ navigation }) => {
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      <RepsHeader 
-        selectionMode={isSelectionMode} 
-        selectedCount={selectedIds.length} 
-        onCancelSelection={() => { setIsSelectionMode(false); setSelectedIds([]); }} 
-        onDeleteSelected={handleDeleteSelected} 
+      <RepsHeader
+        selectionMode={isSelectionMode}
+        selectedCount={selectedIds.length}
+        onCancelSelection={() => { setIsSelectionMode(false); setSelectedIds([]); }}
+        onDeleteSelected={handleDeleteSelected}
         onSelectAll={handleSelectAll}
       />
 
@@ -209,13 +209,13 @@ const WeightsLog = ({ navigation }) => {
         <View style={styles.content}>
           <View style={styles.viewToggle}>
             <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'ARCHIVE' && { borderBottomColor: '#CCFF00' }]}
+              style={[styles.toggleBtn, viewMode === 'ARCHIVE' && { borderBottomColor: colors.accent }]}
               onPress={() => { setViewMode('ARCHIVE'); setHasFetched(false); }}
             >
               <Text style={[styles.toggleBtnText, { color: viewMode === 'ARCHIVE' ? colors.text : colors.secondaryText }]}>ARCHIVE</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'PROGRESSION' && { borderBottomColor: '#CCFF00' }]}
+              style={[styles.toggleBtn, viewMode === 'PROGRESSION' && { borderBottomColor: colors.accent }]}
               onPress={() => setViewMode('PROGRESSION')}
             >
               <Text style={[styles.toggleBtnText, { color: viewMode === 'PROGRESSION' ? colors.text : colors.secondaryText }]}>PROGRESSION</Text>
@@ -240,7 +240,7 @@ const WeightsLog = ({ navigation }) => {
                     {uniqueFilters.map(filter => (
                       <TouchableOpacity
                         key={filter}
-                        style={[styles.filterChip, { borderColor: colors.border }, selectedFilter === filter && { backgroundColor: '#CCFF00', borderColor: '#CCFF00' }]}
+                        style={[styles.filterChip, { borderColor: colors.border }, selectedFilter === filter && { backgroundColor: colors.accent, borderColor: colors.accent }]}
                         onPress={() => setSelectedFilter(filter)}
                       >
                         <Text style={[styles.filterChipText, selectedFilter === filter ? { color: '#000' } : { color: colors.text }]}>{filter}</Text>
