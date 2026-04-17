@@ -79,6 +79,9 @@ const Calendar = ({ navigation }) => {
     useCallback(() => {
       fetchMonthData();
       loadPlannedSessions();
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ y: 0, animated: false });
+      }
     }, [currentDate])
   );
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -23,6 +23,7 @@ const WeightsLog = ({ navigation }) => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('ALL');
+  const scrollRef = useRef(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -30,6 +31,9 @@ const WeightsLog = ({ navigation }) => {
         fetchSessions();
       } else if (viewMode === 'PROGRESSION') {
         fetchProgression();
+      }
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ y: 0, animated: false });
       }
     }, [viewMode])
   );
@@ -201,6 +205,7 @@ const WeightsLog = ({ navigation }) => {
       />
 
       <ScrollView
+        ref={scrollRef}
         style={styles.container}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

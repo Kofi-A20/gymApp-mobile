@@ -71,6 +71,10 @@ const Calories = ({ navigation, route }) => {
           // Clear params to avoid re-scrolling
           navigation.setParams({ scrollToLog: undefined });
         }, 100);
+      } else {
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollTo({ y: 0, animated: false });
+        }
       }
     }, [refreshProfile, route.params?.scrollToLog, weightSectionY])
   );

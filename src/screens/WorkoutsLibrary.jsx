@@ -36,6 +36,7 @@ const WorkoutsLibrary = ({ navigation }) => {
   const [stats, setStats] = useState({ cumulativeVolume: 0, weeklyLoad: 0, activeHours: 0 });
 
   const { width: windowWidth } = Dimensions.get('window');
+  const scrollViewRef = useRef(null);
 
   const openDropdown = (item, measureRef) => {
     measureRef.current.measure((x, y, width, height, pageX, pageY) => {
@@ -58,6 +59,9 @@ const WorkoutsLibrary = ({ navigation }) => {
     useCallback(() => {
       fetchWorkouts();
       fetchStats();
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: 0, animated: false });
+      }
     }, [])
   );
 
@@ -319,6 +323,7 @@ const WorkoutsLibrary = ({ navigation }) => {
       />
 
       <ScrollView
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"

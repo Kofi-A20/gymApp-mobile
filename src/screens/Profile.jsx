@@ -145,6 +145,9 @@ const Profile = ({ navigation }) => {
   // Unsaved-changes guard & refresh weight logs
   useFocusEffect(
     useCallback(() => {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: 0, animated: false });
+      }
       fetchWeightLogs();
 
       const unsubscribe = navigation.addListener('beforeRemove', (e) => {
