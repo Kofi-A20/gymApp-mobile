@@ -17,7 +17,7 @@ const EXPO_WEEKDAYS = {
 };
 
 const Settings = ({ navigation }) => {
-  const { isDarkMode, toggleTheme, units, toggleUnits, notifications, toggleNotifications, colors, changeAccentColor } = useTheme();
+  const { isDarkMode, themeMode, setThemeMode, units, toggleUnits, notifications, toggleNotifications, colors, changeAccentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const { showAlert } = useRepsAlert();
@@ -174,31 +174,48 @@ const Settings = ({ navigation }) => {
 
           {/* Section: Interface */}
           <SectionHeader id="01" title="Interface" />
-          <View style={styles.interfaceGrid}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
             <TouchableOpacity 
-              onPress={() => isDarkMode && toggleTheme()}
+              onPress={() => setThemeMode('light')}
               style={[
                 styles.themeCard, 
-                { backgroundColor: '#FFFFFF', borderColor: !isDarkMode ? colors.accent : colors.border, borderWidth: !isDarkMode ? 2 : 1 }
+                { backgroundColor: '#FFFFFF', borderColor: themeMode === 'light' ? colors.accent : colors.border, borderWidth: themeMode === 'light' ? 2 : 1 }
               ]}
+              activeOpacity={0.8}
             >
               <MaterialCommunityIcons name="white-balance-sunny" size={32} color="#000" />
               <Text style={styles.themeNameBlack}>STARK WHITE</Text>
-              <Text style={styles.themeSubBlack}>{!isDarkMode ? 'ACTIVE THEME' : 'SWITCH MODE'}</Text>
+              <Text style={styles.themeSubBlack}>{themeMode === 'light' ? 'ACTIVE THEME' : 'SWITCH MODE'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              onPress={() => !isDarkMode && toggleTheme()}
+              onPress={() => setThemeMode('dark')}
               style={[
                 styles.themeCard, 
-                { backgroundColor: '#121212', borderColor: isDarkMode ? colors.accent : colors.border, borderWidth: isDarkMode ? 2 : 1 }
+                { backgroundColor: '#121212', borderColor: themeMode === 'dark' ? colors.accent : colors.border, borderWidth: themeMode === 'dark' ? 2 : 1 }
               ]}
+              activeOpacity={0.8}
             >
               <MaterialCommunityIcons name="moon-waning-crescent" size={32} color="#FFF" />
               <Text style={styles.themeNameWhite}>DEEP BLACK</Text>
-              <Text style={styles.themeSubWhite}>{isDarkMode ? 'ACTIVE THEME' : 'SWITCH MODE'}</Text>
+              <Text style={styles.themeSubWhite}>{themeMode === 'dark' ? 'ACTIVE THEME' : 'SWITCH MODE'}</Text>
             </TouchableOpacity>
           </View>
+          
+          <TouchableOpacity 
+            onPress={() => setThemeMode('system')}
+            style={[
+              { padding: 20, borderRadius: 2, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+              { backgroundColor: colors.secondaryBackground, borderColor: themeMode === 'system' ? colors.accent : colors.border, borderWidth: themeMode === 'system' ? 2 : 1 }
+            ]}
+            activeOpacity={0.8}
+          >
+             <MaterialCommunityIcons name="theme-light-dark" size={28} color={colors.text} style={{marginRight: 15}}/>
+             <View>
+               <Text style={{ color: colors.text, fontSize: 16, fontWeight: '900' }}>SYSTEM DEFAULT</Text>
+               <Text style={{ color: colors.secondaryText, fontSize: 10, fontWeight: '700', marginTop: 2 }}>{themeMode === 'system' ? 'ACTIVE THEME' : 'SWITCH MODE'}</Text>
+             </View>
+          </TouchableOpacity>
 
           {/* Section: App Accent */}
           <SectionHeader id="02" title="App Accent" />

@@ -6,7 +6,8 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
   const deviceColorScheme = useColorScheme();
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [themeMode, setThemeMode] = useState('system');
+  const isDarkMode = themeMode === 'system' ? deviceColorScheme === 'dark' : themeMode === 'dark';
   const [units, setUnits] = useState('kg');
   const [notifications, setNotifications] = useState(true);
   const [accentColor, setAccentColor] = useState('#CCFF00');
@@ -24,9 +25,9 @@ export const ThemeProvider = ({ children }) => {
         ]);
 
         if (savedTheme !== null) {
-          setIsDarkMode(savedTheme === 'dark');
+          setThemeMode(savedTheme);
         } else {
-          setIsDarkMode(deviceColorScheme === 'dark');
+          setThemeMode('system');
         }
 
         if (savedUnits !== null) {
@@ -50,13 +51,13 @@ export const ThemeProvider = ({ children }) => {
     loadSettings();
   }, []);
 
-  // ── Persist isDarkMode ───────────────────────────────────────────────────────
+  // ── Persist themeMode ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!loaded) return;
-    AsyncStorage.setItem('theme', isDarkMode ? 'dark' : 'light').catch(e =>
+    AsyncStorage.setItem('theme', themeMode).catch(e =>
       console.error('Failed to save theme:', e)
     );
-  }, [isDarkMode, loaded]);
+  }, [themeMode, loaded]);
 
   // ── Persist units ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -82,7 +83,7 @@ export const ThemeProvider = ({ children }) => {
     );
   }, [accentColor, loaded]);
 
-  const toggleTheme = () => setIsDarkMode(prev => !prev);
+
   const toggleUnits = () => setUnits(prev => (prev === 'kg' ? 'lbs' : 'kg'));
   const toggleNotifications = () => setNotifications(prev => !prev);
   const changeAccentColor = (newColor) => setAccentColor(newColor);
@@ -99,7 +100,8 @@ export const ThemeProvider = ({ children }) => {
 
   const theme = {
     isDarkMode,
-    toggleTheme,
+    themeMode,
+    setThemeMode,
     units,
     toggleUnits,
     notifications,
