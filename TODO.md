@@ -6,9 +6,9 @@ Last things to do, is with the ui for text visiblikty and contrast
 security checks and whatnot that i have to do 
 better login and integrate auth with other account types like google apple and wahntot
 
+color code your routines so its easier to identify on the calendar
 
-do this also later where the light or dark mode chosen by the user on their system is a setting we can apply in the app if toggled
-
+account for gender in calorie calculation
 
 dunno if the delete account works yet 
 
