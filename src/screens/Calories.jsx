@@ -276,7 +276,7 @@ const Calories = ({ navigation, route }) => {
               <Text style={[styles.metricValue, { color: colors.text }]}>{tdee.toLocaleString()}</Text>
               <Text style={[styles.metricSub, { color: colors.secondaryText }]}>CALORIES BURNED DAILY</Text>
             </View>
-            <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground, borderColor: colors.accent, borderWidth: 1 }]}>
+            <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground, borderColor: colors.border, borderWidth: 1 }]}>
               <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>CALORIE TARGET</Text>
               <Text style={[styles.metricValue, { color: colors.accent }]}>{targetIntake.toLocaleString()}</Text>
               <Text style={[styles.metricSub, { color: colors.secondaryText }]}>CALORIES TO EAT DAILY</Text>
@@ -284,7 +284,7 @@ const Calories = ({ navigation, route }) => {
           </View>
 
           {/* 3. MACROS */}
-          <View style={[styles.card, { backgroundColor: isDarkMode ? '#111' : colors.secondaryBackground, borderColor: colors.accent }]}>
+          <View style={[styles.card, { backgroundColor: isDarkMode ? '#111' : colors.secondaryBackground, borderColor: colors.border }]}>
             <Text style={[styles.cardHeader, { color: colors.accent }]}>MACRO RATIOS</Text>
 
             <View style={styles.macroRow}>
@@ -314,18 +314,18 @@ const Calories = ({ navigation, route }) => {
 
           {/* 4. PROFILE SNAPSHOT */}
           <View style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
-            <Text style={styles.cardHeader}>PROFILE SNAPSHOT</Text>
+            <Text style={[styles.cardHeader, { color: colors.secondaryText }]}>PROFILE SNAPSHOT</Text>
             <View style={styles.snapshotGrid}>
               <View style={styles.snapshotItem}>
-                <Text style={styles.inputLabel}>GENDER</Text>
+                <Text style={[styles.inputLabel, { color: colors.secondaryText }]}>GENDER</Text>
                 <Text style={[styles.snapshotValue, { color: colors.text }]}>{gender.toUpperCase()}</Text>
               </View>
               <View style={styles.snapshotItem}>
-                <Text style={styles.inputLabel}>ACTIVITY</Text>
+                <Text style={[styles.inputLabel, { color: colors.secondaryText }]}>ACTIVITY</Text>
                 <Text style={[styles.snapshotValue, { color: colors.text }]}>{activityLabel}</Text>
               </View>
               <View style={styles.snapshotItem}>
-                <Text style={styles.inputLabel}>STRATEGY</Text>
+                <Text style={[styles.inputLabel, { color: colors.secondaryText }]}>STRATEGY</Text>
                 <Text style={[styles.snapshotValue, { color: strategyIdx === 1 ? colors.text : colors.accent }]}>{strategyLabel}</Text>
               </View>
             </View>
