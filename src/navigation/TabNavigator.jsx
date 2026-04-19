@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StackActions } from '@react-navigation/native';
@@ -11,6 +12,7 @@ import WorkoutsLibrary from '../screens/WorkoutsLibrary';
 import WorkoutDetail from '../screens/WorkoutDetail';
 import Calendar from '../screens/Calendar';
 import AddWorkout from '../screens/AddWorkout';
+import ConfigureWorkout from '../screens/ConfigureWorkout';
 import WeightsLog from '../screens/WeightsLog';
 import Calories from '../screens/Calories';
 import Settings from '../screens/Settings';
@@ -28,6 +30,7 @@ const WorkoutStack = () => (
     <Stack.Screen name="WorkoutsLibrary" component={WorkoutsLibrary} />
     <Stack.Screen name="WorkoutDetail" component={WorkoutDetail} />
     <Stack.Screen name="AddWorkout" component={AddWorkout} options={{ animation: 'slide_from_right' }} />
+    <Stack.Screen name="ConfigureWorkout" component={ConfigureWorkout} options={{ animation: 'slide_from_right' }} />
   </Stack.Navigator>
 );
 
@@ -62,6 +65,7 @@ const TAB_ICONS = {
 
 const CustomTabBar = ({ state, descriptors, navigation }) => {
   const { colors, isDarkMode } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [containerWidth, setContainerWidth] = useState(0);
   const slideAnim = useRef(new Animated.Value(state.index)).current;
@@ -86,8 +90,12 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     }),
   });
 
+  // Keep 16 px breathing room above the safe area (or above the screen
+  // bottom on devices with no system nav bar).
+  const tabBarBottom = Math.max(insets.bottom, 0) + 16;
+
   return (
-    <View style={styles.wrapper} pointerEvents="box-none">
+    <View style={[styles.wrapper, { bottom: tabBarBottom }]} pointerEvents="box-none">
       <View style={[
         styles.pillContainer,
         {
@@ -180,7 +188,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    bottom: 36,
+    // bottom is now set dynamically via the insets-aware inline style above.
     left: 0,
     right: 0,
     alignItems: 'center',

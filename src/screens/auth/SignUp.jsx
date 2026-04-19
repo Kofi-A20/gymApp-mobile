@@ -38,8 +38,10 @@ const SignUp = ({ navigation }) => {
           last_name: lastName,
         },
       });
-      showAlert('Success', 'Check your email for confirmation!');
-      navigation.navigate('Login');
+      // Email confirmation is disabled in Supabase — signUp returns a live
+      // session immediately. The onAuthStateChange listener in AuthContext
+      // will set the user and drive navigation automatically, so there is
+      // nothing extra to do here.
     } catch (error) {
       showAlert('Signup Failed', error.message);
     } finally {

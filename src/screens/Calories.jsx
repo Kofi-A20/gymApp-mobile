@@ -39,7 +39,7 @@ const deriveStrategy = (weightKg, goalWeightKg) => {
 };
 
 const Calories = ({ navigation, route }) => {
-  const { colors, isDarkMode, units } = useTheme();
+  const { colors, isDarkMode, units, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { profile, refreshProfile, updateProfile } = useProfile();
   const { showAlert } = useRepsAlert();
@@ -267,48 +267,48 @@ const Calories = ({ navigation, route }) => {
           {/* 2. Top Metrics */}
           <View style={styles.metricsGrid}>
             <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground }]}>
-              <Text style={styles.metricLabel}>BMR</Text>
+              <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>BMR</Text>
               <Text style={[styles.metricValue, { color: colors.text }]}>{bmr.toLocaleString()}</Text>
-              <Text style={styles.metricSub}>CALORIES AT REST</Text>
+              <Text style={[styles.metricSub, { color: colors.secondaryText }]}>CALORIES AT REST</Text>
             </View>
             <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground }]}>
-              <Text style={styles.metricLabel}>TDEE</Text>
+              <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>TDEE</Text>
               <Text style={[styles.metricValue, { color: colors.text }]}>{tdee.toLocaleString()}</Text>
-              <Text style={styles.metricSub}>CALORIES BURNED DAILY</Text>
+              <Text style={[styles.metricSub, { color: colors.secondaryText }]}>CALORIES BURNED DAILY</Text>
             </View>
             <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground, borderColor: colors.accent, borderWidth: 1 }]}>
-              <Text style={[styles.metricLabel, { color: colors.accent }]}>CALORIE TARGET</Text>
+              <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>CALORIE TARGET</Text>
               <Text style={[styles.metricValue, { color: colors.accent }]}>{targetIntake.toLocaleString()}</Text>
-              <Text style={[styles.metricSub, { color: colors.accent }]}>CALORIES TO EAT DAILY</Text>
+              <Text style={[styles.metricSub, { color: colors.secondaryText }]}>CALORIES TO EAT DAILY</Text>
             </View>
           </View>
 
           {/* 3. MACROS */}
-          <View style={[styles.card, { backgroundColor: '#000', borderColor: colors.accent }]}>
+          <View style={[styles.card, { backgroundColor: isDarkMode ? '#111' : colors.secondaryBackground, borderColor: colors.accent }]}>
             <Text style={[styles.cardHeader, { color: colors.accent }]}>MACRO RATIOS</Text>
 
             <View style={styles.macroRow}>
               <View style={styles.macroHeader}>
-                <Text style={styles.macroName}>PROTEIN</Text>
-                <Text style={[styles.macroVal, { color: colors.accent }]}>{proLow}G – {proHigh}G</Text>
+                <Text style={[styles.macroName, { color: colors.text }]}>PROTEIN</Text>
+                <Text style={[styles.macroVal, { color: accentColor }]}>{proLow}G – {proHigh}G</Text>
               </View>
-              <View style={styles.mBarBg}><View style={[styles.mBarFill, { width: '85%', backgroundColor: colors.accent }]} /></View>
+              <View style={[styles.mBarBg, { backgroundColor: isDarkMode ? '#333' : '#E0E0E0' }]}><View style={[styles.mBarFill, { width: '85%', backgroundColor: accentColor }]} /></View>
             </View>
 
             <View style={styles.macroRow}>
               <View style={styles.macroHeader}>
-                <Text style={styles.macroName}>FATS</Text>
-                <Text style={styles.macroVal}>{fatLow}G – {fatHigh}G</Text>
+                <Text style={[styles.macroName, { color: colors.text }]}>FATS</Text>
+                <Text style={[styles.macroVal, { color: accentColor }]}>{fatLow}G – {fatHigh}G</Text>
               </View>
-              <View style={styles.mBarBg}><View style={[styles.mBarFill, { width: '40%', backgroundColor: '#FFF' }]} /></View>
+              <View style={[styles.mBarBg, { backgroundColor: isDarkMode ? '#333' : '#E0E0E0' }]}><View style={[styles.mBarFill, { width: '40%', backgroundColor: accentColor }]} /></View>
             </View>
 
             <View style={styles.macroRow}>
               <View style={styles.macroHeader}>
-                <Text style={styles.macroName}>CARBS</Text>
-                <Text style={styles.macroVal}>{carbLow}G – {carbHigh}G</Text>
+                <Text style={[styles.macroName, { color: colors.text }]}>CARBS</Text>
+                <Text style={[styles.macroVal, { color: accentColor }]}>{carbLow}G – {carbHigh}G</Text>
               </View>
-              <View style={styles.mBarBg}><View style={[styles.mBarFill, { width: '60%', backgroundColor: colors.secondaryText }]} /></View>
+              <View style={[styles.mBarBg, { backgroundColor: isDarkMode ? '#333' : '#E0E0E0' }]}><View style={[styles.mBarFill, { width: '60%', backgroundColor: accentColor }]} /></View>
             </View>
           </View>
 
@@ -517,9 +517,9 @@ const styles = StyleSheet.create({
 
   macroRow: { marginBottom: 20 },
   macroHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  macroName: { fontSize: 12, fontWeight: '900', color: '#FFF' },
+  macroName: { fontSize: 12, fontWeight: '900' },
   macroVal: { fontSize: 12, fontWeight: '900' },
-  mBarBg: { height: 4, backgroundColor: '#333' },
+  mBarBg: { height: 4 },
   mBarFill: { height: '100%' },
 
   noteBox: { flexDirection: 'row', gap: 10, marginVertical: 30, paddingHorizontal: 10 },

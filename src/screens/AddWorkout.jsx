@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { exercisesService } from '../services/exercisesService';
-import { workoutsService } from '../services/workoutsService';
-import { MaterialCommunityIcons, AntDesign, Feather, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
 import { useRepsAlert } from '../context/AlertContext';
 
@@ -22,8 +21,7 @@ const AddWorkout = ({ navigation }) => {
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [expandedExerciseId, setExpandedExerciseId] = useState(null);
-  const [draftTargets, setDraftTargets] = useState({ sets: '', reps: '' });
+
 
   useEffect(() => {
     fetchExercises();
@@ -76,70 +74,30 @@ const AddWorkout = ({ navigation }) => {
     return unsubscribe;
   }, [navigation]);
 
+  // Toggle selection on tap (no inline sets/reps — that's on Screen 2)
   const handleRowPress = (ex) => {
     const isSelected = selectedExercises.find(s => s.id === ex.id);
-
-    if (expandedExerciseId === ex.id) {
-      setExpandedExerciseId(null);
+    if (isSelected) {
+      setSelectedExercises(prev => prev.filter(s => s.id !== ex.id));
     } else {
-      setExpandedExerciseId(ex.id);
-      setDraftTargets({
-        sets: isSelected?.sets_target?.toString() || '',
-        reps: isSelected?.reps_target?.toString() || ''
-      });
+      setSelectedExercises(prev => [...prev, { ...ex, sets_target: '', reps_target: '' }]);
     }
   };
 
-  const handleSaveTargets = (exId) => {
-    const isAlreadySelected = selectedExercises.find(ex => ex.id === exId);
-    const updatedSets = draftTargets.sets;
-    const updatedReps = draftTargets.reps;
-
-    if (isAlreadySelected) {
-      setSelectedExercises(prev =>
-        prev.map(ex => ex.id === exId ? { ...ex, sets_target: updatedSets, reps_target: updatedReps } : ex)
-      );
-    } else {
-      const exercise = allExercises.find(ex => ex.id === exId);
-      setSelectedExercises(prev => [...prev, { ...exercise, sets_target: updatedSets, reps_target: updatedReps }]);
-    }
-
-    setExpandedExerciseId(null);
-  };
-
-  const handleCreateWorkout = async () => {
+  // Validate then proceed to Screen 2
+  const handleNext = () => {
     if (!workoutName.trim()) {
-      showAlert('Error', 'Please enter a workout name');
+      showAlert('Error', 'Please enter a workout name.');
       return;
     }
     if (selectedExercises.length === 0) {
-      showAlert('Error', 'Please select at least one exercise before saving your workout routine.');
+      showAlert('Error', 'Please select at least one exercise.');
       return;
     }
-
-    const missingTargets = selectedExercises.find(ex => !ex.sets_target || !ex.reps_target);
-    if (missingTargets) {
-      showAlert('Error', `Please provide sets and reps for ${missingTargets.name.toUpperCase()}`);
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const exercisesList = selectedExercises.map(ex => ({
-        exercise_id: ex.id,
-        name: ex.name,
-        sets_target: parseInt(ex.sets_target, 10),
-        reps_target: parseInt(ex.reps_target, 10),
-      }));
-
-      await workoutsService.createWorkout(workoutName, '', exercisesList);
-      showAlert('Success', 'Workout template created');
-      navigation.goBack();
-    } catch (error) {
-      showAlert('Error', 'Failed to create workout');
-    } finally {
-      setSaving(false);
-    }
+    navigation.navigate('ConfigureWorkout', {
+      workoutName: workoutName.trim(),
+      selectedExercises,
+    });
   };
 
   return (
@@ -226,88 +184,59 @@ const AddWorkout = ({ navigation }) => {
               </Text>
             </View>
 
-            <View style={styles.selectedList}>
+            {/* Selected count badge in card header */}
+          <View style={styles.selectedList}>
               {loading ? (
                 <ActivityIndicator color={colors.text} style={{ padding: 40 }} />
               ) : (
-                <View style={{ maxHeight: 400 }}>
-                  <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
-                    {filteredExercises.map((ex, index) => {
+                  <FlatList
+                    data={filteredExercises}
+                    keyExtractor={(ex) => String(ex.id)}
+                    scrollEnabled={true}
+                    nestedScrollEnabled={true}
+                    showsVerticalScrollIndicator={true}
+                    style={{ maxHeight: 400 }}
+                    keyboardShouldPersistTaps="handled"
+                    renderItem={({ item: ex, index }) => {
                       const isSelected = selectedExercises.find(s => s.id === ex.id);
                       return (
-                        <View
+                        <TouchableOpacity
                           key={ex.id}
+                          activeOpacity={1}
                           style={[
                             styles.exerciseItemContainer,
                             {
-                              backgroundColor: isSelected ? isDarkMode ? '#111' : '#F5F5F5' : colors.background,
-                              borderColor: colors.border,
+                              backgroundColor: isSelected ? (isDarkMode ? '#111' : '#F0F0F0') : colors.background,
+                              borderColor: isSelected ? colors.accent : colors.border,
                               borderWidth: 1,
-                              marginBottom: 12
+                              marginBottom: 12,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              padding: 15,
                             }
                           ]}
+                          onPress={() => handleRowPress(ex)}
                         >
-                          <TouchableOpacity
-                            style={{ flexDirection: 'row', alignItems: 'center', padding: 15 }}
-                            onPress={() => handleRowPress(ex)}
-                          >
-                            <Text style={[
-                              styles.exerciseId,
-                              { color: isSelected ? colors.text : colors.secondaryText }
-                            ]}>
+                          {/* Check / index */}
+                          {isSelected ? (
+                            <Ionicons name="checkmark-circle" size={22} color={colors.accent} style={{ marginRight: 16 }} />
+                          ) : (
+                            <Text style={[styles.exerciseId, { color: colors.secondaryText, marginRight: 16 }]}>
                               {String(index + 1).padStart(2, '0')}
                             </Text>
-                            <View style={{ flex: 1 }}>
-                              <Text style={[
-                                styles.exerciseName,
-                                { color: colors.text }
-                              ]}>{ex.name.toUpperCase()}</Text>
-                              <Text style={[
-                                styles.exerciseFocus,
-                                { color: colors.secondaryText }
-                              ]}>{ex.muscle_group?.toUpperCase() || 'GENERAL'}</Text>
-                            </View>
-                            {isSelected && expandedExerciseId !== ex.id && (
-                              <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 16 }}>
-                                {isSelected.sets_target} × {isSelected.reps_target}
-                              </Text>
-                            )}
-                          </TouchableOpacity>
-
-                          {expandedExerciseId === ex.id && (
-                            <View style={{ alignItems: 'center', justifyContent: 'center', paddingBottom: 15, gap: 15 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 15 }}>
-                                <TextInput
-                                  style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
-                                  placeholder="SETS"
-                                  placeholderTextColor={colors.secondaryText}
-                                  keyboardType="numeric"
-                                  value={draftTargets.sets}
-                                  onChangeText={(val) => setDraftTargets(prev => ({ ...prev, sets: val.replace(/[^0-9]/g, '') }))}
-                                />
-                                <Text style={{ color: colors.secondaryText, fontSize: 16 }}>×</Text>
-                                <TextInput
-                                  style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
-                                  placeholder="REPS"
-                                  placeholderTextColor={colors.secondaryText}
-                                  keyboardType="numeric"
-                                  value={draftTargets.reps}
-                                  onChangeText={(val) => setDraftTargets(prev => ({ ...prev, reps: val.replace(/[^0-9]/g, '') }))}
-                                />
-                              </View>
-                              <TouchableOpacity
-                                style={{ backgroundColor: colors.accent, paddingHorizontal: 30, paddingVertical: 10, borderRadius: 2 }}
-                                onPress={() => handleSaveTargets(ex.id)}
-                              >
-                                <Text style={{ fontWeight: '800', fontSize: 12, color: '#000', letterSpacing: 1 }}>SAVE</Text>
-                              </TouchableOpacity>
-                            </View>
                           )}
-                        </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.exerciseName, { color: colors.text }]}>
+                              {ex.name.toUpperCase()}
+                            </Text>
+                            <Text style={[styles.exerciseFocus, { color: colors.secondaryText }]}>
+                              {ex.muscle_group?.toUpperCase() || 'GENERAL'}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
                       );
-                    })}
-                  </ScrollView>
-                </View>
+                    }}
+                  />
               )}
 
               {filteredExercises.length === 0 && !loading && (
@@ -318,17 +247,21 @@ const AddWorkout = ({ navigation }) => {
             </View>
           </View>
 
-          {/* Action Button */}
+          {/* Selection summary */}
+          {selectedExercises.length > 0 && (
+            <View style={[styles.selectionSummary, { borderColor: colors.border }]}>
+              <Text style={[styles.selectionSummaryText, { color: colors.secondaryText }]}>
+                {selectedExercises.length} MOVEMENT{selectedExercises.length !== 1 ? 'S' : ''} SELECTED
+              </Text>
+            </View>
+          )}
+
+          {/* Next CTA */}
           <TouchableOpacity
             style={[styles.saveBtn, { backgroundColor: colors.accent }]}
-            onPress={handleCreateWorkout}
-            disabled={saving}
+            onPress={handleNext}
           >
-            {saving ? (
-              <ActivityIndicator color="#000" />
-            ) : (
-              <Text style={styles.saveBtnText}>CREATE WORKOUT ROUTINE</Text>
-            )}
+            <Text style={[styles.saveBtnText, { color: isDarkMode ? '#000' : '#FFF' }]}>NEXT — SET TARGETS →</Text>
           </TouchableOpacity>
 
           <View style={{ height: 100 }} />
@@ -485,24 +418,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
-  targetInput: {
-    width: 60,
-    borderBottomWidth: 2,
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: '900',
-    paddingVertical: 5,
+  selectionSummary: {
+    marginTop: 20,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    alignItems: 'center',
+  },
+  selectionSummaryText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
   },
   saveBtn: {
     paddingVertical: 20,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 40,
+    marginTop: 24,
     borderRadius: 2,
   },
   saveBtnText: {
-    color: '#000',
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 2,

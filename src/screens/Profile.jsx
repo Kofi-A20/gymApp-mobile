@@ -72,7 +72,7 @@ const InputField = ({ label, value, onChangeText, keyboardType, editable = true,
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const Profile = ({ navigation }) => {
-  const { colors, isDarkMode, units } = useTheme();
+  const { colors, isDarkMode, units, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const { showAlert } = useRepsAlert();
@@ -321,14 +321,14 @@ const Profile = ({ navigation }) => {
               key={String(opt.value)}
               style={[
                 styles.selectorChip,
-                { borderColor: isSelected ? colors.accent : colors.border },
-                isSelected && { backgroundColor: colors.accent },
+                { borderColor: isSelected ? accentColor : colors.border },
+                isSelected && { backgroundColor: accentColor },
               ]}
               onPress={() => { onChange(opt.value); setIsDirty(true); }}
             >
               <Text style={[
                 styles.selectorChipText,
-                { color: isSelected ? '#000' : colors.text },
+                { color: isSelected ? (isDarkMode ? '#000' : '#FFF') : colors.text },
               ]}>
                 {opt.label}
               </Text>
@@ -411,18 +411,22 @@ const Profile = ({ navigation }) => {
           </View>
 
           <View style={styles.bioGrid}>
-            <BiometricTile label="Height" value={profile?.height_cm || '--'} unit="cm" onPress={() => scrollToField('height')} />
-            <BiometricTile
-              label="Weight"
-              value={latestLogWeight !== null 
-                ? Math.round(latestLogWeight * (units === 'lbs' ? 2.20462 : 1)) 
-                : (profile?.weight_kg ? Math.round(profile.weight_kg * (units === 'lbs' ? 2.20462 : 1)) : '--')
-              }
-              unit={units}
-              onPress={() => navigation.navigate('Calories', { scrollToLog: true })}
-            />
-            <BiometricTile label="Age" value={age !== null ? age : '--'} unit="yrs" onPress={() => scrollToField('dob')} />
-            <BiometricTile label="Activity" value={actLabel} isDark onPress={() => scrollToField('activity')} />
+            <View style={styles.bioGridRow}>
+              <BiometricTile label="Height" value={profile?.height_cm || '--'} unit="cm" onPress={() => scrollToField('height')} />
+              <BiometricTile
+                label="Weight"
+                value={latestLogWeight !== null
+                  ? Math.round(latestLogWeight * (units === 'lbs' ? 2.20462 : 1))
+                  : (profile?.weight_kg ? Math.round(profile.weight_kg * (units === 'lbs' ? 2.20462 : 1)) : '--')
+                }
+                unit={units}
+                onPress={() => navigation.navigate('Calories', { scrollToLog: true })}
+              />
+            </View>
+            <View style={styles.bioGridRow}>
+              <BiometricTile label="Age" value={age !== null ? age : '--'} unit="yrs" onPress={() => scrollToField('dob')} />
+              <BiometricTile label="Activity" value={actLabel} isDark onPress={() => scrollToField('activity')} />
+            </View>
           </View>
 
           {/* Account Details */}
@@ -594,9 +598,10 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 24, fontWeight: '900', letterSpacing: 0.5 },
   sectionSubTitle: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
 
-  bioGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  bioGrid: { gap: 12 },
+  bioGridRow: { flexDirection: 'row', gap: 12, marginBottom: 0 },
   bioTile: {
-    width: '48.2%', aspectRatio: 0.85, padding: 20,
+    flex: 1, aspectRatio: 0.85, padding: 20,
     justifyContent: 'center', borderWidth: 1, borderRadius: 2,
   },
   bioLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginBottom: 25 },
