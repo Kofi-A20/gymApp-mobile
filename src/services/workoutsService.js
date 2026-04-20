@@ -202,6 +202,14 @@ export const workoutsService = {
     }
   },
 
+  async updateWorkoutColor(workoutId, color) {
+    const { error } = await supabase
+      .from('workouts')
+      .update({ color })
+      .eq('id', workoutId);
+    if (error) throw error;
+  },
+
   /**
    * Delete a workout. Cascade on the DB handles workout_exercises.
    */

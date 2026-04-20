@@ -164,6 +164,7 @@ const Calendar = ({ navigation }) => {
         id: Date.now().toString(),
         workoutId: workout.id,
         workoutName: workout.name,
+        workoutColor: workout.color || null,
         dateTime: dateTime.toISOString(),
         notificationId,
       };
@@ -312,7 +313,7 @@ const Calendar = ({ navigation }) => {
         isToday,
         dateStr,
         hasSession: !!sessionsByDate[dateStr],
-        hasPlanned: plannedSessions.some(p => p.dateTime.split('T')[0] === dateStr)
+        plannedColor: plannedSessions.find(p => p.dateTime.split('T')[0] === dateStr)?.workoutColor || null
       });
     }
     let nextDay = 1;
@@ -320,16 +321,18 @@ const Calendar = ({ navigation }) => {
     return days;
   };
 
-  const Indicator = ({ type, count }) => {
+  const Indicator = ({ type, color }) => {
+    const indicatorColor = color || colors.accent;
+    // TODO: For completed sessions, color coding requires fetching the workout color from session data
     if (type === 'completed') {
       return (
-        <View style={[styles.indicator, { backgroundColor: colors.accent }]}>
+        <View style={[styles.indicator, { backgroundColor: indicatorColor }]}>
           <MaterialCommunityIcons name="check" size={8} color="#000" />
         </View>
       );
     }
     return (
-      <View style={[styles.indicator, { borderWidth: 1, borderColor: colors.accent, backgroundColor: 'transparent' }]} />
+      <View style={[styles.indicator, { borderWidth: 1, borderColor: indicatorColor, backgroundColor: 'transparent' }]} />
     );
   };
 
@@ -418,7 +421,7 @@ const Calendar = ({ navigation }) => {
                     {item.day.toString().padStart(2, '0')}
                   </Text>
                   <View style={styles.indicatorContainer}>
-                    {item.hasPlanned && <Indicator type="planned" />}
+                    {item.plannedColor !== null && <Indicator type="planned" color={item.plannedColor} />}
                     {item.hasSession && <Indicator type="completed" />}
                   </View>
                 </TouchableOpacity>
