@@ -313,7 +313,9 @@ const Calendar = ({ navigation }) => {
         isToday,
         dateStr,
         hasSession: !!sessionsByDate[dateStr],
-        plannedColor: plannedSessions.find(p => p.dateTime.split('T')[0] === dateStr)?.workoutColor || null
+        plannedColors: plannedSessions
+          .filter(p => p.dateTime.split('T')[0] === dateStr)
+          .map(p => p.workoutColor || null),
       });
     }
     let nextDay = 1;
@@ -421,7 +423,9 @@ const Calendar = ({ navigation }) => {
                     {item.day.toString().padStart(2, '0')}
                   </Text>
                   <View style={styles.indicatorContainer}>
-                    {item.plannedColor !== null && <Indicator type="planned" color={item.plannedColor} />}
+                    {item.plannedColors?.map((color, i) => (
+                      <Indicator key={i} type="planned" color={color} />
+                    ))}
                     {item.hasSession && <Indicator type="completed" />}
                   </View>
                 </TouchableOpacity>

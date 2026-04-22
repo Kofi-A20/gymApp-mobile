@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   Keyboard,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,23 @@ import { useTheme } from '../context/ThemeContext';
 import { workoutsService } from '../services/workoutsService';
 import { useRepsAlert } from '../context/AlertContext';
 import RepsHeader from '../components/RepsHeader';
+
+const COLOR_PALETTE = [
+  '#FF3B30', '#FF375F', '#FF2D55', '#FF6B35',
+  '#FF9500', '#FFD60A', '#FFCC00', '#34C759',
+  '#00D4AA', '#00C7BE', '#30B0C7', '#32ADE6',
+  '#007AFF', '#5856D6', '#BF5AF2', '#AF52DE',
+  '#A2845E', '#8E8E93',
+];
+
+const SquircleHex = ({ color, selected, onPress }) => (
+  <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ width: 60, height: 60, alignItems: 'center', justifyContent: 'center' }}>
+    {selected && (
+      <View style={{ position: 'absolute', width: 66, height: 66, borderWidth: 2, borderColor: color, borderRadius: 20, transform: [{ rotate: '45deg' }] }} />
+    )}
+    <View style={{ width: 54, height: 54, backgroundColor: color, borderRadius: 16, transform: [{ rotate: '45deg' }], alignItems: 'center', justifyContent: 'center' }} />
+  </TouchableOpacity>
+);
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -32,6 +50,8 @@ const ConfigureWorkout = ({ route, navigation }) => {
     }))
   );
   const workoutName = route.params?.workoutName || 'NEW WORKOUT';
+  const [selectedColor, setSelectedColor] = useState('#FF3B30');
+  const [showColorModal, setShowColorModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // ─── Reorder (same up/down logic as WorkoutDetail edit mode) ─────────────
@@ -67,7 +87,7 @@ const ConfigureWorkout = ({ route, navigation }) => {
         reps_target: parseInt(ex.reps_target, 10),
       }));
 
-      await workoutsService.createWorkout(workoutName, '', exercisesList);
+      await workoutsService.createWorkout(workoutName, '', exercisesList, selectedColor);
       showAlert('SUCCESS', 'Workout routine created.');
       // Pop both CreateWorkout screens back to the library
       navigation.popToTop();
@@ -232,6 +252,27 @@ const ConfigureWorkout = ({ route, navigation }) => {
             </Text>
           )}
 
+          <Text style={[styles.subLabel, { color: colors.secondaryText, marginTop: 40, marginBottom: 16 }]}>
+            ROUTINE COLOR
+          </Text>
+          <TouchableOpacity
+            style={[styles.colorPreviewBtn, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
+            onPress={() => setShowColorModal(true)}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View>
+                <Text style={[styles.toggleLabel, { color: colors.text }]}>ROUTINE COLOR</Text>
+                <Text style={[styles.toggleSub, { color: colors.secondaryText }]}>CALENDAR INDICATOR</Text>
+              </View>
+              <View style={{
+                width: 40, height: 40, borderRadius: 20,
+                backgroundColor: selectedColor,
+                borderWidth: 2, borderColor: colors.border
+              }} />
+            </View>
+          </TouchableOpacity>
+
           {/* Save CTA */}
           <TouchableOpacity
             style={[
@@ -249,6 +290,56 @@ const ConfigureWorkout = ({ route, navigation }) => {
           </TouchableOpacity>
 
           <View style={{ height: 350 }} />
+
+          <Modal transparent animationType="fade" visible={showColorModal} onRequestClose={() => setShowColorModal(false)}>
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalBox, { backgroundColor: colors.background }]}>
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>ROUTINE COLOR</Text>
+                  <TouchableOpacity onPress={() => setShowColorModal(false)}>
+                    <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 14 }}>DONE</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 }}
+                >
+                  <View style={{ width: 280, alignItems: 'center' }}>
+                    {/* Row 1: 3 */}
+                    <View style={{ flexDirection: 'row', gap: 14, marginBottom: -12 }}>
+                      {COLOR_PALETTE.slice(0, 3).map(c => (
+                        <SquircleHex key={c} color={c} selected={selectedColor === c} onPress={() => setSelectedColor(c)} />
+                      ))}
+                    </View>
+                    {/* Row 2: 4 */}
+                    <View style={{ flexDirection: 'row', gap: 14, marginBottom: -12 }}>
+                      {COLOR_PALETTE.slice(3, 7).map(c => (
+                        <SquircleHex key={c} color={c} selected={selectedColor === c} onPress={() => setSelectedColor(c)} />
+                      ))}
+                    </View>
+                    {/* Row 3: 4 */}
+                    <View style={{ flexDirection: 'row', gap: 14, marginBottom: -12 }}>
+                      {COLOR_PALETTE.slice(7, 11).map(c => (
+                        <SquircleHex key={c} color={c} selected={selectedColor === c} onPress={() => setSelectedColor(c)} />
+                      ))}
+                    </View>
+                    {/* Row 4: 4 */}
+                    <View style={{ flexDirection: 'row', gap: 14, marginBottom: -12 }}>
+                      {COLOR_PALETTE.slice(11, 15).map(c => (
+                        <SquircleHex key={c} color={c} selected={selectedColor === c} onPress={() => setSelectedColor(c)} />
+                      ))}
+                    </View>
+                    {/* Row 5: 3 */}
+                    <View style={{ flexDirection: 'row', gap: 14 }}>
+                      {COLOR_PALETTE.slice(15, 18).map(c => (
+                        <SquircleHex key={c} color={c} selected={selectedColor === c} onPress={() => setSelectedColor(c)} />
+                      ))}
+                    </View>
+                  </View>
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
         </View>
       </ScrollView>
     </View>
@@ -381,6 +472,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 2,
+  },
+  colorPreviewBtn: {
+    padding: 20,
+    borderWidth: 1,
+    borderRadius: 4,
+    marginBottom: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalBox: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(150,150,150,0.2)',
+  },
+  modalTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  toggleSub: {
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
   },
 });
 

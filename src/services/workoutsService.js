@@ -94,7 +94,7 @@ export const workoutsService = {
    * Create a new workout template with its exercises.
    * Matches signature used in AddWorkout.jsx: (name, description, exercises)
    */
-  async createWorkout(name, description, exercises) {
+  async createWorkout(name, description, exercises, color = null) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
@@ -105,7 +105,8 @@ export const workoutsService = {
       const workoutToInsert = {
         name: name,
         description: description || '',
-        user_id: user.id
+        user_id: user.id,
+        color: color,
       };
 
       const { data: workout, error: workoutError } = await supabase

@@ -7,7 +7,6 @@ import { useProfile } from '../context/ProfileContext';
 import { MaterialCommunityIcons, AntDesign, Ionicons, Feather } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
 import Body from 'react-native-body-highlighter';
-import WheelColorPicker from 'react-native-wheel-color-picker';
 import { workoutsService } from '../services/workoutsService';
 import { exercisesService } from '../services/exercisesService';
 import { useRepsAlert } from '../context/AlertContext';
@@ -73,7 +72,6 @@ const WorkoutDetail = ({ route, navigation }) => {
   const [expandedExercises, setExpandedExercises] = useState({});
   const [editedExercises, setEditedExercises] = useState([]);
   const [editedWorkoutName, setEditedWorkoutName] = useState('');
-  const [workoutColor, setWorkoutColor] = useState('#CCFF00');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -81,7 +79,6 @@ const WorkoutDetail = ({ route, navigation }) => {
       setCurrentWorkout(route.params.workout);
       setEditedExercises(JSON.parse(JSON.stringify(route.params.workout.exercises || [])));
       setEditedWorkoutName(route.params.workout.name || '');
-      setWorkoutColor(route.params.workout.color || '#CCFF00');
       setLoadingWorkout(false);
     } else if (route.params?.workoutId) {
       fetchWorkoutDetail(route.params.workoutId);
@@ -95,7 +92,6 @@ const WorkoutDetail = ({ route, navigation }) => {
       setCurrentWorkout(data);
       setEditedExercises(JSON.parse(JSON.stringify(data.exercises || [])));
       setEditedWorkoutName(data.name || '');
-      setWorkoutColor(data.color || '#CCFF00');
     } catch (err) {
       showAlert("Error", "Failed to load workout details");
       navigation.goBack();
@@ -192,7 +188,6 @@ const WorkoutDetail = ({ route, navigation }) => {
 
       // Dirty check: exit silently if nothing has changed
       const nameUnchanged = newName === (currentWorkout?.name || '');
-      const colorUnchanged = workoutColor === (currentWorkout?.color || '#CCFF00');
       const exercisesUnchanged =
         exercisesList.length === (currentWorkout?.exercises || []).length &&
         exercisesList.every((ex, i) => {
@@ -203,7 +198,7 @@ const WorkoutDetail = ({ route, navigation }) => {
             ex.reps_target === (parseInt(orig.reps_target, 10) || orig.reps_target);
         });
 
-      if (nameUnchanged && colorUnchanged && exercisesUnchanged) {
+      if (nameUnchanged && exercisesUnchanged) {
         setIsEditMode(false);
         setSaving(false);
         return;
@@ -213,11 +208,7 @@ const WorkoutDetail = ({ route, navigation }) => {
 
       await workoutsService.updateWorkout(currentWorkout.id, newName, currentWorkout.description, exercisesList);
 
-      if (workoutColor !== currentWorkout.color) {
-        await workoutsService.updateWorkoutColor(currentWorkout.id, workoutColor);
-      }
-
-      setCurrentWorkout(prev => ({ ...prev, name: newName, exercises: exercisesList, color: workoutColor }));
+      setCurrentWorkout(prev => ({ ...prev, name: newName, exercises: exercisesList }));
       setIsEditMode(false);
       showAlert('Success', 'Routine updated successfully.');
     } catch (err) {
@@ -279,7 +270,6 @@ const WorkoutDetail = ({ route, navigation }) => {
             setIsEditMode(false);
             setEditedExercises(currentWorkout?.exercises ? JSON.parse(JSON.stringify(currentWorkout.exercises)) : []);
             setEditedWorkoutName(currentWorkout?.name || '');
-            setWorkoutColor(currentWorkout?.color || '#CCFF00');
           }}>
             <Text style={{ color: colors.text, fontWeight: '700', fontSize: 12, letterSpacing: 1 }}>CANCEL</Text>
           </TouchableOpacity>
@@ -314,19 +304,6 @@ const WorkoutDetail = ({ route, navigation }) => {
                 placeholderTextColor={colors.secondaryText}
                 autoCapitalize="characters"
               />
-              <Text style={[styles.statLabel, { color: colors.secondaryText, marginTop: 20, marginBottom: 10 }]}>
-                WORKOUT COLOR
-              </Text>
-              <View style={{ height: 200, marginBottom: 20 }}>
-                <WheelColorPicker
-                  color={workoutColor}
-                  onColorChange={(color) => setWorkoutColor(color)}
-                  thumbSize={30}
-                  sliderSize={20}
-                  noSnap={true}
-                  row={false}
-                />
-              </View>
             </>
           ) : (
             <Text style={[styles.workoutTitle, { color: colors.text }]}>{currentWorkout.name.toUpperCase()}</Text>
