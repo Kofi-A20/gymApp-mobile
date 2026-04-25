@@ -90,9 +90,11 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     }),
   });
 
-  // Keep 16 px breathing room above the safe area (or above the screen
-  // bottom on devices with no system nav bar).
-  const tabBarBottom = Math.max(insets.bottom, 0) + 16;
+  // iOS has no on-screen nav buttons, so use a smaller portion of the safe-area
+  // inset to keep the pill closer to the bottom edge.
+  const tabBarBottom = Platform.OS === 'ios'
+    ? Math.max(insets.bottom / 2, 0)
+    : Math.max(insets.bottom, 0) + 16;
 
   return (
     <View style={[styles.wrapper, { bottom: tabBarBottom }]} pointerEvents="box-none">

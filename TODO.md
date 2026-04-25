@@ -1,9 +1,5 @@
 # REPS — MASTER TODO
 
-## 🔴 BUGS
-- [ ] Nav pill too high on iPhone after Android OS button fix
-- [ ] Historical records screen not working
-
 ## 🟠 UI / UX
 - [ ] Text visibility and contrast pass across entire app
 - [ ] Nav pill glassmorphism effect
