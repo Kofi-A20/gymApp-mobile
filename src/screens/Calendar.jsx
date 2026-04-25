@@ -11,7 +11,9 @@ import {
   Dimensions,
   Alert,
   ActionSheetIOS,
-  Platform
+  Platform,
+  PanResponder,
+  Animated
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -43,6 +45,29 @@ const Calendar = ({ navigation }) => {
   const [selectedDayData, setSelectedDayData] = useState(null);
   const [sheetSelectionMode, setSheetSelectionMode] = useState(false);
   const [sheetSelectedSessions, setSheetSelectedSessions] = useState([]);
+
+  const panY = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 10,
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          panY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 80 || gestureState.vy > 0.5) {
+          Animated.timing(panY, { toValue: 500, duration: 300, useNativeDriver: true }).start(() => {
+            setSelectedDayData(null);
+          });
+        } else {
+          Animated.spring(panY, { toValue: 0, useNativeDriver: true }).start();
+        }
+      },
+    })
+  ).current;
 
 
   const handleSheetSelectAll = () => {
@@ -240,6 +265,7 @@ const Calendar = ({ navigation }) => {
       const dayCompleted = sessionsByDate[editingSessionDateStr] || [];
 
       setTimeout(() => {
+        panY.setValue(0);
         setSelectedDayData({
           dateStr: editingSessionDateStr,
           planned: dayPlanned,
@@ -488,6 +514,7 @@ const Calendar = ({ navigation }) => {
     const dayCompleted = sessionsByDate[dateStr] || [];
 
     if (isFutureOrToday || dayPlanned.length > 0 || dayCompleted.length > 0) {
+      panY.setValue(0);
       setSelectedDayData({
         dateStr,
         planned: dayPlanned,
@@ -681,6 +708,7 @@ const Calendar = ({ navigation }) => {
                         const dayCompleted = sessionsByDate[dateStr] || [];
                         const todayStr = getLocalYMD(new Date());
 
+                        panY.setValue(0);
                         setSelectedDayData({
                           dateStr,
                           planned: dayPlanned,
@@ -840,7 +868,7 @@ const Calendar = ({ navigation }) => {
       {/* Day Sheet Modal */}
       <Modal visible={!!selectedDayData} transparent animationType="none" onRequestClose={() => setSelectedDayData(null)}>
         <View style={[styles.modalOverlay, { justifyContent: 'flex-end', padding: 0 }]}>
-          <View style={[
+          <Animated.View style={[
             styles.modalContent,
             {
               backgroundColor: colors.background,
@@ -854,13 +882,16 @@ const Calendar = ({ navigation }) => {
               maxHeight: '75%',
               flexShrink: 1,
               paddingBottom: insets.bottom > 0 ? insets.bottom + 20 : 30,
-            }
+            },
+            { transform: [{ translateY: panY }] }
           ]}>
-            <View style={styles.modalHeader}>
+            <View {...panResponder.panHandlers} style={{ width: '100%', alignItems: 'center', paddingVertical: 12 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+            </View>
+            <View style={[styles.modalHeader, { justifyContent: 'flex-start' }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
                 {selectedDayData ? new Date(selectedDayData.dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase() : ''}
               </Text>
-              <TouchableOpacity onPress={() => setSelectedDayData(null)}><AntDesign name="close" size={20} color={colors.text} /></TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -961,7 +992,7 @@ const Calendar = ({ navigation }) => {
                 <Text style={[styles.addBtnText, { fontSize: 12 }]}>SCHEDULE WORKOUT</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </View>
