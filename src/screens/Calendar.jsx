@@ -9,16 +9,20 @@ import {
   Modal,
   FlatList,
   Dimensions,
-  Alert
+  Alert,
+  ActionSheetIOS,
+  Platform
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { sessionsService } from '../services/sessionsService';
 import { workoutsService } from '../services/workoutsService';
+import { splitsService } from '../services/splitsService';
 import { MaterialCommunityIcons, AntDesign, Feather, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import RepsHeader from '../components/RepsHeader';
 
 const { width } = Dimensions.get('window');
@@ -31,12 +35,118 @@ const Calendar = ({ navigation }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [sessionsByDate, setSessionsByDate] = useState({});
   const [plannedSessions, setPlannedSessions] = useState([]);
-  const [monthStats, setMonthStats] = useState({ count: 0, totalVolume: 0 });
+  const [monthStats, setMonthStats] = useState({ count: 0 });
   const [loading, setLoading] = useState(true);
   const [hasInitialLoaded, setHasInitialLoaded] = useState(false);
 
   // For multi-session day picker
-  const [selectedDaySessions, setSelectedDaySessions] = useState(null);
+  const [selectedDayData, setSelectedDayData] = useState(null);
+  const [sheetSelectionMode, setSheetSelectionMode] = useState(false);
+  const [sheetSelectedSessions, setSheetSelectedSessions] = useState([]);
+
+
+  const handleSheetSelectAll = () => {
+    if (sheetSelectionMode) {
+      setSheetSelectionMode(false);
+      setSheetSelectedSessions([]);
+    } else {
+      setSheetSelectionMode(true);
+      setSheetSelectedSessions(selectedDayData?.planned?.map(p => p.id) || []);
+    }
+  };
+
+  const toggleSheetSelection = (id) => {
+    if (sheetSelectedSessions.includes(id)) {
+      setSheetSelectedSessions(prev => prev.filter(sId => sId !== id));
+    } else {
+      setSheetSelectedSessions(prev => [...prev, id]);
+    }
+  };
+
+  const handleSheetBatchDelete = async () => {
+    if (sheetSelectedSessions.length === 0) return;
+
+    Alert.alert(
+      "DELETE SESSIONS",
+      `Are you sure you want to delete ${sheetSelectedSessions.length} planned session(s)?`,
+      [
+        { text: "CANCEL", style: "cancel" },
+        {
+          text: "DELETE",
+          style: "destructive",
+          onPress: async () => {
+            const sessionsToDelete = plannedSessions.filter(p => sheetSelectedSessions.includes(p.id));
+            for (const s of sessionsToDelete) {
+              if (s.notificationId) {
+                await Notifications.cancelScheduledNotificationAsync(s.notificationId);
+              }
+            }
+
+            const updated = plannedSessions.filter(p => !sheetSelectedSessions.includes(p.id));
+            setPlannedSessions(updated);
+            await AsyncStorage.setItem(PLANNED_STORAGE_KEY, JSON.stringify(updated));
+
+            setSelectedDayData(prev => prev ? { ...prev, planned: prev.planned.filter(p => !sheetSelectedSessions.includes(p.id)) } : null);
+            setSheetSelectedSessions([]);
+            setSheetSelectionMode(false);
+          }
+        }
+      ]
+    );
+  };
+
+  const handleSessionOptions = (item) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Edit Time', 'Delete'],
+          destructiveButtonIndex: 2,
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            setEditingSession(item);
+            const date = new Date(item.dateTime);
+            setEditHour(date.getHours());
+            setEditMinute(date.getMinutes());
+            setSelectedDayData(null);
+            setTimeout(() => {
+              setShowEditTimeModal(true);
+            }, 300);
+          } else if (buttonIndex === 2) {
+            deletePlannedSession(item);
+            setSelectedDayData(prev => prev ? { ...prev, planned: prev.planned.filter(p => p.id !== item.id) } : null);
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        'Session Options',
+        'Choose an action for this session',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Edit Time', onPress: () => {
+              setEditingSession(item);
+              const date = new Date(item.dateTime);
+              setEditHour(date.getHours());
+              setEditMinute(date.getMinutes());
+              setSelectedDayData(null);
+              setTimeout(() => {
+                setShowEditTimeModal(true);
+              }, 300);
+            }
+          },
+          {
+            text: 'Delete', style: 'destructive', onPress: () => {
+              deletePlannedSession(item);
+              setSelectedDayData(prev => prev ? { ...prev, planned: prev.planned.filter(p => p.id !== item.id) } : null);
+            }
+          }
+        ]
+      );
+    }
+  };
 
   // For Adding Planned Session
   const [showAddModal, setShowAddModal] = useState(false);
@@ -49,6 +159,104 @@ const Calendar = ({ navigation }) => {
   const [planHour, setPlanHour] = useState(new Date().getHours());
   const [planMinute, setPlanMinute] = useState(0);
   const [planDateIndex, setPlanDateIndex] = useState(0); // For manual selection if needed
+
+  // Edit Time Modal State
+  const [showEditTimeModal, setShowEditTimeModal] = useState(false);
+  const [editingSession, setEditingSession] = useState(null);
+  const [editHour, setEditHour] = useState(8);
+  const [editMinute, setEditMinute] = useState(0);
+
+  const planDateVal = new Date();
+  planDateVal.setHours(planHour, planMinute, 0, 0);
+
+  const editDateVal = new Date();
+  editDateVal.setHours(editHour, editMinute, 0, 0);
+
+  const onPlanTimeChange = (event, selectedDate) => {
+    if (selectedDate) {
+      setPlanHour(selectedDate.getHours());
+      setPlanMinute(selectedDate.getMinutes());
+    }
+  };
+
+  const onEditTimeChange = (event, selectedDate) => {
+    if (selectedDate) {
+      setEditHour(selectedDate.getHours());
+      setEditMinute(selectedDate.getMinutes());
+    }
+  };
+
+  const handleConfirmEditTime = async () => {
+    if (!editingSession) return;
+    try {
+      if (editingSession.notificationId) {
+        await Notifications.cancelScheduledNotificationAsync(editingSession.notificationId).catch(() => { });
+      }
+
+      const newDate = new Date(editingSession.dateTime);
+      newDate.setHours(editHour, editMinute, 0, 0);
+
+      if (newDate < new Date()) {
+        Alert.alert('INVALID TIME', 'CANNOT PLAN A SESSION IN THE PAST.');
+        return;
+      }
+
+      let notificationId = null;
+      try {
+        notificationId = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'TIME TO TRAIN',
+            body: `${editingSession.workoutName.toUpperCase()} IS SCHEDULED FOR NOW.`,
+            data: { workoutId: editingSession.workoutId },
+            sound: true,
+          },
+          trigger: {
+            type: 'date',
+            date: newDate,
+          },
+        });
+      } catch (e) {
+        console.warn(e);
+      }
+
+      const updatedSession = {
+        ...editingSession,
+        dateTime: newDate.toISOString(),
+        notificationId
+      };
+
+      const updated = plannedSessions.map(p => p.id === updatedSession.id ? updatedSession : p).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+      setPlannedSessions(updated);
+      await AsyncStorage.setItem(PLANNED_STORAGE_KEY, JSON.stringify(updated));
+
+      const editingSessionDateStr = editingSession.dateTime.split('T')[0];
+
+      setShowEditTimeModal(false);
+      setEditingSession(null);
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const isFutureOrToday = editingSessionDateStr >= todayStr;
+      const dayPlanned = updated.filter(p => p.dateTime.split('T')[0] === editingSessionDateStr);
+      const dayCompleted = sessionsByDate[editingSessionDateStr] || [];
+
+      setTimeout(() => {
+        setSelectedDayData({
+          dateStr: editingSessionDateStr,
+          planned: dayPlanned,
+          completed: dayCompleted,
+          isFutureOrToday
+        });
+      }, 300);
+
+      // Auto-scroll to the upcoming sessions section
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: upcomingSectionY, animated: true });
+      }, 500);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('ERROR', 'FAILED TO UPDATE SESSION.');
+    }
+  };
 
   // Batch Deletion State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -79,6 +287,7 @@ const Calendar = ({ navigation }) => {
     useCallback(() => {
       fetchMonthData();
       loadPlannedSessions();
+      splitsService.syncNotifications();
       if (scrollRef.current) {
         scrollRef.current.scrollTo({ y: 0, animated: false });
       }
@@ -109,17 +318,15 @@ const Calendar = ({ navigation }) => {
       const data = await sessionsService.getSessionsForMonth(year, month);
 
       const sessionMap = {};
-      let totalVolume = 0;
 
       data.forEach(s => {
         const dateStr = s.completed_at.split('T')[0];
         if (!sessionMap[dateStr]) sessionMap[dateStr] = [];
         sessionMap[dateStr].push(s);
-        totalVolume += (s.total_volume_kg || 0);
       });
 
       setSessionsByDate(sessionMap);
-      setMonthStats({ count: Object.keys(sessionMap).length, totalVolume });
+      setMonthStats({ count: Object.keys(sessionMap).length });
     } catch (error) {
       console.error('Failed to fetch calendar data:', error);
     } finally {
@@ -276,18 +483,17 @@ const Calendar = ({ navigation }) => {
 
   const handleDayPress = (dateStr) => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const daySessions = sessionsByDate[dateStr];
+    const isFutureOrToday = dateStr >= todayStr;
+    const dayPlanned = plannedSessions.filter(p => p.dateTime.split('T')[0] === dateStr);
+    const dayCompleted = sessionsByDate[dateStr] || [];
 
-    if (dateStr >= todayStr) {
-      // Future or today - open scheduling flow
-      openAddPlanned(dateStr);
-    } else if (daySessions && daySessions.length > 0) {
-      // Past - view history
-      if (daySessions.length === 1) {
-        navigation.navigate('SessionHistoryDetail', { session: daySessions[0] });
-      } else {
-        setSelectedDaySessions({ date: dateStr, items: daySessions });
-      }
+    if (isFutureOrToday || dayPlanned.length > 0 || dayCompleted.length > 0) {
+      setSelectedDayData({
+        dateStr,
+        planned: dayPlanned,
+        completed: dayCompleted,
+        isFutureOrToday
+      });
     }
   };
 
@@ -367,6 +573,7 @@ const Calendar = ({ navigation }) => {
         onCancelSelection={() => { setIsSelectionMode(false); setSelectedSessions([]); }}
         onDeleteSelected={handleBatchDelete}
         onSelectAll={handleSelectAll}
+        rightActions={[{ icon: 'book-open-outline', library: 'MaterialCommunityIcons', onPress: () => navigation.navigate('SplitsScreen') }]}
       />
 
       <ScrollView
@@ -394,10 +601,6 @@ const Calendar = ({ navigation }) => {
               <Text style={[styles.statLabel, { color: colors.secondaryText }]}>COMPLETIONS</Text>
               <Text style={[styles.statValue, { color: colors.text }]}>{monthStats.count}</Text>
             </View>
-            <View style={[styles.statBox, { borderLeftColor: colors.accent }]}>
-              <Text style={[styles.statLabel, { color: colors.secondaryText }]}>TOTAL VOLUME</Text>
-              <Text style={[styles.statValue, { color: colors.text }]}>{monthStats.totalVolume.toLocaleString()} KG</Text>
-            </View>
           </View>
 
           <View style={styles.gridContainer}>
@@ -405,31 +608,33 @@ const Calendar = ({ navigation }) => {
               {DAYS.map(d => <Text key={d} style={[styles.dayLabel, { color: colors.secondaryText }]}>{d}</Text>)}
             </View>
             <View style={styles.gridOuter}>
-              {getMonthDays().map((item, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={[
-                    styles.dayCell,
-                    { borderColor: colors.border },
-                    item.isToday && { backgroundColor: isDarkMode ? '#1A1D0E' : '#F7FFD6', borderColor: colors.accent, borderWidth: 1 },
-                    !item.isCurrentMonth && { opacity: 0.1 },
-                    (idx % 7 === 6) && { borderRightWidth: 0 },
-                    (idx >= 35) && { borderBottomWidth: 0 }
-                  ]}
-                  onPress={() => item.isCurrentMonth && handleDayPress(item.dateStr)}
-                  disabled={!item.isCurrentMonth}
-                >
-                  <Text style={[styles.dayNum, { color: item.isToday ? colors.accent : (item.isCurrentMonth ? colors.text : colors.secondaryText) }]}>
-                    {item.day.toString().padStart(2, '0')}
-                  </Text>
-                  <View style={styles.indicatorContainer}>
-                    {item.plannedColors?.map((color, i) => (
-                      <Indicator key={i} type="planned" color={color} />
-                    ))}
-                    {item.hasSession && <Indicator type="completed" />}
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {getMonthDays().map((item, idx) => {
+                const plannedColor = item.plannedColors && item.plannedColors.length > 0 ? (item.plannedColors[0] || colors.accent) : null;
+
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[
+                      styles.dayCell,
+                      { borderColor: colors.border },
+                      item.isToday && { backgroundColor: isDarkMode ? '#1A1D0E' : '#F7FFD6', borderColor: colors.accent, borderWidth: 1 },
+                      !item.isCurrentMonth && { opacity: 0.1 },
+                      (idx % 7 === 6) && { borderRightWidth: 0 },
+                      (idx >= 35) && { borderBottomWidth: 0 },
+                      plannedColor && { borderLeftWidth: 4, borderLeftColor: plannedColor, backgroundColor: isDarkMode ? `${plannedColor}1A` : `${plannedColor}10` }
+                    ]}
+                    onPress={() => item.isCurrentMonth && handleDayPress(item.dateStr)}
+                    disabled={!item.isCurrentMonth}
+                  >
+                    <Text style={[styles.dayNum, { color: item.isToday ? colors.accent : (item.isCurrentMonth ? colors.text : colors.secondaryText) }]}>
+                      {item.day.toString().padStart(2, '0')}
+                    </Text>
+                    <View style={styles.indicatorContainer}>
+                      {item.hasSession && <Indicator type="completed" />}
+                    </View>
+                  </TouchableOpacity>
+                )
+              })}
             </View>
           </View>
 
@@ -444,50 +649,62 @@ const Calendar = ({ navigation }) => {
               <Text style={[styles.subLabel, { color: colors.secondaryText }]}>UPCOMING SESSIONS</Text>
             </View>
 
-            <View style={[styles.plannedTable, { borderColor: colors.border }]}>
-              {plannedSessions.length === 0 ? (
+            {plannedSessions.length === 0 ? (
+              <View style={[styles.plannedTable, { borderColor: colors.border, justifyContent: 'center' }]}>
                 <Text style={{ color: colors.secondaryText, textAlign: 'center', padding: 20, fontSize: 10 }}>NO UPCOMING SESSIONS SCHEDULED</Text>
-              ) : (
-                plannedSessions.map(item => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[
-                      styles.plannedRow,
-                      { borderBottomColor: colors.border },
-                      selectedSessions.includes(item.id) && { backgroundColor: isDarkMode ? '#1A1D0E' : '#F7FFD6' }
-                    ]}
-                    onLongPress={() => {
-                      setIsSelectionMode(true);
-                      toggleSelection(item.id);
-                    }}
-                    onPress={() => {
-                      if (isSelectionMode) toggleSelection(item.id);
-                    }}
-                    activeOpacity={isSelectionMode ? 0.7 : 1}
-                  >
-                    {isSelectionMode && (
-                      <MaterialCommunityIcons
-                        name={selectedSessions.includes(item.id) ? "checkbox-marked" : "checkbox-blank-outline"}
-                        size={24}
-                        color={selectedSessions.includes(item.id) ? colors.accent : colors.border}
-                        style={{ marginRight: 15 }}
-                      />
-                    )}
-                    <View style={styles.dateBlock}>
-                      <Text style={[styles.pDate, { color: colors.text }]}>{new Date(item.dateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}</Text>
-                      <Text style={[styles.pTime, { color: colors.secondaryText }]}>{new Date(item.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
-                    </View>
-                    <Text style={[styles.pName, { color: colors.text }]}>{item.workoutName.toUpperCase()}</Text>
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.upcomingStrip}>
+                {plannedSessions.filter(s => s.dateTime > new Date().toISOString()).slice(0, 10).map(item => {
+                  const itemColor = item.workoutColor || colors.accent;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[
+                        styles.upcomingCard,
+                        { backgroundColor: isDarkMode ? '#1A1A1A' : '#F5F5F5', borderLeftColor: itemColor }
+                      ]}
+                      onPress={() => {
+                        const getLocalYMD = (d) => {
+                          const date = new Date(d);
+                          return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                        };
 
-                    {!isSelectionMode && (
-                      <TouchableOpacity onPress={() => deletePlannedSession(item)} style={styles.deleteBtn}>
-                        <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-                      </TouchableOpacity>
-                    )}
-                  </TouchableOpacity>
-                ))
-              )}
-            </View>
+                        item.localDateStr = getLocalYMD(item.dateTime);
+                        const dateStr = item.localDateStr;
+
+                        const dayPlanned = plannedSessions.filter(p => {
+                          p.localDateStr = getLocalYMD(p.dateTime);
+                          return p.localDateStr === dateStr;
+                        });
+
+                        const dayCompleted = sessionsByDate[dateStr] || [];
+                        const todayStr = getLocalYMD(new Date());
+
+                        setSelectedDayData({
+                          dateStr,
+                          planned: dayPlanned,
+                          completed: dayCompleted,
+                          isFutureOrToday: item.localDateStr >= todayStr
+                        });
+                      }}
+                    >
+                      <View style={styles.ucDateRow}>
+                        <Text style={[styles.ucDate, { color: colors.secondaryText }]}>
+                          {new Date(item.dateTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()}
+                        </Text>
+                        <Text style={[styles.ucTime, { color: colors.text }]}>
+                          {new Date(item.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      </View>
+                      <Text style={[styles.ucName, { color: colors.text }]} numberOfLines={2}>
+                        {item.workoutName.toUpperCase()}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </ScrollView>
+            )}
           </View>
 
           <View style={{ height: 100 }} />
@@ -552,23 +769,15 @@ const Calendar = ({ navigation }) => {
               </ScrollView>
             )}
 
-            <Text style={[styles.pLabel, { color: colors.secondaryText, marginTop: 20 }]}>TIME (24H)</Text>
-            <View style={styles.timePickerRow}>
-              {/* Hour */}
-              <View style={styles.timeCol}>
-                <TouchableOpacity onPress={() => setPlanHour(h => (h + 1) % 24)}><Ionicons name="chevron-up" size={24} color={colors.text} /></TouchableOpacity>
-                <Text style={[styles.timeVal, { color: colors.text }]}>{planHour.toString().padStart(2, '0')}</Text>
-                <TouchableOpacity onPress={() => setPlanHour(h => (h - 1 + 24) % 24)}><Ionicons name="chevron-down" size={24} color={colors.text} /></TouchableOpacity>
-              </View>
-
-              <Text style={[styles.timeVal, { color: colors.text, marginHorizontal: 15 }]}>:</Text>
-
-              {/* Minute */}
-              <View style={styles.timeCol}>
-                <TouchableOpacity onPress={() => setPlanMinute(m => (m + 5) % 60)}><Ionicons name="chevron-up" size={24} color={colors.text} /></TouchableOpacity>
-                <Text style={[styles.timeVal, { color: colors.text }]}>{planMinute.toString().padStart(2, '0')}</Text>
-                <TouchableOpacity onPress={() => setPlanMinute(m => (m - 5 + 60) % 60)}><Ionicons name="chevron-down" size={24} color={colors.text} /></TouchableOpacity>
-              </View>
+            <Text style={[styles.pLabel, { color: colors.secondaryText, marginTop: 20 }]}>TIME</Text>
+            <View style={{ alignItems: 'center', marginVertical: 10 }}>
+              <DateTimePicker
+                value={planDateVal}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onPlanTimeChange}
+                textColor={colors.text}
+              />
             </View>
 
             <View style={styles.pActionRow}>
@@ -586,20 +795,172 @@ const Calendar = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Multi-Session Modal */}
-      <Modal visible={!!selectedDaySessions} transparent animationType="fade" onRequestClose={() => setSelectedDaySessions(null)}>
+      {/* EDIT TIME MODAL */}
+      <Modal visible={showEditTimeModal} transparent animationType="fade" onRequestClose={() => setShowEditTimeModal(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>PICK SESSION</Text>
-              <TouchableOpacity onPress={() => setSelectedDaySessions(null)}><AntDesign name="close" size={20} color={colors.text} /></TouchableOpacity>
+          <View style={[styles.planBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text, textAlign: 'center', marginBottom: 20 }]}>EDIT TIME</Text>
+
+            {editingSession && (
+              <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: colors.text, marginBottom: 4 }}>
+                  {editingSession.workoutName.toUpperCase()}
+                </Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.secondaryText }}>
+                  {new Date(editingSession.dateTime).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}
+                </Text>
+              </View>
+            )}
+
+            <View style={{ alignItems: 'center', marginVertical: 10 }}>
+              <DateTimePicker
+                value={editDateVal}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onEditTimeChange}
+                textColor={colors.text}
+              />
             </View>
-            <FlatList data={selectedDaySessions?.items} keyExtractor={item => item.id} renderItem={({ item }) => (
-              <TouchableOpacity style={[styles.pickerItem, { borderBottomColor: colors.border }]} onPress={() => { setSelectedDaySessions(null); navigation.navigate('SessionHistoryDetail', { session: item }); }}>
-                <View><Text style={[styles.pickerName, { color: colors.text }]}>{item.workout_name.toUpperCase()}</Text></View>
-                <AntDesign name="right" size={16} color={colors.secondaryText} />
+
+            <View style={styles.pActionRow}>
+              <TouchableOpacity style={[styles.pBtn, { flex: 1 }]} onPress={() => setShowEditTimeModal(false)}>
+                <Text style={[styles.pBtnText, { color: colors.secondaryText }]}>CANCEL</Text>
               </TouchableOpacity>
-            )} />
+              <TouchableOpacity
+                style={[styles.pBtn, { flex: 2, backgroundColor: colors.accent }]}
+                onPress={handleConfirmEditTime}
+              >
+                <Text style={[styles.pBtnText, { color: '#000' }]}>CONFIRM</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Day Sheet Modal */}
+      <Modal visible={!!selectedDayData} transparent animationType="none" onRequestClose={() => setSelectedDayData(null)}>
+        <View style={[styles.modalOverlay, { justifyContent: 'flex-end', padding: 0 }]}>
+          <View style={[
+            styles.modalContent,
+            {
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              borderTopWidth: 1,
+              borderLeftWidth: 1,
+              borderRightWidth: 1,
+              borderBottomWidth: 0,
+              maxHeight: '75%',
+              flexShrink: 1,
+              paddingBottom: insets.bottom > 0 ? insets.bottom + 20 : 30,
+            }
+          ]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {selectedDayData ? new Date(selectedDayData.dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase() : ''}
+              </Text>
+              <TouchableOpacity onPress={() => setSelectedDayData(null)}><AntDesign name="close" size={20} color={colors.text} /></TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {selectedDayData?.planned?.length > 0 && (
+                <View style={{ marginBottom: 20 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <Text style={[styles.subLabel, { color: colors.secondaryText, marginBottom: 0 }]}>SCHEDULED</Text>
+                    {selectedDayData.planned.length >= 2 && (
+                      <TouchableOpacity onPress={handleSheetSelectAll}>
+                        <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>
+                          {sheetSelectionMode ? 'CANCEL' : 'SELECT ALL'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {selectedDayData.planned.map(item => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[styles.pickerItem, { borderBottomColor: colors.border }]}
+                      onPress={() => sheetSelectionMode ? toggleSheetSelection(item.id) : null}
+                      activeOpacity={sheetSelectionMode ? 0.7 : 1}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        {sheetSelectionMode && (
+                          <MaterialCommunityIcons
+                            name={sheetSelectedSessions.includes(item.id) ? "checkbox-marked" : "checkbox-blank-outline"}
+                            size={20}
+                            color={sheetSelectedSessions.includes(item.id) ? colors.accent : colors.border}
+                            style={{ marginRight: 10 }}
+                          />
+                        )}
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.workoutColor || colors.accent, marginRight: 10 }} />
+                        <View>
+                          <Text style={[styles.pickerName, { color: colors.text }]}>{item.workoutName.toUpperCase()}</Text>
+                          <Text style={{ color: colors.secondaryText, fontSize: 10, fontWeight: '700', marginTop: 2 }}>
+                            {new Date(item.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 15, alignItems: 'center' }}>
+                        {!sheetSelectionMode && (
+                          <TouchableOpacity onPress={() => handleSessionOptions(item)} style={{ padding: 5 }}>
+                            <Feather name="more-horizontal" size={20} color={colors.text} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {selectedDayData?.completed?.length > 0 && (
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={[styles.subLabel, { color: colors.secondaryText, marginBottom: 10 }]}>COMPLETED</Text>
+                  {selectedDayData.completed.map(item => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[styles.pickerItem, { borderBottomColor: colors.border }]}
+                      onPress={() => { setSelectedDayData(null); navigation.navigate('SessionHistoryDetail', { session: item }); }}
+                    >
+                      <View>
+                        <Text style={[styles.pickerName, { color: colors.text }]}>{item.workout_name.toUpperCase()}</Text>
+                        <Text style={{ color: colors.secondaryText, fontSize: 10, fontWeight: '700', marginTop: 2 }}>
+                          {new Date(item.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      </View>
+                      <AntDesign name="right" size={16} color={colors.secondaryText} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {(!selectedDayData?.planned?.length && !selectedDayData?.completed?.length) && (
+                <Text style={{ color: colors.secondaryText, textAlign: 'center', marginVertical: 30, fontSize: 12 }}>NO SESSIONS FOR THIS DAY</Text>
+              )}
+            </ScrollView>
+
+            {sheetSelectionMode && sheetSelectedSessions.length > 0 && (
+              <TouchableOpacity
+                style={[styles.addBtn, { backgroundColor: '#FF3B30', justifyContent: 'center', marginTop: 10, paddingVertical: 15 }]}
+                onPress={handleSheetBatchDelete}
+              >
+                <Ionicons name="trash-outline" size={16} color="#FFF" />
+                <Text style={[styles.addBtnText, { fontSize: 12, color: '#FFF' }]}>DELETE SELECTED</Text>
+              </TouchableOpacity>
+            )}
+
+            {selectedDayData?.isFutureOrToday && !sheetSelectionMode && (
+              <TouchableOpacity
+                style={[styles.addBtn, { backgroundColor: colors.accent, justifyContent: 'center', marginTop: 20, paddingVertical: 15 }]}
+                onPress={() => {
+                  const targetDate = selectedDayData.dateStr;
+                  setSelectedDayData(null);
+                  openAddPlanned(targetDate);
+                }}
+              >
+                <AntDesign name="plus" size={16} color="#000" />
+                <Text style={[styles.addBtnText, { fontSize: 12 }]}>SCHEDULE WORKOUT</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -633,14 +994,21 @@ const styles = StyleSheet.create({
   indicator: { width: 14, height: 14, borderRadius: 7, justifyContent: 'center', alignItems: 'center' },
   plannedSection: { marginTop: 20 },
   plannedHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  addBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 2, flexDirection: 'row', alignItems: 'center' },
-  addBtnText: { color: '#000', fontSize: 10, fontWeight: '900', marginLeft: 4 },
   plannedTable: { borderWidth: 1, minHeight: 100, maxHeight: 300, overflow: 'hidden' },
-  plannedRow: { flexDirection: 'row', alignItems: 'center', padding: 15, borderBottomWidth: 1 },
-  dateBlock: { width: 80 },
-  pDate: { fontSize: 13, fontWeight: '900' },
-  pTime: { fontSize: 9, fontWeight: '700' },
-  pName: { fontSize: 16, fontWeight: '900', flex: 1 },
+  upcomingStrip: { flexDirection: 'row', paddingVertical: 10 },
+  upcomingCard: {
+    width: 160,
+    height: 100,
+    marginRight: 12,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    padding: 12,
+    justifyContent: 'space-between'
+  },
+  ucDateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  ucDate: { fontSize: 10, fontWeight: '800' },
+  ucTime: { fontSize: 10, fontWeight: '800' },
+  ucName: { fontSize: 14, fontWeight: '900', marginTop: 8 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { width: '100%', maxHeight: '60%', borderWidth: 1, padding: 20 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },

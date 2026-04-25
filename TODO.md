@@ -1,29 +1,38 @@
-NEXT SESSION - TODO
+# REPS — MASTER TODO
+
+## 🟡 FEATURES IN PROGRESS
+- [ ] Splits & Recurring Scheduling
+      - Splits library screen (accessible from Calendar header)
+      - Create/name a split, assign routines to days of week + time
+      - Multiple splits can be active simultaneously
+      - Auto-generates weekly recurring planned sessions when active
+      - Toggle individual splits on/off without deleting
+      - Calendar days color-coded by routine from active splits
+      - Upcoming sessions strip below calendar (color-coded cards)
+
+## 🟠 UI / UX
+- [ ] Text visibility and contrast pass across entire app
+- [ ] Nav pill glassmorphism effect
+- [ ] Profile accent color selection — expand color palette
+- [ ] Switch all custom modals to native modals throughout entire app
+
+## 🔵 AUTH & SECURITY
+- [ ] Security audit and checks
+- [ ] Improve login screen
+- [ ] Google, Apple, and third-party OAuth integration
 
 
-Last things to do, is with the ui for text visiblikty and contrast
+## 📈 ANALYTICS & PROGRESS
+- [ ] Weight loss journey graphs
 
-security checks and whatnot that i have to do 
-better login and integrate auth with other account types like google apple and wahntot
+## 💰 MONETISATION
+- [ ] Define which features go behind paywall
+- [ ] Implement premium gate
 
-color code your routines so its easier to identify on the calendar
+## 🚀 ONBOARDING
+- [ ] First-time onboarding flow after account creation
+      - Walk user through core app sections
+      - Replace all in-screen UX redirect helpers\
 
-account for gender in calorie calculation
-
-completely through out entire app switch to native modals
-
-profile colors selection is limited need to expand
-
-
-premium features behind paywall:
-thinking of that 
-
-
-thinking of landing an onboarding page that walks the user first time into the the app after they first create an account 
-
-graphs for the weightloss journey
-session history isnt working its not tracking the progression or showing anything whats that baout 
-historcal record isnt working either wheen we 
-
-
-nav pill is not glassy and for the iphone its high above the screen it was due to the fix for android where it was kinda hidden behind the native os buttons 
+- [ ] Monthly total volume stat — move to Session History screen
+        (removed from Calendar, add as a stat on the history/analytics screen)
