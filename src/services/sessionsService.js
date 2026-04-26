@@ -19,7 +19,7 @@ export const sessionsService = {
         })
         .select()
         .single();
-      
+
       if (error) {
         console.error('startSession error:', error);
         throw error;
@@ -48,7 +48,7 @@ export const sessionsService = {
         .eq('id', sessionId)
         .select()
         .single();
-      
+
       if (error) {
         console.error('completeSession error:', error);
         throw error;
@@ -56,17 +56,17 @@ export const sessionsService = {
 
       // After completing session, create a calendar check-in if valid
       if (data.workout_id) {
-          try {
-              const { data: workout } = await supabase.from('workouts').select('name').eq('id', data.workout_id).single();
-              await supabase.from('calendar_checkins').insert({
-                  user_id: data.user_id,
-                  session_id: data.id,
-                  date: new Date().toISOString().split('T')[0],
-                  workout_name: workout?.name || 'Workout'
-              });
-          } catch (err) {
-              console.error('Failed to create calendar check-in:', err);
-          }
+        try {
+          const { data: workout } = await supabase.from('workouts').select('name').eq('id', data.workout_id).single();
+          await supabase.from('calendar_checkins').insert({
+            user_id: data.user_id,
+            session_id: data.id,
+            date: new Date().toISOString().split('T')[0],
+            workout_name: workout?.name || 'Workout'
+          });
+        } catch (err) {
+          console.error('Failed to create calendar check-in:', err);
+        }
       }
 
       return data;
@@ -131,12 +131,12 @@ export const sessionsService = {
         .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false })
         .limit(limit);
-      
+
       if (error) {
         console.error('getSessionHistory error:', error);
         throw error;
       }
-      
+
       // Map to include workout_name and flattened exercises list
       return (data || []).map(s => {
         // Flatten session_sets into a unique exercises list for display
@@ -176,19 +176,19 @@ export const sessionsService = {
         `)
         .eq('id', sessionId)
         .single();
-      
+
       if (error) {
         console.error('getSessionDetail error:', error);
         throw error;
       }
 
       console.log('getSessionDetail result:', JSON.stringify(data, null, 2));
-      
+
       // Sort sets by log time or set number
       if (data.session_sets) {
-          data.session_sets.sort((a, b) => a.set_number - b.set_number);
+        data.session_sets.sort((a, b) => a.set_number - b.set_number);
       }
-      
+
       return data;
     } catch (err) {
       console.error('getSessionDetail exception:', err);
@@ -205,7 +205,7 @@ export const sessionsService = {
         .from('sessions')
         .delete()
         .eq('id', sessionId);
-      
+
       if (error) {
         console.error('deleteSession error:', error);
         throw error;
@@ -225,7 +225,7 @@ export const sessionsService = {
         .from('sessions')
         .delete()
         .in('id', sessionIds);
-      
+
       if (error) {
         console.error('bulkDeleteSessions error:', error);
         throw error;
@@ -240,10 +240,14 @@ export const sessionsService = {
    * Calculate cumulative and weekly training statistics.
    * Weekly stats now start from the current week's Monday.
    */
-  async getTrainingStats() {
+  async getTrainingStats(days = 30) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
+
+      const sinceDate = new Date();
+      sinceDate.setDate(sinceDate.getDate() - days);
+      const sinceDateISO = sinceDate.toISOString();
 
       // 1. Get all-time volume
       const { data: allSessions, error: allErr } = await supabase
@@ -259,7 +263,7 @@ export const sessionsService = {
       // 2. Get current calendar week (Starting from Sunday)
       const now = new Date();
       const day = now.getDay(); // 0 (Sun) to 6 (Sat)
-      const diff = now.getDate() - day; 
+      const diff = now.getDate() - day;
       const sunday = new Date(now.setDate(diff));
       sunday.setHours(0, 0, 0, 0);
       const sundayISO = sunday.toISOString();
@@ -268,7 +272,7 @@ export const sessionsService = {
         .from('sessions')
         .select('total_volume_kg, started_at, completed_at')
         .eq('user_id', user.id)
-        .gte('completed_at', sundayISO)
+        .gte('completed_at', sinceDateISO)
         .not('completed_at', 'is', null);
 
       if (weekErr) throw weekErr;
@@ -293,6 +297,108 @@ export const sessionsService = {
       };
     } catch (err) {
       console.error('getTrainingStats exception:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * Get overview stats for the Stats screen OVERVIEW tab.
+   */
+  async getOverviewStats(days = 30) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const sinceDate = new Date();
+      sinceDate.setDate(sinceDate.getDate() - days);
+      const sinceDateISO = sinceDate.toISOString();
+
+      const { data: sessionsData, error: sessionsErr } = await supabase
+        .from('sessions')
+        .select('id, total_volume_kg')
+        .eq('user_id', user.id)
+        .not('completed_at', 'is', null)
+        .gte('completed_at', sinceDateISO);
+
+      if (sessionsErr) throw sessionsErr;
+
+      const totalWorkouts = sessionsData ? sessionsData.length : 0;
+      const totalVolume = (sessionsData || []).reduce((acc, s) => acc + (Number(s.total_volume_kg) || 0), 0);
+
+      const { data: setsData, error: setsErr } = await supabase
+        .from('session_sets')
+        .select(`
+          id,
+          exercises (muscle_group, primary_muscles, secondary_muscles),
+          sessions!inner (user_id, completed_at)
+        `)
+        .eq('sessions.user_id', user.id)
+        .not('sessions.completed_at', 'is', null)
+        .gte('sessions.completed_at', sinceDateISO);
+
+      if (setsErr) throw setsErr;
+
+      const totalSets = setsData ? setsData.length : 0;
+
+      const muscleBreakdown = {
+        Arms: 0,
+        Back: 0,
+        Chest: 0,
+        Core: 0,
+        Legs: 0,
+        Shoulders: 0
+      };
+
+      const VALID_SPECIFIC_MUSCLES = [
+        'Biceps', 'Triceps', 'Forearms', 'Lats', 'Trapezius',
+        'Rear Deltoids', 'Lower Back', 'Chest', 'Abs', 'Obliques',
+        'Quads', 'Glutes', 'Hamstrings', 'Calves', 'Front Deltoids'
+      ];
+
+      const specificBreakdown = {};
+
+      (setsData || []).forEach(set => {
+        if (set.exercises && set.exercises.muscle_group) {
+          const mg = set.exercises.muscle_group;
+          const key = Object.keys(muscleBreakdown).find(k => k.toLowerCase() === mg.toLowerCase());
+          if (key) {
+            muscleBreakdown[key]++;
+          }
+        }
+
+        // Build specificBreakdown from primary_muscles
+        if (set.exercises && Array.isArray(set.exercises.primary_muscles)) {
+          set.exercises.primary_muscles.forEach(muscle => {
+            const matched = VALID_SPECIFIC_MUSCLES.find(
+              v => v.toLowerCase() === muscle.toLowerCase()
+            );
+            if (matched) {
+              specificBreakdown[matched] = (specificBreakdown[matched] || 0) + 1;
+            }
+          });
+        }
+
+        if (set.exercises && Array.isArray(set.exercises.secondary_muscles)) {
+          set.exercises.secondary_muscles.forEach(muscle => {
+            const matched = VALID_SPECIFIC_MUSCLES.find(
+              v => v.toLowerCase() === muscle.toLowerCase()
+            );
+            if (matched) {
+              specificBreakdown[matched] = (specificBreakdown[matched] || 0) + 0.5;
+            }
+          });
+        }
+      });
+
+      return {
+        totalWorkouts,
+        totalSets,
+        totalVolume,
+        muscleBreakdown,
+        specificBreakdown
+      };
+    } catch (err) {
+      console.error('getOverviewStats exception:', err);
       throw err;
     }
   }

@@ -13,7 +13,7 @@ import WorkoutDetail from '../screens/WorkoutDetail';
 import Calendar from '../screens/Calendar';
 import AddWorkout from '../screens/AddWorkout';
 import ConfigureWorkout from '../screens/ConfigureWorkout';
-import WeightsLog from '../screens/WeightsLog';
+import Stats from '../screens/Stats';
 import Calories from '../screens/Calories';
 import Settings from '../screens/Settings';
 import Profile from '../screens/Profile';
@@ -239,7 +239,7 @@ const TabNavigator = () => (
   >
     <Tab.Screen name="Workouts" component={WorkoutStack} />
     <Tab.Screen name="Calendar" component={Calendar} />
-    <Tab.Screen name="Log" component={WeightsLog} />
+    <Tab.Screen name="Log" component={Stats} />
     <Tab.Screen name="Calories" component={Calories} />
     <Tab.Screen name="Profile" component={ProfileStack} />
   </Tab.Navigator>

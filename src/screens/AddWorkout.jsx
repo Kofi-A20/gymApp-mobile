@@ -6,8 +6,7 @@ import { exercisesService } from '../services/exercisesService';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
 import { useRepsAlert } from '../context/AlertContext';
-
-const FILTERS = ['ALL', 'CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'QUADS', 'HAMSTRINGS', 'GLUTES', 'CALVES', 'CORE', 'FOREARMS'];
+import { EXERCISE_FILTERS, exerciseMatchesFilter } from '../utils/muscleUtils';
 
 const AddWorkout = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
@@ -44,14 +43,7 @@ const AddWorkout = ({ navigation }) => {
     let result = allExercises;
 
     if (activeFilter !== 'ALL') {
-      result = result.filter(ex => {
-        const mg = ex.muscle_group?.toUpperCase() || '';
-        const cat = ex.category?.toUpperCase() || '';
-        if (activeFilter === 'FOREARMS') {
-          return mg === 'FOREARMS' || ex.name.toUpperCase().includes('FOREARM');
-        }
-        return mg.includes(activeFilter) || cat.includes(activeFilter);
-      });
+      result = result.filter(ex => exerciseMatchesFilter(ex, activeFilter));
     }
 
     if (search) {
@@ -154,7 +146,7 @@ const AddWorkout = ({ navigation }) => {
           <View style={styles.filterSection}>
             <Text style={[styles.filterLabel, { color: colors.secondaryText }]}>BODY FOCUS</Text>
             <View style={styles.filterGrid}>
-              {FILTERS.map((f) => (
+              {EXERCISE_FILTERS.map((f) => (
                 <TouchableOpacity
                   key={f}
                   onPress={() => setActiveFilter(f)}

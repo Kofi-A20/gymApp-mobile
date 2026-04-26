@@ -10,29 +10,7 @@ import Body from 'react-native-body-highlighter';
 import { workoutsService } from '../services/workoutsService';
 import { exercisesService } from '../services/exercisesService';
 import { useRepsAlert } from '../context/AlertContext';
-
-const FILTERS = ['ALL', 'CHEST', 'BACK', 'LEGS', 'SHOULDERS', 'ARMS', 'FOREARMS'];
-
-const mapMuscleSlug = (muscleName) => {
-  const name = muscleName.toLowerCase();
-  if (name.includes('anterior deltoid') || name.includes('front delt')) return 'front-deltoids';
-  if (name.includes('posterior deltoid') || name.includes('rear delt')) return 'rear-deltoids';
-  if (name.includes('deltoid') || name.includes('shoulder')) return 'front-deltoids';
-  if (name.includes('pectoralis') || name.includes('chest')) return 'chest';
-  if (name.includes('biceps')) return 'biceps';
-  if (name.includes('triceps')) return 'triceps';
-  if (name.includes('latissimus') || name.includes('lat')) return 'upper-back';
-  if (name.includes('trapezius') || name.includes('trap')) return 'trapezius';
-  if (name.includes('rectus abdominis') || name.includes('abs') || name.includes('core')) return 'abs';
-  if (name.includes('oblique')) return 'obliques';
-  if (name.includes('quadriceps') || name.includes('quad')) return 'quadriceps';
-  if (name.includes('hamstring')) return 'hamstring';
-  if (name.includes('gluteus') || name.includes('glute')) return 'gluteal';
-  if (name.includes('gastrocnemius') || name.includes('calf') || name.includes('calves')) return 'calves';
-  if (name.includes('erector') || name.includes('lower back')) return 'lower-back';
-  if (name.includes('forearm')) return 'forearm';
-  return null;
-};
+import { mapMuscleSlug, EXERCISE_FILTERS, exerciseMatchesFilter } from '../utils/muscleUtils';
 
 const frontSlugs = new Set(['chest', 'biceps', 'abs', 'obliques', 'quadriceps', 'tibialis', 'knees', 'front-deltoids']);
 const backSlugs = new Set(['upper-back', 'triceps', 'lower-back', 'gluteal', 'hamstring', 'calves', 'rear-deltoids']);
@@ -136,13 +114,7 @@ const WorkoutDetail = ({ route, navigation }) => {
   useEffect(() => {
     let result = allExercises;
     if (activeFilter !== 'ALL') {
-      result = result.filter(ex => {
-        const mg = ex.muscle_group?.toUpperCase() || '';
-        if (activeFilter === 'FOREARMS') {
-          return mg === 'FOREARMS' || ex.name.toUpperCase().includes('FOREARM');
-        }
-        return mg === activeFilter;
-      });
+      result = result.filter(ex => exerciseMatchesFilter(ex, activeFilter));
     }
     if (search) {
       result = result.filter(ex =>
@@ -470,7 +442,7 @@ const WorkoutDetail = ({ route, navigation }) => {
                 </View>
 
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 20, marginBottom: 30 }}>
-                  {FILTERS.map((f) => (
+                  {EXERCISE_FILTERS.map((f) => (
                     <TouchableOpacity
                       key={f}
                       onPress={() => setActiveFilter(f)}

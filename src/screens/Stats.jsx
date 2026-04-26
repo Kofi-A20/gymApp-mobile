@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform, ActionSheetIOS, Alert } from 'react-native';
+import Body from 'react-native-body-highlighter';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
@@ -9,25 +11,164 @@ import { setsService } from '../services/setsService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useRepsAlert } from '../context/AlertContext';
 import RepsHeader from '../components/RepsHeader';
+import Svg, { Polygon, Line, Text as SvgText } from 'react-native-svg';
+import { mapMuscleSlug, intensityColors, getIntensityForPct } from '../utils/muscleUtils';
 
-const WeightsLog = ({ navigation }) => {
+const LABELS = ['Core', 'Shoulders', 'Arms', 'Legs', 'Back', 'Chest'];
+const SIDES = LABELS.length;
+const RINGS = 5; // number of concentric hexagon rings
+const LABEL_CLEARANCE = 14; // dp clearance outside outermost ring
+
+const polarToCartesian = (cx, cy, radius, index) => {
+  const angleRad = (Math.PI * 2 * index) / SIDES;
+  return {
+    x: cx + radius * Math.cos(angleRad),
+    y: cy + radius * Math.sin(angleRad),
+  };
+};
+
+const hexagonPoints = (cx, cy, radius) =>
+  Array.from({ length: SIDES })
+    .map((_, i) => {
+      const { x, y } = polarToCartesian(cx, cy, radius, i);
+      return `${x},${y}`;
+    })
+    .join(' ');
+
+const anchorForIndex = (index) => {
+  const angle = (360 / SIDES) * index;
+  const norm = ((angle % 360) + 360) % 360;
+  if (norm > 80 && norm < 100) return 'middle';   // bottom
+  if (norm > 260 && norm < 280) return 'middle';   // top
+  if (norm >= 100 && norm <= 260) return 'end';     // left half
+  return 'start';                                    // right half
+};
+
+const RadarChart = ({ data = {}, maxValue = 10, colors, size = 180 }) => {
+  const svgSize = size + LABEL_CLEARANCE * 2 + 100; // extra room for labels
+  const cx = svgSize / 2;
+  const cy = svgSize / 2;
+  const outerRadius = size / 2;
+
+  const dataPoints = LABELS.map((label, i) => {
+    const value = data[label] ?? 0;
+    const fraction = maxValue > 0 ? Math.max(Math.min(value / maxValue, 1), 0.02) : 0.02;
+    return polarToCartesian(cx, cy, outerRadius * fraction, i);
+  });
+  const dataPolygonPoints = dataPoints.map((p) => `${p.x},${p.y}`).join(' ');
+
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <Svg width={svgSize} height={svgSize}>
+        {Array.from({ length: RINGS }).map((_, ringIdx) => {
+          const ringRadius = outerRadius * ((ringIdx + 1) / RINGS);
+          return (
+            <Polygon
+              key={`ring-${ringIdx}`}
+              points={hexagonPoints(cx, cy, ringRadius)}
+              fill="none"
+              stroke={colors.border}
+              strokeWidth={1}
+              strokeOpacity={0.9}
+            />
+          );
+        })}
+        {LABELS.map((_, i) => {
+          const { x, y } = polarToCartesian(cx, cy, outerRadius, i);
+          return (
+            <Line
+              key={`spoke-${i}`}
+              x1={cx}
+              y1={cy}
+              x2={x}
+              y2={y}
+              stroke={colors.border}
+              strokeWidth={1}
+              strokeOpacity={0.9}
+            />
+          );
+        })}
+        <Polygon
+          points={dataPolygonPoints}
+          fill={colors.accent}
+          fillOpacity={0.4}
+          stroke={colors.accent}
+          strokeWidth={2}
+          strokeOpacity={1}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        {LABELS.map((label, i) => {
+          const { x, y } = polarToCartesian(cx, cy, outerRadius + LABEL_CLEARANCE, i);
+          return (
+            <SvgText
+              key={`label-${i}`}
+              x={x}
+              y={y}
+              fill={colors.text}
+              fontSize={10}
+              fontWeight="600"
+              textAnchor={anchorForIndex(i)}
+              alignmentBaseline="central"
+            >
+              {label}
+            </SvgText>
+          );
+        })}
+      </Svg>
+    </View>
+  );
+};
+
+const Stats = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useProfile();
   const { showAlert } = useRepsAlert();
   const [sessions, setSessions] = useState([]);
   const [progression, setProgression] = useState([]);
-  const [viewMode, setViewMode] = useState('ARCHIVE'); // ARCHIVE | PROGRESSION
+  const [viewMode, setViewMode] = useState('OVERVIEW'); // OVERVIEW | ARCHIVE | PROGRESSION
+  const [overviewStats, setOverviewStats] = useState(null);
+  const [activeHours, setActiveHours] = useState(0);
   const [loading, setLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('ALL');
+  const [selectedDays, setSelectedDays] = useState(30);
   const scrollRef = useRef(null);
+
+  const periodLabels = {
+    30: 'Last 30 Days',
+    60: 'Last 60 Days',
+    90: 'Last 90 Days',
+    180: 'Last 6 Months',
+  };
+
+  const handlePeriodSelect = () => {
+    const options = ['Last 30 Days', 'Last 60 Days', 'Last 90 Days', 'Last 6 Months', 'Cancel'];
+    const values = [30, 60, 90, 180];
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex: 4 },
+        (index) => {
+          if (index < 4) setSelectedDays(values[index]);
+        }
+      );
+    } else {
+      Alert.alert('Select Period', '', [
+        ...values.map((v, i) => ({ text: options[i], onPress: () => setSelectedDays(v) })),
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
-      if (viewMode === 'ARCHIVE') {
+      if (viewMode === 'OVERVIEW') {
+        fetchOverview(selectedDays);
+      } else if (viewMode === 'ARCHIVE') {
         fetchSessions();
       } else if (viewMode === 'PROGRESSION') {
         fetchProgression();
@@ -35,8 +176,23 @@ const WeightsLog = ({ navigation }) => {
       if (scrollRef.current) {
         scrollRef.current.scrollTo({ y: 0, animated: false });
       }
-    }, [viewMode])
+    }, [viewMode, selectedDays])
   );
+
+  const fetchOverview = async (days = 30) => {
+    setLoading(true);
+    try {
+      const stats = await sessionsService.getOverviewStats(days);
+      setOverviewStats(stats);
+
+      const trainingStats = await sessionsService.getTrainingStats(days);
+      setActiveHours(trainingStats.activeHours);
+    } catch (error) {
+      console.error('Failed to fetch overview stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchSessions = async () => {
     if (!hasFetched) setLoading(true);
@@ -163,6 +319,120 @@ const WeightsLog = ({ navigation }) => {
     ? sessions
     : sessions.filter(s => (s.workout_name?.toUpperCase() || 'FREE SESSION') === selectedFilter);
 
+  const renderOverview = () => {
+    if (!overviewStats) return null;
+
+    const gender = profile?.gender === 'female' ? 'female' : 'male';
+
+    // ── Set distribution data ──
+    const specificBreakdown = overviewStats.specificBreakdown || {};
+    const sortedMuscles = Object.entries(specificBreakdown)
+      .filter(([_, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1]);
+    const totalSpecificSets = sortedMuscles.reduce((acc, [_, c]) => acc + c, 0);
+    const maxSpecificCount = sortedMuscles.length > 0 ? sortedMuscles[0][1] : 1;
+
+    // ── Heatmap: fixed percentage thresholds ──
+    const bodyData = [];
+    sortedMuscles.forEach(([muscle, count]) => {
+      const pct = totalSpecificSets > 0 ? count / totalSpecificSets : 0;
+      const intensity = getIntensityForPct(pct);
+
+      const slug = mapMuscleSlug(muscle);
+      if (slug) {
+        bodyData.push({ slug, intensity });
+      }
+    });
+
+    return (
+      <View>
+        <TouchableOpacity
+          onPress={handlePeriodSelect}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            alignSelf: 'flex-start',
+            backgroundColor: colors.secondaryBackground,
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            borderRadius: 20,
+            marginBottom: 20,
+          }}
+        >
+          <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{periodLabels[selectedDays]}</Text>
+          <MaterialCommunityIcons name="chevron-down" size={16} color={colors.text} style={{ marginLeft: 6 }} />
+        </TouchableOpacity>
+
+        <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 0, marginBottom: 4 }]}>TRAINING BALANCE</Text>
+        <View style={{ alignItems: 'center', marginBottom: 10 }}>
+          <RadarChart
+            data={overviewStats.muscleBreakdown}
+            maxValue={Math.max(...Object.values(overviewStats.muscleBreakdown), 1)}
+            colors={colors}
+            size={200}
+          />
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>MUSCLE HEATMAP</Text>
+        <View style={[styles.heatmapContainer, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Body data={bodyData} side="front" gender={gender} scale={0.7} colors={[intensityColors[1], intensityColors[2], intensityColors[3], intensityColors[4], intensityColors[5], intensityColors[6]]} border="#1C2733" />
+          </View>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Body data={bodyData} side="back" gender={gender} scale={0.7} colors={[intensityColors[1], intensityColors[2], intensityColors[3], intensityColors[4], intensityColors[5], intensityColors[6]]} border="#1C2733" />
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10, marginTop: 20 }}>
+          <View style={[styles.statTile, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+            <Text style={[styles.statTileLabel, { color: colors.secondaryText }]}>WORKOUTS</Text>
+            <Text style={[styles.statTileValue, { color: colors.text }]}>{overviewStats.totalWorkouts}</Text>
+          </View>
+          <View style={[styles.statTile, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+            <Text style={[styles.statTileLabel, { color: colors.secondaryText }]}>TOTAL SETS</Text>
+            <Text style={[styles.statTileValue, { color: colors.text }]}>{overviewStats.totalSets}</Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 30 }}>
+          <View style={[styles.statTile, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+            <Text style={[styles.statTileLabel, { color: colors.secondaryText }]}>TOTAL VOLUME</Text>
+            <Text style={[styles.statTileValue, { color: colors.text }]}>{Math.round(overviewStats.totalVolume)} {units}</Text>
+          </View>
+          <View style={[styles.statTile, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+            <Text style={[styles.statTileLabel, { color: colors.secondaryText }]}>ACTIVE HOURS</Text>
+            <Text style={[styles.statTileValue, { color: colors.text }]}>{activeHours.toFixed(1)}h</Text>
+          </View>
+        </View>
+
+        {sortedMuscles.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>SET DISTRIBUTION</Text>
+            <View style={[
+              { backgroundColor: colors.secondaryBackground, borderColor: colors.border, borderWidth: 1, borderRadius: 4, padding: 16 }
+            ]}>
+              {sortedMuscles.map(([muscle, count], idx) => {
+                const pctDecimal = totalSpecificSets > 0 ? count / totalSpecificSets : 0;
+                const intensity = getIntensityForPct(pctDecimal);
+
+                const pct = Math.round(pctDecimal * 100);
+                const barWidth = `${(count / maxSpecificCount) * 100}%`;
+                return (
+                  <View key={muscle} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: idx < sortedMuscles.length - 1 ? 14 : 0 }}>
+                    <Text style={{ fontSize: 12, color: colors.secondaryText, width: 90, fontWeight: '700' }}>{muscle}</Text>
+                    <View style={{ flex: 1, height: 6, backgroundColor: colors.border, borderRadius: 3, marginHorizontal: 10 }}>
+                      <View style={{ width: barWidth, height: 6, backgroundColor: intensityColors[intensity], borderRadius: 3, opacity: 0.8 }} />
+                    </View>
+                    <Text style={{ fontSize: 12, color: colors.text, fontWeight: '700', width: 70, textAlign: 'right' }}>{count} · {pct}%</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        )}
+      </View>
+    );
+  };
+
   const ProgressionCard = ({ item }) => {
     const lastDateObj = new Date(item.lastDate);
     const dateLabel = lastDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
@@ -214,6 +484,12 @@ const WeightsLog = ({ navigation }) => {
         <View style={styles.content}>
           <View style={styles.viewToggle}>
             <TouchableOpacity
+              style={[styles.toggleBtn, viewMode === 'OVERVIEW' && { borderBottomColor: colors.accent }]}
+              onPress={() => setViewMode('OVERVIEW')}
+            >
+              <Text style={[styles.toggleBtnText, { color: viewMode === 'OVERVIEW' ? colors.text : colors.secondaryText }]}>OVERVIEW</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.toggleBtn, viewMode === 'ARCHIVE' && { borderBottomColor: colors.accent }]}
               onPress={() => { setViewMode('ARCHIVE'); setHasFetched(false); }}
             >
@@ -228,15 +504,17 @@ const WeightsLog = ({ navigation }) => {
           </View>
 
           <Text style={[styles.subLabel, { color: colors.secondaryText, marginTop: 20 }]}>
-            {viewMode === 'ARCHIVE' ? 'CHRONOLOGICAL ARCHIVE' : 'PERSONAL RECORDS'}
+            {viewMode === 'OVERVIEW' ? 'TRAINING SUMMARY' : viewMode === 'ARCHIVE' ? 'CHRONOLOGICAL ARCHIVE' : 'PERSONAL RECORDS'}
           </Text>
           <Text style={[styles.mainTitle, { color: colors.text }]}>
-            {viewMode === 'ARCHIVE' ? 'SESSION\nHISTORY.' : 'WEIGHT\nPROGRESS.'}
+            {viewMode === 'OVERVIEW' ? 'OVERVIEW\nSTATS.' : viewMode === 'ARCHIVE' ? 'SESSION\nHISTORY.' : 'WEIGHT\nPROGRESS.'}
           </Text>
 
-          {loading && (viewMode === 'PROGRESSION' || (viewMode === 'ARCHIVE' && !hasFetched)) ? (
+          {loading && (viewMode === 'OVERVIEW' || viewMode === 'PROGRESSION' || (viewMode === 'ARCHIVE' && !hasFetched)) ? (
 
             <ActivityIndicator color={colors.text} style={{ marginTop: 50 }} />
+          ) : viewMode === 'OVERVIEW' ? (
+            renderOverview()
           ) : viewMode === 'ARCHIVE' ? (
             <View>
               {sessions.length > 0 && (
@@ -568,6 +846,39 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1,
   },
+  statTile: {
+    flex: 1,
+    padding: 16,
+    borderWidth: 1,
+    borderRadius: 4,
+  },
+  statTileLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  statTileValue: {
+    fontSize: 26,
+    fontWeight: '900',
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginTop: 20,
+    marginBottom: 8,
+  },
+
+  heatmapContainer: {
+    flexDirection: 'row',
+    padding: 20,
+    borderWidth: 1,
+    borderRadius: 4,
+    justifyContent: 'space-between',
+    height: 300,
+  },
 });
 
-export default WeightsLog;
+export default Stats;
