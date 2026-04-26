@@ -352,7 +352,7 @@ export const sessionsService = {
       const VALID_SPECIFIC_MUSCLES = [
         'Biceps', 'Triceps', 'Forearms', 'Lats', 'Trapezius',
         'Rear Deltoids', 'Lower Back', 'Chest', 'Abs', 'Obliques',
-        'Quads', 'Glutes', 'Hamstrings', 'Calves', 'Front Deltoids'
+        'Quads', 'Glutes', 'Hamstrings', 'Calves', 'Front Deltoids', 'Adductors'
       ];
 
       const specificBreakdown = {};

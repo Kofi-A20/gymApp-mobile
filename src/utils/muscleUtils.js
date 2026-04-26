@@ -16,6 +16,7 @@ export const mapMuscleSlug = (muscleName) => {
   if (name.includes('gastrocnemius') || name.includes('calf') || name.includes('calves')) return 'calves';
   if (name.includes('erector') || name.includes('lower back')) return 'lower-back';
   if (name.includes('forearm')) return 'forearm';
+  if (name.includes('adductor')) return 'adductors';
   return null;
 };
 
