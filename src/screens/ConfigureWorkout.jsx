@@ -35,7 +35,9 @@ const ConfigureWorkout = ({ route, navigation }) => {
     }))
   );
   const workoutName = route.params?.workoutName || 'NEW WORKOUT';
-  const [selectedColor, setSelectedColor] = useState('#FF3B30');
+  const editWorkoutId = route.params?.editWorkoutId || null;
+
+  const [selectedColor, setSelectedColor] = useState(route.params?.editWorkoutColor || '#FF3B30');
   const [showColorModal, setShowColorModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -72,13 +74,19 @@ const ConfigureWorkout = ({ route, navigation }) => {
         reps_target: parseInt(ex.reps_target, 10),
       }));
 
-      await workoutsService.createWorkout(workoutName, '', exercisesList, selectedColor);
-      showAlert('SUCCESS', 'Workout routine created.');
-      // Pop both CreateWorkout screens back to the library
-      navigation.popToTop();
+      if (editWorkoutId) {
+        await workoutsService.updateWorkout(editWorkoutId, workoutName, '', exercisesList, selectedColor);
+        showAlert('SUCCESS', 'Workout routine updated.');
+        navigation.pop(2);
+      } else {
+        await workoutsService.createWorkout(workoutName, '', exercisesList, selectedColor);
+        showAlert('SUCCESS', 'Workout routine created.');
+        // Pop both CreateWorkout screens back to the library
+        navigation.popToTop();
+      }
     } catch (error) {
       console.error('ConfigureWorkout save error:', error);
-      showAlert('ERROR', 'Failed to create workout. Please try again.');
+      showAlert('ERROR', `Failed to ${editWorkoutId ? 'update' : 'create'} workout. Please try again.`);
     } finally {
       setSaving(false);
     }
@@ -261,7 +269,7 @@ const ConfigureWorkout = ({ route, navigation }) => {
             {saving ? (
               <ActivityIndicator color={isDarkMode ? '#000' : '#FFF'} />
             ) : (
-              <Text style={[styles.saveBtnText, { color: isDarkMode ? '#000' : '#FFF' }]}>CREATE WORKOUT ROUTINE</Text>
+              <Text style={[styles.saveBtnText, { color: isDarkMode ? '#000' : '#FFF' }]}>{editWorkoutId ? "SAVE CHANGES" : "CREATE WORKOUT ROUTINE"}</Text>
             )}
           </AppTile>
 

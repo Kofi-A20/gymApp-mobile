@@ -80,6 +80,7 @@ export const WorkoutProvider = ({ children }) => {
       );
 
       // 2. Log each completed set to Supabase
+      const setPromises = [];
       let setNumber = 1;
       for (const exercise of (activeSession.exercises || [])) {
         const exId = exercise.id || exercise.exercise_id;
@@ -89,17 +90,21 @@ export const WorkoutProvider = ({ children }) => {
           const key = `${exId}-${i}`;
           const setData = completedSets[key];
           if (setData && setData.weight && setData.reps) {
-            await setsService.logSet(
-              dbSession.id,
-              exId,
-              exSetNumber,
-              parseFloat(setData.weight),
-              parseInt(setData.reps)
+            setPromises.push(
+              setsService.logSet(
+                dbSession.id,
+                exId,
+                exSetNumber,
+                parseFloat(setData.weight),
+                parseInt(setData.reps)
+              )
             );
             exSetNumber++;
           }
         }
       }
+      
+      await Promise.all(setPromises);
 
       // 3. Calculate total volume and complete the session
       const totalVolume = Object.values(completedSets).reduce((acc, s) => {

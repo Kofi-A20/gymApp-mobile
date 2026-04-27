@@ -45,17 +45,19 @@ const ExerciseRow = React.memo(({ ex, index, isSelected, onPress, colors, isDark
   </TouchableOpacity>
 ));
 
-const CreateWorkout = ({ navigation }) => {
+const CreateWorkout = ({ route, navigation }) => {
   const { colors, isDarkMode, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { showAlert } = useRepsAlert();
-  const [workoutName, setWorkoutName] = useState('');
+
+  const editWorkout = route.params?.editWorkout || null;
+
+  const [workoutName, setWorkoutName] = useState(editWorkout?.name || '');
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [allExercises, setAllExercises] = useState([]);
-  const [selectedExercises, setSelectedExercises] = useState([]);
+  const [selectedExercises, setSelectedExercises] = useState(editWorkout?.exercises || []);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const listRef = useRef(null);
 
 
@@ -104,9 +106,10 @@ const CreateWorkout = ({ navigation }) => {
   // Toggle selection on tap (no inline sets/reps — that's on Screen 2)
   const handleRowPress = useCallback((ex) => {
     setSelectedExercises(prev => {
-      const isSelected = prev.find(s => s.id === ex.id);
+      // Check for both exercise_id (if from existing workout) and id
+      const isSelected = prev.find(s => (s.exercise_id || s.id) === ex.id);
       if (isSelected) {
-        return prev.filter(s => s.id !== ex.id);
+        return prev.filter(s => (s.exercise_id || s.id) !== ex.id);
       } else {
         return [...prev, { ...ex, sets_target: '', reps_target: '' }];
       }
@@ -126,6 +129,8 @@ const CreateWorkout = ({ navigation }) => {
     navigation.navigate('ConfigureWorkout', {
       workoutName: workoutName.trim(),
       selectedExercises,
+      editWorkoutId: editWorkout?.id,
+      editWorkoutColor: editWorkout?.color,
     });
   };
 
@@ -142,7 +147,9 @@ const CreateWorkout = ({ navigation }) => {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
 
-          <Text style={[styles.mainTitle, { color: colors.text }]}>CREATE{"\n"}WORKOUT</Text>
+          <Text style={[styles.mainTitle, { color: colors.text, fontSize: editWorkout ? 48 : 56 }]}>
+            {editWorkout ? "EDIT\nWORKOUT" : "CREATE\nWORKOUT"}
+          </Text>
 
           {/* Workout Name Input */}
           <AppTile style={styles.inputGroup}>

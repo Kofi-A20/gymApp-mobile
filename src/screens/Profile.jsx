@@ -98,21 +98,8 @@ const Profile = ({ navigation }) => {
   const hasLogs = weightLogs.length > 0;
   const latestLogWeight = hasLogs ? weightLogs[weightLogs.length - 1].weight_kg : null;
 
-  // Scroll references for tap-to-edit
+  // Scroll reference
   const scrollViewRef = useRef(null);
-  const [layoutOffsets, setLayoutOffsets] = useState({});
-
-  const handleLayout = (key) => (event) => {
-    const { y } = event.nativeEvent.layout;
-    setLayoutOffsets(prev => ({ ...prev, [key]: y }));
-  };
-
-  const scrollToField = (key) => {
-    const yOffset = layoutOffsets[key];
-    if (yOffset !== undefined) {
-      scrollViewRef.current?.scrollTo({ y: Math.max(0, yOffset - 40), animated: true });
-    }
-  };
 
   // UI state for pickers
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -145,41 +132,41 @@ const Profile = ({ navigation }) => {
     }
   }, [profile, units, latestLogWeight]);
 
-  // Unsaved-changes guard & refresh weight logs
+  // Refresh weight logs when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({ y: 0, animated: false });
-      }
       fetchWeightLogs();
-
-      const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-        if (!isDirty) return;
-        e.preventDefault();
-        showAlert(
-          'UNSAVED CHANGES',
-          'You have unsaved changes. What would you like to do?',
-          [
-            {
-              text: 'DISCARD',
-              style: 'destructive',
-              onPress: () => {
-                setIsDirty(false);
-                navigation.dispatch(e.data.action);
-              },
-            },
-            {
-              text: 'SAVE',
-              onPress: () => {
-                handleSave().then(() => navigation.dispatch(e.data.action));
-              },
-            },
-          ]
-        );
-      });
-      return unsubscribe;
-    }, [isDirty, navigation])
+    }, [])
   );
+
+  // Unsaved-changes guard
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      showAlert(
+        'UNSAVED CHANGES',
+        'You have unsaved changes. What would you like to do?',
+        [
+          {
+            text: 'DISCARD',
+            style: 'destructive',
+            onPress: () => {
+              setIsDirty(false);
+              navigation.dispatch(e.data.action);
+            },
+          },
+          {
+            text: 'SAVE',
+            onPress: () => {
+              handleSave().then(() => navigation.dispatch(e.data.action));
+            },
+          },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [isDirty, navigation, showAlert, handleSave]);
 
   const fetchWeightLogs = async () => {
     try {
@@ -410,7 +397,7 @@ const Profile = ({ navigation }) => {
 
           <View style={styles.bioGrid}>
             <View style={styles.bioGridRow}>
-              <BiometricTile label="Height" value={profile?.height_cm || '--'} unit="cm" onPress={() => scrollToField('height')} />
+              <BiometricTile label="Height" value={profile?.height_cm || '--'} unit="cm" />
               <BiometricTile
                 label="Weight"
                 value={latestLogWeight !== null
@@ -418,12 +405,11 @@ const Profile = ({ navigation }) => {
                   : (profile?.weight_kg ? Math.round(profile.weight_kg * (units === 'lbs' ? 2.20462 : 1)) : '--')
                 }
                 unit={units}
-                onPress={() => navigation.navigate('Calories', { scrollToLog: true })}
               />
             </View>
             <View style={styles.bioGridRow}>
-              <BiometricTile label="Age" value={age !== null ? age : '--'} unit="yrs" onPress={() => scrollToField('dob')} />
-              <BiometricTile label="Activity" value={actLabel} isDark onPress={() => scrollToField('activity')} />
+              <BiometricTile label="Age" value={age !== null ? age : '--'} unit="yrs" />
+              <BiometricTile label="Activity" value={actLabel} isDark />
             </View>
           </View>
 
@@ -444,7 +430,7 @@ const Profile = ({ navigation }) => {
           </View>
 
           {/* Date of Birth */}
-          <View style={styles.inputContainer} onLayout={handleLayout('dob')}>
+          <View style={styles.inputContainer}>
             <Text style={[styles.fieldLabel, { color: colors.secondaryText }]}>DATE OF BIRTH</Text>
             <AppTile
               onPress={() => setShowDatePicker(true)}
@@ -502,12 +488,12 @@ const Profile = ({ navigation }) => {
           )}
 
           {/* Height */}
-          <View onLayout={handleLayout('height')}>
+          <View>
             <InputField label="Height (cm)" value={height} onChangeText={markDirty(setHeight)} keyboardType="numeric" colors={colors} accentColor={accentColor} />
           </View>
 
           {/* Weight */}
-          <View onLayout={handleLayout('weight')}>
+          <View>
             <InputField 
               label={`Weight (${units})`} 
               value={weight} 
@@ -515,13 +501,11 @@ const Profile = ({ navigation }) => {
               keyboardType="numeric" 
               colors={colors} 
               accentColor={accentColor}
-              editable={!hasLogs}
-              onPress={hasLogs ? () => navigation.navigate('Calories', { scrollToLog: true }) : null}
             />
           </View>
 
           {/* Goal Weight */}
-          <View onLayout={handleLayout('goal_weight')}>
+          <View>
             <InputField label={`Goal Weight (${units})`} value={goalWeight} onChangeText={markDirty(setGoalWeight)} keyboardType="numeric" colors={colors} accentColor={accentColor} />
           </View>
 
@@ -534,7 +518,7 @@ const Profile = ({ navigation }) => {
           />
 
           {/* Activity Level */}
-          <View onLayout={handleLayout('activity')}>
+          <View>
             <SelectorField
               label="Activity Level"
               options={ACTIVITY_OPTIONS}

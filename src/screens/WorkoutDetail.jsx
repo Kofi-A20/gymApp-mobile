@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Keyboard } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useWorkout } from '../context/WorkoutContext';
 import { useProfile } from '../context/ProfileContext';
-import { MaterialCommunityIcons, AntDesign, Ionicons, Feather } from '@expo/vector-icons';
+import { MaterialCommunityIcons, AntDesign, Ionicons } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
 import AppTile from '../components/AppTile';
 import Body from 'react-native-body-highlighter';
 import { workoutsService } from '../services/workoutsService';
-import { exercisesService } from '../services/exercisesService';
 import { useRepsAlert } from '../context/AlertContext';
-import { mapMuscleSlug, EXERCISE_FILTERS, exerciseMatchesFilter } from '../utils/muscleUtils';
+import { mapMuscleSlug } from '../utils/muscleUtils';
 
 const frontSlugs = new Set(['chest', 'biceps', 'abs', 'obliques', 'quadriceps', 'tibialis', 'knees', 'front-deltoids']);
 const backSlugs = new Set(['upper-back', 'triceps', 'lower-back', 'gluteal', 'hamstring', 'calves', 'rear-deltoids']);
@@ -47,84 +47,32 @@ const WorkoutDetail = ({ route, navigation }) => {
   const [currentWorkout, setCurrentWorkout] = useState(route.params?.workout || null);
   const [loadingWorkout, setLoadingWorkout] = useState(!route.params?.workout);
   const [starting, setStarting] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
   const [expandedExercises, setExpandedExercises] = useState({});
-  const [editedExercises, setEditedExercises] = useState([]);
-  const [editedWorkoutName, setEditedWorkoutName] = useState('');
-  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (route.params?.workout) {
-      setCurrentWorkout(route.params.workout);
-      setEditedExercises(JSON.parse(JSON.stringify(route.params.workout.exercises || [])));
-      setEditedWorkoutName(route.params.workout.name || '');
-      setLoadingWorkout(false);
-    } else if (route.params?.workoutId) {
-      fetchWorkoutDetail(route.params.workoutId);
-    }
-  }, [route.params]);
-
-  const fetchWorkoutDetail = async (id) => {
-    try {
-      setLoadingWorkout(true);
-      const data = await workoutsService.getWorkoutDetail(id);
-      setCurrentWorkout(data);
-      setEditedExercises(JSON.parse(JSON.stringify(data.exercises || [])));
-      setEditedWorkoutName(data.name || '');
-    } catch (err) {
-      showAlert("Error", "Failed to load workout details");
-      navigation.goBack();
-    } finally {
-      setLoadingWorkout(false);
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      const targetId = route.params?.workoutId || route.params?.workout?.id;
+      if (targetId) {
+        workoutsService.getWorkoutDetail(targetId)
+          .then(data => {
+            setCurrentWorkout(data);
+            setLoadingWorkout(false);
+          })
+          .catch(err => {
+            console.error(err);
+            showAlert("Error", "Failed to load workout details");
+            if (!currentWorkout) navigation.goBack();
+          });
+      }
+    }, [route.params?.workoutId, route.params?.workout?.id])
+  );
 
   const toggleExpand = (index) => {
-    if (isEditMode) return;
     setExpandedExercises(prev => ({
       ...prev,
       [index]: !prev[index]
     }));
   };
-
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState('ALL');
-  const [allExercises, setAllExercises] = useState([]);
-  const [filteredExercises, setFilteredExercises] = useState([]);
-  const [loadingExercises, setLoadingExercises] = useState(false);
-
-  useEffect(() => {
-    if (isEditMode && allExercises.length === 0) {
-      fetchExercises();
-    }
-  }, [isEditMode]);
-
-  const fetchExercises = async () => {
-    try {
-      setLoadingExercises(true);
-      const data = await exercisesService.getAllExercises();
-      setAllExercises(data);
-      setFilteredExercises(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoadingExercises(false);
-    }
-  };
-
-  useEffect(() => {
-    let result = allExercises;
-    if (activeFilter !== 'ALL') {
-      result = result.filter(ex => exerciseMatchesFilter(ex, activeFilter));
-    }
-    if (search) {
-      result = result.filter(ex =>
-        ex.name.toUpperCase().includes(search.toUpperCase()) ||
-        ex.muscle_group?.toUpperCase().includes(search.toUpperCase())
-      );
-    }
-    setFilteredExercises(result);
-  }, [search, activeFilter, allExercises]);
 
   const handleStartSession = async () => {
     try {
@@ -135,60 +83,6 @@ const WorkoutDetail = ({ route, navigation }) => {
       showAlert('Error', 'Failed to start workout session');
     } finally {
       setStarting(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (saving) return;
-    setSaving(true);
-
-    try {
-      Keyboard.dismiss();
-
-      const missingTargets = editedExercises.find(ex => !ex.sets_target || !ex.reps_target);
-      if (missingTargets) {
-        showAlert('Missing data', `Please provide sets and reps for ${missingTargets.name}.`);
-        setSaving(false);
-        return;
-      }
-
-      const exercisesList = editedExercises.map(ex => ({
-        ...ex,
-        sets_target: parseInt(ex.sets_target, 10),
-        reps_target: parseInt(ex.reps_target, 10),
-      }));
-      const newName = editedWorkoutName.trim() || (currentWorkout?.name || 'UNNAMED');
-
-      // Dirty check: exit silently if nothing has changed
-      const nameUnchanged = newName === (currentWorkout?.name || '');
-      const exercisesUnchanged =
-        exercisesList.length === (currentWorkout?.exercises || []).length &&
-        exercisesList.every((ex, i) => {
-          const orig = (currentWorkout?.exercises || [])[i];
-          return orig &&
-            (ex.exercise_id || ex.id) === (orig.exercise_id || orig.id) &&
-            ex.sets_target === (parseInt(orig.sets_target, 10) || orig.sets_target) &&
-            ex.reps_target === (parseInt(orig.reps_target, 10) || orig.reps_target);
-        });
-
-      if (nameUnchanged && exercisesUnchanged) {
-        setIsEditMode(false);
-        setSaving(false);
-        return;
-      }
-
-      if (!currentWorkout?.id) throw new Error('Missing workout ID');
-
-      await workoutsService.updateWorkout(currentWorkout.id, newName, currentWorkout.description, exercisesList);
-
-      setCurrentWorkout(prev => ({ ...prev, name: newName, exercises: exercisesList }));
-      setIsEditMode(false);
-      showAlert('Success', 'Routine updated successfully.');
-    } catch (err) {
-      console.error('Workout saving error:', err);
-      showAlert('Error', 'Failed to update workout. Please try again.');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -222,40 +116,15 @@ const WorkoutDetail = ({ route, navigation }) => {
     );
   }
 
-  const moveExercise = (index, direction) => {
-    if (direction === -1 && index === 0) return;
-    if (direction === 1 && index === editedExercises.length - 1) return;
-    setEditedExercises(prev => {
-      const newItems = [...prev];
-      const temp = newItems[index];
-      newItems[index] = newItems[index + direction];
-      newItems[index + direction] = temp;
-      return newItems;
-    });
-  };
-
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <RepsHeader
         onLeftPress={() => navigation.goBack()}
-        centerContent={isEditMode ? (
-          <TouchableOpacity onPress={() => {
-            setIsEditMode(false);
-            setEditedExercises(currentWorkout?.exercises ? JSON.parse(JSON.stringify(currentWorkout.exercises)) : []);
-            setEditedWorkoutName(currentWorkout?.name || '');
-          }}>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 12, letterSpacing: 1 }}>CANCEL</Text>
-          </TouchableOpacity>
-        ) : null}
-        title={isEditMode ? "" : "REPS"}
+        title="REPS"
         rightActions={[{
-          text: saving ? 'SAVING...' : (isEditMode ? 'Done' : 'Edit'),
-          color: isEditMode ? accentColor : colors.text,
-          onPress: () => {
-            if (saving) return;
-            if (isEditMode) handleSave();
-            else setIsEditMode(true);
-          }
+          text: 'Edit',
+          color: colors.text,
+          onPress: () => navigation.navigate('CreateWorkout', { editWorkout: currentWorkout })
         }]}
       />
 
@@ -267,41 +136,28 @@ const WorkoutDetail = ({ route, navigation }) => {
       >
         {/* ── Header ── */}
         <View style={styles.content}>
-          {isEditMode ? (
-            <>
-              <TextInput
-                style={[styles.workoutTitle, { color: colors.text, padding: 0, margin: 0, borderBottomWidth: 1, borderBottomColor: colors.border }]}
-                value={editedWorkoutName}
-                onChangeText={setEditedWorkoutName}
-                placeholder="ROUTINE NAME"
-                placeholderTextColor={colors.secondaryText}
-                autoCapitalize="characters"
-              />
-            </>
-          ) : (
-            <Text style={[styles.workoutTitle, { color: colors.text }]}>{currentWorkout.name.toUpperCase()}</Text>
-          )}
+          <Text style={[styles.workoutTitle, { color: colors.text }]}>{currentWorkout.name.toUpperCase()}</Text>
 
           <View style={styles.statsRow}>
             <View style={[styles.statItem, { borderLeftColor: colors.text }]}>
               <Text style={[styles.statLabel, { color: colors.secondaryText }]}>MOVEMENTS</Text>
-              <Text style={[styles.statValue, { color: colors.text }]}>{editedExercises.length}</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>{currentWorkout.exercises?.length || 0}</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={[styles.statLabel, { color: colors.secondaryText }]}>ESTIMATED TIME</Text>
-              <Text style={[styles.statValue, { color: colors.text }]}>~ {editedExercises.length * 12} MIN</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>~ {(currentWorkout.exercises?.length || 0) * 12} MIN</Text>
             </View>
           </View>
         </View>
 
         {/* ── Exercise list ── */}
         <View style={{ paddingHorizontal: 24 }}>
-        {editedExercises.map((item, index) => {
+        {(currentWorkout.exercises || []).map((item, index) => {
           const isExpanded = expandedExercises[index];
           return (
             <AppTile
               key={item.exercise_id || item.id ? `ex-${item.exercise_id || item.id}` : `idx-${index}`}
-              onPress={isEditMode ? undefined : () => toggleExpand(index)}
+              onPress={() => toggleExpand(index)}
               style={{ padding: 20, marginBottom: 12 }}
             >
               <View style={styles.exerciseHeader}>
@@ -309,65 +165,14 @@ const WorkoutDetail = ({ route, navigation }) => {
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.exerciseName, { color: colors.text }]}>{item.name?.toUpperCase()}</Text>
                     <Text style={[styles.exerciseDetails, { color: colors.secondaryText }]}>
-                      {isEditMode ? `MOVEMENT ARCHIVE ${index + 1}` : `${item.sets_target || 3} SETS × ${item.reps_target || 10} REPS`}
+                      {item.sets_target || 3} SETS × {item.reps_target || 10} REPS
                     </Text>
                   </View>
                 </View>
-                {isEditMode ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-                    <View style={{ flexDirection: 'row', gap: 10 }}>
-                      <TouchableOpacity onPress={() => moveExercise(index, -1)} disabled={index === 0}>
-                        <Ionicons name="arrow-up-circle-outline" size={24} color={index === 0 ? colors.border : colors.text} />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => moveExercise(index, 1)} disabled={index === editedExercises.length - 1}>
-                        <Ionicons name="arrow-down-circle-outline" size={24} color={index === editedExercises.length - 1 ? colors.border : colors.text} />
-                      </TouchableOpacity>
-                    </View>
-                    <TouchableOpacity onPress={() => setEditedExercises(prev => prev.filter((_, i) => i !== index))}>
-                      <Ionicons name="remove-circle-outline" size={24} color="#FF3B30" />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <AntDesign name={isExpanded ? 'down' : 'right'} size={16} color={colors.text} />
-                )}
+                <AntDesign name={isExpanded ? 'down' : 'right'} size={16} color={colors.text} />
               </View>
 
-              {isEditMode ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 15, gap: 15, marginTop: 15 }}>
-                  <TextInput
-                    style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
-                    placeholder="SETS"
-                    placeholderTextColor={colors.secondaryText}
-                    keyboardType="numeric"
-                    value={String(item.sets_target || '')}
-                    onChangeText={(val) => {
-                      const numValue = val.replace(/[^0-9]/g, '');
-                      setEditedExercises(prev => {
-                        const copy = [...prev];
-                        copy[index] = { ...copy[index], sets_target: numValue };
-                        return copy;
-                      });
-                    }}
-                  />
-                  <Text style={{ color: colors.secondaryText, fontSize: 16 }}>×</Text>
-                  <TextInput
-                    style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
-                    placeholder="REPS"
-                    placeholderTextColor={colors.secondaryText}
-                    keyboardType="numeric"
-                    value={String(item.reps_target || '')}
-                    onChangeText={(val) => {
-                      const numValue = val.replace(/[^0-9]/g, '');
-                      setEditedExercises(prev => {
-                        const copy = [...prev];
-                        copy[index] = { ...copy[index], reps_target: numValue };
-                        return copy;
-                      });
-                    }}
-                  />
-                </View>
-              ) : (
-                isExpanded && (() => {
+              {isExpanded && (() => {
                   const bodyData = [
                     ...(item.primary_muscles || []).map(m => ({ slug: mapMuscleSlug(m), intensity: 2 })),
                     ...(item.secondary_muscles || []).map(m => ({ slug: mapMuscleSlug(m), intensity: 1 })),
@@ -389,8 +194,7 @@ const WorkoutDetail = ({ route, navigation }) => {
                       </View>
                     </View>
                   );
-                })()
-              )}
+                })()}
             </AppTile>
           );
         })}
@@ -398,76 +202,22 @@ const WorkoutDetail = ({ route, navigation }) => {
 
         {/* ── Footer ── */}
         <View style={styles.content}>
-          {isEditMode ? (
-            <View>
-              <TouchableOpacity style={[styles.logBtn, { backgroundColor: '#FF3B30' }]} onPress={handleDeleteWorkout}>
-                <Text style={[styles.logBtnText, { color: '#FFF' }]}>DELETE ROUTINE</Text>
-                <MaterialCommunityIcons name="delete" size={24} color="#FFF" />
-              </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.logBtn, { backgroundColor: accentColor, marginBottom: 16 }]}
+            onPress={handleStartSession}
+            disabled={starting}
+          >
+            <Text style={styles.logBtnText}>{starting ? 'INITIALIZING...' : 'START SESSION'}</Text>
+            <Ionicons name="play" size={20} color="#000" />
+          </TouchableOpacity>
 
-              <View style={{ marginTop: 60, borderTopWidth: 1, borderColor: colors.border, paddingTop: 40 }}>
-                <Text style={[styles.statLabel, { color: colors.secondaryText, marginBottom: 20 }]}>APPEND MOVEMENTS</Text>
-
-                <View style={[styles.searchBox, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Feather name="search" size={16} color={colors.secondaryText} style={{ marginRight: 8 }} />
-                    <TextInput
-                      placeholder="FIND EXERCISE..."
-                      placeholderTextColor={colors.secondaryText}
-                      style={{ flex: 1, color: colors.text, fontSize: 14, fontWeight: '600' }}
-                      value={search}
-                      onChangeText={setSearch}
-                    />
-                  </View>
-                </View>
-
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 20, marginBottom: 30 }}>
-                  {EXERCISE_FILTERS.map((f) => (
-                    <TouchableOpacity
-                      key={f}
-                      onPress={() => setActiveFilter(f)}
-                      style={{ paddingHorizontal: 15, paddingVertical: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: activeFilter === f ? (isDarkMode ? '#FFF' : '#000') : 'transparent' }}
-                    >
-                      <Text style={{ fontSize: 9, fontWeight: '800', color: activeFilter === f ? (isDarkMode ? '#000' : '#FFF') : colors.text }}>{f}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <View>
-                  {loadingExercises ? (
-                    <ActivityIndicator color={colors.text} style={{ padding: 40 }} />
-                  ) : (
-                    filteredExercises.map((ex) => {
-                      const alreadyAdded = editedExercises.find(s => (s.exercise_id || s.id) === ex.id);
-                      if (alreadyAdded) return null;
-                      return (
-                        <AppTile
-                          key={ex.id}
-                          style={{ flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 12 }}
-                          onPress={() => setEditedExercises(prev => [...prev, { ...ex, sets_target: '', reps_target: '' }])}
-                        >
-                          <Text style={{ fontSize: 18, fontWeight: '800', marginRight: 20, color: colors.secondaryText }}>+</Text>
-                          <View>
-                            <Text style={{ fontSize: 16, fontWeight: '900', color: colors.text }}>{ex.name.toUpperCase()}</Text>
-                            <Text style={{ fontSize: 8, fontWeight: '600', color: colors.secondaryText, marginTop: 2 }}>{ex.muscle_group?.toUpperCase() || 'GENERAL'}</Text>
-                          </View>
-                        </AppTile>
-                      );
-                    })
-                  )}
-                </View>
-              </View>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[styles.logBtn, { backgroundColor: accentColor }]}
-              onPress={handleStartSession}
-              disabled={starting}
-            >
-              <Text style={styles.logBtnText}>{starting ? 'INITIALIZING...' : 'START SESSION'}</Text>
-              <Ionicons name="play" size={20} color="#000" />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity 
+            style={[styles.logBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border }]} 
+            onPress={handleDeleteWorkout}
+          >
+            <Text style={[styles.logBtnText, { color: '#FF3B30', fontSize: 14 }]}>DELETE ROUTINE</Text>
+            <MaterialCommunityIcons name="delete" size={20} color="#FF3B30" />
+          </TouchableOpacity>
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>

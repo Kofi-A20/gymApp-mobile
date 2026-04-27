@@ -50,6 +50,9 @@ const ActiveWorkout = ({ navigation }) => {
   // Allow navigation.goBack() through after user confirms DISCARD
   const discardConfirmed = useRef(false);
 
+  // Refs for reps inputs to allow auto-focus
+  const repsInputsRefs = useRef({});
+
   // Session timer tick
   useEffect(() => {
     const interval = setInterval(() => {
@@ -147,14 +150,34 @@ const ActiveWorkout = ({ navigation }) => {
 
   const handleTick = (exId, setIdx) => {
     const key = `${exId}-${setIdx}`;
-    if (completedSets[key]) return;
+    
+    // Allow unticking an already completed set
+    if (completedSets[key]) {
+      setCompletedSets(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      return;
+    }
+
+    const exercise = activeSession?.exercises?.find(ex => (ex.id || ex.exercise_id) === exId);
+    const targetReps = exercise?.reps_target ? String(exercise.reps_target) : '';
 
     const weight = setInputs[key]?.weight;
-    const reps = setInputs[key]?.reps;
+    const reps = setInputs[key]?.reps !== undefined ? setInputs[key].reps : targetReps;
 
     if (!weight || !reps) {
       showAlert('MISSING DATA', 'Enter weight and reps before completing a set.');
       return;
+    }
+
+    // Make sure we save the auto-filled reps if they weren't explicitly typed
+    if (setInputs[key]?.reps === undefined) {
+      setSetInputs(prev => ({
+        ...prev,
+        [key]: { ...prev[key], reps },
+      }));
     }
 
     setCompletedSets(prev => ({ ...prev, [key]: true }));
@@ -214,7 +237,11 @@ const ActiveWorkout = ({ navigation }) => {
         }
       });
       await finishWorkout(setsToCommit, notes);
-      navigation.navigate('Tabs', { screen: 'Log' });
+      discardConfirmed.current = true;
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Tabs', params: { screen: 'Log' } }],
+      });
     } catch (e) {
       showAlert('ERROR', 'Failed to save session. Please try again.');
     }
@@ -365,10 +392,15 @@ const ActiveWorkout = ({ navigation }) => {
                         value={setInputs[key]?.weight || ''}
                         onChangeText={v => handleInputChange(exId, setIdx, 'weight', v)}
                         editable={!done && !locked}
+                        blurOnSubmit={false}
+                        onSubmitEditing={() => {
+                          repsInputsRefs.current[key]?.focus();
+                        }}
                       />
 
                       {/* Reps input */}
                       <TextInput
+                        ref={el => (repsInputsRefs.current[key] = el)}
                         style={[
                           styles.setInput,
                           {
@@ -379,9 +411,12 @@ const ActiveWorkout = ({ navigation }) => {
                         keyboardType="numeric"
                         placeholder="—"
                         placeholderTextColor={colors.secondaryText}
-                        value={setInputs[key]?.reps || ''}
+                        value={setInputs[key]?.reps !== undefined ? setInputs[key].reps : (exercise.reps_target ? String(exercise.reps_target) : '')}
                         onChangeText={v => handleInputChange(exId, setIdx, 'reps', v)}
                         editable={!done && !locked}
+                        onSubmitEditing={() => {
+                          handleTick(exId, setIdx);
+                        }}
                       />
 
                       {/* Done checkbox */}

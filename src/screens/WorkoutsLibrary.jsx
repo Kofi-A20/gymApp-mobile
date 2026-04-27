@@ -24,36 +24,9 @@ const WorkoutsLibrary = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [pendingShare, setPendingShare] = useState(null);
-  const [shareModalVisible, setShareModalVisible] = useState(false);
-  const [shareToken, setShareToken] = useState(null);
-  const [shareUrl, setShareUrl] = useState(null);
-
-  const [dropdownConfig, setDropdownConfig] = useState({
-    visible: false,
-    item: null,
-    position: { top: 0, right: 0 }
-  });
 
   const { width: windowWidth } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
-
-  const openDropdown = (item, measureRef) => {
-    measureRef.current.measure((x, y, width, height, pageX, pageY) => {
-      setDropdownConfig({
-        visible: true,
-        item,
-        position: {
-          top: pageY + height + 5,
-          right: windowWidth - pageX - width
-        }
-      });
-    });
-  };
-
-  const closeDropdown = () => {
-    setDropdownConfig(prev => ({ ...prev, visible: false }));
-  };
 
   useFocusEffect(
     useCallback(() => {
@@ -87,36 +60,6 @@ const WorkoutsLibrary = ({ navigation }) => {
     } else {
       setSelectedIds(workouts.map(w => w.id));
     }
-  };
-
-  // Share effect — fires after modal is fully gone from the tree
-  React.useEffect(() => {
-    if (!pendingShare) return;
-    if (dropdownConfig.visible) return;
-
-    const doShare = async () => {
-      const workout = pendingShare;
-      setPendingShare(null);
-      try {
-        console.log('[SHARE] Generating link for workout:', workout.id);
-        const result = await sharingService.createShareLink(workout.id);
-        console.log('[SHARE] Link generated:', result.url);
-
-        setShareToken(result.token);
-        setShareUrl(result.url);
-        setShareModalVisible(true);
-      } catch (error) {
-        console.error('[SHARE] Error:', error);
-        showAlert('ERROR', 'Failed to generate share link.');
-      }
-    };
-
-    setTimeout(doShare, 400);
-  }, [pendingShare, dropdownConfig.visible]);
-
-  const handleShareWorkout = (workout) => {
-    setPendingShare(workout);
-    closeDropdown();
   };
 
   const handleDeleteSelected = () => {
@@ -175,17 +118,11 @@ const WorkoutsLibrary = ({ navigation }) => {
         <View style={styles.cardHeader}>
           <Text style={[styles.workoutName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            {isSelectionMode ? (
+            {isSelectionMode && (
               <MaterialCommunityIcons
                 name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"}
                 size={24}
                 color={isSelected ? accentColor : colors.secondaryText} />
-            ) : (
-              <View ref={menuRef} collapsable={false}>
-                <TouchableOpacity onPress={() => openDropdown(item, menuRef)}>
-                  <MaterialCommunityIcons name="dots-horizontal" size={24} color={colors.secondaryText} />
-                </TouchableOpacity>
-              </View>
             )}
           </View>
         </View>
@@ -204,100 +141,6 @@ const WorkoutsLibrary = ({ navigation }) => {
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-
-      {/* Share Protocol Modal */}
-      <Modal visible={shareModalVisible} transparent animationType="fade" onRequestClose={() => setShareModalVisible(false)}>
-        <View style={styles.shareModalContainer}>
-          <View style={[styles.shareModalContent, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
-            <TouchableOpacity style={styles.closeShareBtn} onPress={() => setShareModalVisible(false)}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-
-            <Text style={[styles.shareModalTitle, { color: colors.text }]}>SHARE PROTOCOL</Text>
-            <Text style={[styles.shareModalSubtitle, { color: colors.secondaryText }]}>Scan the QR code or share the 6-character code with friends.</Text>
-
-            <View style={{ alignItems: 'center', marginBottom: 24 }}>
-              <View style={{ padding: 16, backgroundColor: '#FFF', borderRadius: 8 }}>
-                <QRCode value={shareToken || 'NONE'} size={160} backgroundColor="#FFF" color="#000" />
-              </View>
-            </View>
-
-            <View style={[styles.tokenContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Text style={[styles.tokenText, { color: colors.text }]}>{shareToken}</Text>
-            </View>
-
-            <TouchableOpacity style={[styles.logBtn, { backgroundColor: accentColor, marginTop: 30, padding: 15 }]} onPress={async () => {
-              await Clipboard.setStringAsync(shareToken || '');
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-              showAlert('COPIED!', 'The share code has been copied to your clipboard.');
-            }}>
-              <MaterialCommunityIcons name="content-copy" size={20} color="#000" style={{ marginRight: 10 }} />
-              <Text style={[styles.logBtnText, { color: '#000', fontSize: 14 }]}>COPY CODE</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={{ marginTop: 20, alignItems: 'center' }} onPress={() => {
-              Share.share({
-                message: shareToken,
-              });
-            }}>
-              <Text style={{ color: colors.secondaryText, fontSize: 12, fontWeight: '700', letterSpacing: 1 }}>SHARE CODE</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Dropdown Menu Modal */}
-      <Modal visible={dropdownConfig.visible} transparent animationType="fade" onRequestClose={closeDropdown}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={closeDropdown}>
-          <View style={[
-            styles.dropdownMenu,
-            {
-              top: dropdownConfig.position.top,
-              right: dropdownConfig.position.right,
-              backgroundColor: colors.background,
-              borderColor: colors.border
-            }
-          ]}>
-            <TouchableOpacity style={[styles.dropdownItem, { borderBottomColor: colors.border }]} onPress={() => {
-              setIsSelectionMode(true);
-              setSelectedIds([dropdownConfig.item.id]);
-              closeDropdown();
-            }}>
-              <MaterialCommunityIcons name="check-circle-outline" size={16} color={colors.text} style={{ marginRight: 10 }} />
-              <Text style={[styles.dropdownItemText, { color: colors.text }]}>SELECT</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.dropdownItem, { borderBottomColor: colors.border }]} onPress={() => handleShareWorkout(dropdownConfig.item)}>
-              <MaterialCommunityIcons name="share-variant" size={16} color={colors.text} style={{ marginRight: 10 }} />
-              <Text style={[styles.dropdownItemText, { color: colors.text }]}>SHARE</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.dropdownItem, { borderBottomWidth: 0 }]} onPress={() => {
-              closeDropdown();
-              showAlert(
-                "Delete Workout",
-                `Are you sure you want to delete this routine?`,
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Delete", style: "destructive", onPress: async () => {
-                      try {
-                        await workoutsService.bulkDeleteWorkouts([dropdownConfig.item.id]);
-                        setWorkouts(prev => prev.filter(w => w.id !== dropdownConfig.item.id));
-                      } catch (err) {
-                        showAlert("Error", "Failed to delete workout");
-                      }
-                    }
-                  }
-                ]
-              );
-            }}>
-              <MaterialCommunityIcons name="delete-outline" size={16} color="#FF3B30" style={{ marginRight: 10 }} />
-              <Text style={[styles.dropdownItemText, { color: '#FF3B30' }]}>DELETE</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
 
       <RepsHeader
         rightActions={[{ icon: 'plus-circle', library: 'AntDesign', onPress: () => navigation.navigate('CreateWorkout') }]}
@@ -321,23 +164,23 @@ const WorkoutsLibrary = ({ navigation }) => {
             <AppTile style={{ flex: 1 }}>
               <TouchableOpacity
                 style={{ padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
-                onPress={() => navigation.navigate('ImportWorkout')}
+                onPress={() => navigation.navigate('ImportWorkout', { workouts })}
               >
-                <MaterialCommunityIcons name="download" size={20} color={colors.text} style={{ marginRight: 10 }} />
-                <Text style={{ color: colors.text, fontWeight: '800', letterSpacing: 1 }}>IMPORT WORKOUT</Text>
+                <MaterialCommunityIcons name="swap-vertical" size={20} color={colors.text} style={{ marginRight: 10 }} />
+                <Text style={{ color: colors.text, fontWeight: '800', letterSpacing: 1 }}>SHARE / IMPORT</Text>
               </TouchableOpacity>
             </AppTile>
           </View>
 
-          <View style={[styles.listContainer, { maxHeight: 500, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+          <View style={[styles.listContainer, { borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 20 }]}>
             {loading ? (
               <ActivityIndicator color={colors.text} style={{ marginTop: 50 }} />
             ) : workouts.length > 0 ? (
-              <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
+              <View>
                 {workouts.map((workout) => (
                   <WorkoutCard key={workout.id} item={workout} />
                 ))}
-              </ScrollView>
+              </View>
             ) : (
               <View style={{ alignItems: 'center', marginTop: 80, marginBottom: 40 }}>
                 <Text style={{ color: colors.secondaryText, fontSize: 14 }}>No workout routines yet.</Text>
@@ -345,7 +188,7 @@ const WorkoutsLibrary = ({ navigation }) => {
             )}
           </View>
 
-          <View style={{ height: 40 }} />
+          <View style={{ height: 120 }} />
         </View>
       </ScrollView>
     </View>
