@@ -1,32 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, FlatList, Alert, Platform, ActionSheetIOS } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../context/ThemeContext';
 import RepsHeader from '../components/RepsHeader';
 import { splitsService } from '../services/splitsService';
 import { workoutsService } from '../services/workoutsService';
 import { MaterialCommunityIcons, AntDesign, Ionicons } from '@expo/vector-icons';
+import AppTile from '../components/AppTile';
 
-const DAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const FULL_DAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
 
 const EditSplitScreen = ({ navigation, route }) => {
-  const { colors, isDarkMode } = useTheme();
+  const { colors, isDarkMode, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   
   const existingSplit = route.params?.split;
   const [splitName, setSplitName] = useState(existingSplit?.name || '');
   const [assignments, setAssignments] = useState(existingSplit?.assignments || []);
+  const [recurrenceWeeks, setRecurrenceWeeks] = useState(existingSplit?.recurrenceWeeks || 1);
   
   const [workouts, setWorkouts] = useState([]);
+  const [activeDayIndex, setActiveDayIndex] = useState(0); // Show Sunday by default
   const [showRoutineModal, setShowRoutineModal] = useState(false);
-  const [showTimeModal, setShowTimeModal] = useState(false);
   
-  // State for active assignment being edited
-  const [activeDayIndex, setActiveDayIndex] = useState(null); // 0-6
-  const [selectedRoutine, setSelectedRoutine] = useState(null);
-  const [planHour, setPlanHour] = useState(8);
-  const [planMinute, setPlanMinute] = useState(0);
-  const [recurrenceWeeks, setRecurrenceWeeks] = useState(1);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [editingAssignmentId, setEditingAssignmentId] = useState(null);
 
   useEffect(() => {
     loadWorkouts();
@@ -56,6 +56,7 @@ const EditSplitScreen = ({ navigation, route }) => {
       name: splitName.trim(),
       isActive: existingSplit ? existingSplit.isActive : false,
       assignments,
+      recurrenceWeeks,
     };
 
     try {
@@ -66,40 +67,106 @@ const EditSplitScreen = ({ navigation, route }) => {
     }
   };
 
+  const handleRecurrenceSelect = () => {
+    const options = ['Weekly', 'Every Two Weeks', 'Every Three Weeks', 'Every Month', 'Cancel'];
+    const values = [1, 2, 3, 4];
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex: 4, title: 'Select Split Recurrence' },
+        (index) => {
+          if (index < 4) setRecurrenceWeeks(values[index]);
+        }
+      );
+    } else {
+      Alert.alert('Select Recurrence', '', [
+        ...values.map((v, i) => ({ text: options[i], onPress: () => setRecurrenceWeeks(v) })),
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
+
+  const getRecurrenceLabel = () => {
+    switch (recurrenceWeeks) {
+      case 1: return 'Weekly';
+      case 2: return 'Every Two Weeks';
+      case 3: return 'Every Three Weeks';
+      case 4: return 'Every Month';
+      default: return 'Weekly';
+    }
+  };
+
+  const handleAddRoutine = () => {
+    if (workouts.length === 0) {
+      Alert.alert('No Routines', 'You need to create a workout routine first.');
+      return;
+    }
+    
+    if (Platform.OS === 'ios') {
+      const options = workouts.map(w => w.name);
+      options.push('Cancel');
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex: options.length - 1,
+          title: 'Select Routine',
+        },
+        (buttonIndex) => {
+          if (buttonIndex !== options.length - 1) {
+            addAssignment(workouts[buttonIndex]);
+          }
+        }
+      );
+    } else {
+      setShowRoutineModal(true);
+    }
+  };
+
+  const addAssignment = (workout) => {
+    const newAssignment = {
+      id: Date.now().toString() + Math.random().toString(36).substring(7),
+      routineId: workout.id,
+      routineName: workout.name,
+      routineColor: workout.color || null,
+      dayOfWeek: activeDayIndex,
+      hour: 8,
+      minute: 0,
+    };
+    setAssignments(prev => [...prev, newAssignment]);
+    setShowRoutineModal(false);
+  };
+
   const removeAssignment = (assignmentId) => {
     setAssignments(prev => prev.filter(a => a.id !== assignmentId));
   };
 
-  const openAddRoutine = (dayOfWeek) => {
-    setActiveDayIndex(dayOfWeek);
-    setShowRoutineModal(true);
+  const openTimePicker = (assignmentId) => {
+    setEditingAssignmentId(assignmentId);
+    setShowTimePicker(true);
   };
 
-  const handleSelectRoutine = (workout) => {
-    setSelectedRoutine(workout);
-    setShowRoutineModal(false);
-    setRecurrenceWeeks(1);
-    setShowTimeModal(true);
+  const onTimeChange = (event, selectedDate) => {
+    if (Platform.OS === 'android') setShowTimePicker(false);
+    
+    if (event.type === 'set' && selectedDate && editingAssignmentId) {
+      setAssignments(prev => prev.map(a => {
+        if (a.id === editingAssignmentId) {
+          return { ...a, hour: selectedDate.getHours(), minute: selectedDate.getMinutes() };
+        }
+        return a;
+      }));
+    }
   };
 
-  const handleConfirmTime = () => {
-    if (!selectedRoutine) return;
+  const activeDayAssignments = assignments.filter(a => a.dayOfWeek === activeDayIndex);
 
-    const newAssignment = {
-      id: Date.now().toString() + Math.random().toString(36).substring(7),
-      routineId: selectedRoutine.id,
-      routineName: selectedRoutine.name,
-      routineColor: selectedRoutine.color || null,
-      dayOfWeek: activeDayIndex,
-      hour: planHour,
-      minute: planMinute,
-      recurrenceWeeks: recurrenceWeeks,
-    };
-
-    setAssignments(prev => [...prev, newAssignment]);
-    setShowTimeModal(false);
-    setSelectedRoutine(null);
-    setActiveDayIndex(null);
+  const getEditingDate = () => {
+    if (!editingAssignmentId) return new Date();
+    const assignment = assignments.find(a => a.id === editingAssignmentId);
+    if (!assignment) return new Date();
+    const d = new Date();
+    d.setHours(assignment.hour, assignment.minute, 0, 0);
+    return d;
   };
 
   return (
@@ -108,61 +175,112 @@ const EditSplitScreen = ({ navigation, route }) => {
         title={existingSplit ? "EDIT SPLIT" : "NEW SPLIT"}
         leftIcon="arrow-back"
         onLeftPress={() => navigation.goBack()}
-        rightActions={[{ text: 'SAVE', onPress: handleSave, color: colors.accent }]}
+        rightActions={[{ text: 'SAVE', onPress: handleSave, color: accentColor }]}
       />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.inputGroup}>
           <Text style={[styles.label, { color: colors.secondaryText }]}>SPLIT NAME</Text>
-          <TextInput
-            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: isDarkMode ? '#111' : '#FFF' }]}
-            value={splitName}
-            onChangeText={setSplitName}
-            placeholder="e.g. Push Pull Legs"
-            placeholderTextColor={colors.secondaryText}
-          />
+          <AppTile style={styles.inputWrapper}>
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              value={splitName}
+              onChangeText={setSplitName}
+              placeholder="e.g. Push Pull Legs"
+              placeholderTextColor={colors.secondaryText}
+            />
+          </AppTile>
         </View>
 
         <View style={styles.scheduleHeader}>
-          <Text style={[styles.label, { color: colors.secondaryText, marginBottom: 0 }]}>WEEKLY SCHEDULE</Text>
+          <Text style={[styles.label, { color: colors.secondaryText }]}>WEEKLY SCHEDULE</Text>
+          <TouchableOpacity
+            onPress={handleRecurrenceSelect}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              alignSelf: 'flex-start',
+              backgroundColor: colors.secondaryBackground,
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: 20,
+              marginBottom: 20,
+            }}
+          >
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{getRecurrenceLabel()}</Text>
+            <MaterialCommunityIcons name="chevron-down" size={16} color={colors.text} style={{ marginLeft: 6 }} />
+          </TouchableOpacity>
         </View>
 
-        {DAYS.map((dayName, dayIndex) => {
-          const dayAssignments = assignments.filter(a => a.dayOfWeek === dayIndex);
-          return (
-            <View key={dayIndex} style={[styles.dayBlock, { borderColor: colors.border }]}>
-              <View style={styles.dayHeader}>
-                <Text style={[styles.dayName, { color: colors.text }]}>{dayName}</Text>
-                <TouchableOpacity onPress={() => openAddRoutine(dayIndex)} style={styles.addIconBtn}>
-                  <AntDesign name="plus" size={20} color={colors.accent} />
-                </TouchableOpacity>
-              </View>
+        {/* Horizontal Day Selector */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daySelectorScroll}>
+          {DAYS.map((dayName, index) => {
+            const isSelected = activeDayIndex === index;
+            const hasAssignments = assignments.some(a => a.dayOfWeek === index);
+            return (
+              <TouchableOpacity
+                key={index}
+                onPress={() => setActiveDayIndex(index)}
+                style={[
+                  styles.dayPill,
+                  { borderColor: colors.border },
+                  isSelected && { backgroundColor: accentColor, borderColor: accentColor }
+                ]}
+              >
+                <Text style={[
+                  styles.dayPillText,
+                  { color: isSelected ? '#000' : colors.text }
+                ]}>{dayName}</Text>
+                {hasAssignments && (
+                  <View style={[styles.indicatorDot, { backgroundColor: isSelected ? '#000' : accentColor }]} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
-              {dayAssignments.length === 0 ? (
-                <Text style={[styles.emptyDayText, { color: colors.secondaryText }]}>Rest day</Text>
-              ) : (
-                dayAssignments.map(a => (
-                  <View key={a.id} style={[styles.assignmentCard, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F5F5F5', borderLeftColor: a.routineColor || colors.accent }]}>
-                    <View style={styles.assignmentInfo}>
-                      <Text style={[styles.aRoutine, { color: colors.text }]}>{a.routineName}</Text>
-                      <Text style={[styles.aTime, { color: colors.secondaryText }]}>
-                        {a.hour.toString().padStart(2, '0')}:{a.minute.toString().padStart(2, '0')} • {(a.recurrenceWeeks || 1) === 1 ? 'Every Week' : `Every ${a.recurrenceWeeks} Weeks`}
-                      </Text>
-                    </View>
-                    <TouchableOpacity onPress={() => removeAssignment(a.id)} style={{ padding: 5 }}>
-                      <MaterialCommunityIcons name="close" size={20} color={colors.secondaryText} />
-                    </TouchableOpacity>
-                  </View>
-                ))
-              )}
+        <View style={styles.dayContent}>
+          <Text style={[styles.selectedDayTitle, { color: colors.text }]}>{FULL_DAYS[activeDayIndex]} SCHEDULE</Text>
+
+          {activeDayAssignments.length === 0 ? (
+            <View style={[styles.emptyDayBox, { borderColor: colors.border, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }]}>
+              <Ionicons name="moon" size={32} color={colors.border} style={{ marginBottom: 10 }} />
+              <Text style={[styles.emptyDayText, { color: colors.secondaryText }]}>REST DAY</Text>
+              <Text style={[styles.emptyDaySubtext, { color: colors.secondaryText }]}>No routines assigned for this day.</Text>
             </View>
-          );
-        })}
+          ) : (
+            activeDayAssignments.map(a => (
+              <AppTile key={a.id} style={styles.assignmentCard}>
+                <View style={styles.assignmentHeader}>
+                  <View style={[styles.colorIndicator, { backgroundColor: a.routineColor || accentColor }]} />
+                  <Text style={[styles.aRoutine, { color: colors.text }]} numberOfLines={1}>{a.routineName}</Text>
+                  <TouchableOpacity onPress={() => removeAssignment(a.id)} style={{ padding: 5 }}>
+                    <MaterialCommunityIcons name="close-circle-outline" size={24} color={colors.secondaryText} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.assignmentControls}>
+                  <TouchableOpacity style={styles.controlBox} onPress={() => openTimePicker(a.id)}>
+                    <MaterialCommunityIcons name="clock-outline" size={16} color={colors.secondaryText} style={{ marginRight: 6 }} />
+                    <Text style={[styles.controlText, { color: colors.text }]}>
+                      {a.hour.toString().padStart(2, '0')}:{a.minute.toString().padStart(2, '0')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </AppTile>
+            ))
+          )}
+
+          <TouchableOpacity style={[styles.addRoutineBtn, { borderColor: colors.border }]} onPress={handleAddRoutine}>
+            <AntDesign name="plus" size={16} color={colors.text} style={{ marginRight: 8 }} />
+            <Text style={[styles.addRoutineText, { color: colors.text }]}>ADD ROUTINE TO {DAYS[activeDayIndex]}</Text>
+          </TouchableOpacity>
+        </View>
         
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Routine Selection Modal */}
+      {/* Routine Selection Modal (Android only) */}
       <Modal visible={showRoutineModal} transparent animationType="slide" onRequestClose={() => setShowRoutineModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
@@ -178,10 +296,10 @@ const EditSplitScreen = ({ navigation, route }) => {
               renderItem={({ item }) => (
                 <TouchableOpacity 
                   style={[styles.pickerItem, { borderBottomColor: colors.border }]}
-                  onPress={() => handleSelectRoutine(item)}
+                  onPress={() => addAssignment(item)}
                 >
                   <Text style={[styles.pickerName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
-                  <AntDesign name="right" size={16} color={colors.accent} />
+                  <AntDesign name="right" size={16} color={accentColor} />
                 </TouchableOpacity>
               )}
             />
@@ -189,69 +307,45 @@ const EditSplitScreen = ({ navigation, route }) => {
         </View>
       </Modal>
 
-      {/* Time Selection Modal */}
-      <Modal visible={showTimeModal} transparent animationType="fade" onRequestClose={() => setShowTimeModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.planBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text, textAlign: 'center', marginBottom: 20 }]}>SET TIME</Text>
-            
-            <Text style={[styles.label, { color: colors.secondaryText, marginTop: 10, textAlign: 'center' }]}>TIME (24H)</Text>
-            <View style={styles.timePickerRow}>
-              {/* Hour */}
-              <View style={styles.timeCol}>
-                <TouchableOpacity onPress={() => setPlanHour(h => (h + 1) % 24)}><Ionicons name="chevron-up" size={24} color={colors.text} /></TouchableOpacity>
-                <Text style={[styles.timeVal, { color: colors.text }]}>{planHour.toString().padStart(2, '0')}</Text>
-                <TouchableOpacity onPress={() => setPlanHour(h => (h - 1 + 24) % 24)}><Ionicons name="chevron-down" size={24} color={colors.text} /></TouchableOpacity>
-              </View>
-
-              <Text style={[styles.timeVal, { color: colors.text, marginHorizontal: 15 }]}>:</Text>
-
-              {/* Minute */}
-              <View style={styles.timeCol}>
-                <TouchableOpacity onPress={() => setPlanMinute(m => (m + 5) % 60)}><Ionicons name="chevron-up" size={24} color={colors.text} /></TouchableOpacity>
-                <Text style={[styles.timeVal, { color: colors.text }]}>{planMinute.toString().padStart(2, '0')}</Text>
-                <TouchableOpacity onPress={() => setPlanMinute(m => (m - 5 + 60) % 60)}><Ionicons name="chevron-down" size={24} color={colors.text} /></TouchableOpacity>
-              </View>
-            </View>
-
-            <Text style={[styles.label, { color: colors.secondaryText, marginTop: 10, textAlign: 'center' }]}>REPEATS</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginVertical: 10 }}>
-              {[1, 2, 3, 4].map(w => (
-                <TouchableOpacity 
-                  key={w} 
-                  onPress={() => setRecurrenceWeeks(w)}
-                  style={[
-                    styles.recurrenceChip,
-                    { borderColor: colors.border },
-                    recurrenceWeeks === w && { backgroundColor: colors.accent, borderColor: colors.accent }
-                  ]}
-                >
-                  <Text style={[styles.recurrenceText, { color: recurrenceWeeks === w ? '#000' : colors.text }]}>
-                    {w === 1 ? 'Every Week' : `Every ${w} Weeks`}
-                  </Text>
+      {/* iOS Native Time Picker Modal Wrapper */}
+      {Platform.OS === 'ios' && showTimePicker && (
+        <Modal transparent animationType="fade" visible={showTimePicker}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.iosPickerBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <View style={styles.iosPickerHeader}>
+                <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                  <Text style={{ color: accentColor, fontWeight: '800' }}>DONE</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <View style={styles.pActionRow}>
-              <TouchableOpacity style={[styles.pBtn, { flex: 1 }]} onPress={() => setShowTimeModal(false)}>
-                <Text style={[styles.pBtnText, { color: colors.secondaryText }]}>CANCEL</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.pBtn, { flex: 2, backgroundColor: colors.accent }]} onPress={handleConfirmTime}>
-                <Text style={[styles.pBtnText, { color: '#000' }]}>CONFIRM</Text>
-              </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={getEditingDate()}
+                mode="time"
+                display="spinner"
+                themeVariant={isDarkMode ? 'dark' : 'light'}
+                onChange={onTimeChange}
+                style={{ width: '100%' }}
+              />
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
 
+      {/* Android Native Time Picker */}
+      {Platform.OS === 'android' && showTimePicker && (
+        <DateTimePicker
+          value={getEditingDate()}
+          mode="time"
+          display="default"
+          onChange={onTimeChange}
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 24 },
+  content: { paddingHorizontal: 24, paddingTop: 20 },
   inputGroup: { marginBottom: 30 },
   label: {
     fontSize: 10,
@@ -259,62 +353,122 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 10,
   },
-  input: {
-    height: 56,
-    borderWidth: 1,
-    borderRadius: 8,
+  inputWrapper: {
     paddingHorizontal: 16,
-    fontSize: 16,
+    height: 60,
+    justifyContent: 'center',
+  },
+  input: {
+    fontSize: 18,
     fontWeight: '700',
   },
   scheduleHeader: {
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-    paddingBottom: 10,
+    marginBottom: 15,
   },
-  dayBlock: {
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    paddingBottom: 15,
+  daySelectorScroll: {
+    paddingBottom: 20,
+    gap: 8,
   },
-  dayHeader: {
+  dayPill: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 24,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginRight: 8,
   },
-  dayName: {
-    fontSize: 14,
+  dayPillText: {
+    fontSize: 12,
     fontWeight: '900',
-    letterSpacing: 1,
   },
-  addIconBtn: {
-    padding: 5,
+  indicatorDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginLeft: 8,
+  },
+  dayContent: {
+    marginTop: 10,
+  },
+  selectedDayTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    marginBottom: 20,
+  },
+  emptyDayBox: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   emptyDayText: {
-    fontSize: 12,
-    fontStyle: 'italic',
-  },
-  assignmentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 4,
-    borderLeftWidth: 4,
-    marginBottom: 8,
-  },
-  assignmentInfo: {
-    flex: 1,
-  },
-  aRoutine: {
     fontSize: 14,
     fontWeight: '900',
-    marginBottom: 4,
+    letterSpacing: 2,
+    marginBottom: 5,
   },
-  aTime: {
+  emptyDaySubtext: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  assignmentCard: {
+    padding: 16,
+    marginBottom: 16,
+  },
+  assignmentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  colorIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 10,
+  },
+  aRoutine: {
+    fontSize: 18,
+    fontWeight: '900',
+    flex: 1,
+  },
+  assignmentControls: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(150,150,150,0.1)',
+    paddingTop: 16,
+    gap: 16,
+  },
+  controlBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(150,150,150,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  controlText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  addRoutineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  addRoutineText: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   modalOverlay: {
     flex: 1,
@@ -328,6 +482,7 @@ const styles = StyleSheet.create({
     maxHeight: '70%',
     borderWidth: 1,
     padding: 20,
+    borderRadius: 16,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -351,56 +506,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
   },
-  planBox: {
+  iosPickerBox: {
     width: '100%',
+    borderRadius: 16,
+    paddingBottom: 20,
     borderWidth: 1,
-    padding: 24,
   },
-  timePickerRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  timeCol: {
-    alignItems: 'center',
-    gap: 5,
-  },
-  timeVal: {
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  pActionRow: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-    marginTop: 20,
-    paddingTop: 10,
-    gap: 10,
-  },
-  pBtn: {
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 4,
-  },
-  pBtnText: {
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  recurrenceChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderWidth: 1,
-    marginRight: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 4,
-  },
-  recurrenceText: {
-    fontSize: 12,
-    fontWeight: '900',
+  iosPickerHeader: {
+    alignItems: 'flex-end',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(150,150,150,0.2)',
   },
 });
 

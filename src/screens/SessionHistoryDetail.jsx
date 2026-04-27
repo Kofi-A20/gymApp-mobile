@@ -10,7 +10,7 @@ import { useRepsAlert } from '../context/AlertContext';
 
 const SessionHistoryDetail = ({ route, navigation }) => {
   const { session } = route.params; // use only for id, title, date while sets load
-  const { colors, isDarkMode, units } = useTheme();
+  const { colors, isDarkMode, units, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { showAlert } = useRepsAlert();
 
@@ -110,7 +110,7 @@ const SessionHistoryDetail = ({ route, navigation }) => {
   if (fetching) {
     return (
       <View style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
-        <ActivityIndicator color={colors.accent} size="large" />
+        <ActivityIndicator color={accentColor} size="large" />
       </View>
     );
   }
@@ -162,20 +162,20 @@ const SessionHistoryDetail = ({ route, navigation }) => {
                           {isEditing ? (
                              <>
                                <TextInput
-                                  style={[styles.smallInput, { color: colors.accent, borderColor: colors.border }]}
+                                  style={[styles.smallInput, { color: accentColor, borderColor: colors.border }]}
                                   keyboardType="numeric"
                                   value={editWeight}
                                   onChangeText={setEditWeight}
                                   autoFocus
                                />
                                <TextInput
-                                  style={[styles.smallInput, { color: colors.accent, borderColor: colors.border }]}
+                                  style={[styles.smallInput, { color: accentColor, borderColor: colors.border }]}
                                   keyboardType="numeric"
                                   value={editReps}
                                   onChangeText={setEditReps}
                                />
                                <TouchableOpacity 
-                                  style={[styles.actionBtn, { backgroundColor: colors.accent }]}
+                                  style={[styles.actionBtn, { backgroundColor: accentColor }]}
                                   onPress={() => saveSetEdit(set.id)}
                                   disabled={loading}
                                >

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, ActivityIndicator, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useWorkout } from '../context/WorkoutContext';
 import { useProfile } from '../context/ProfileContext';
 import { MaterialCommunityIcons, AntDesign, Ionicons, Feather } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
+import AppTile from '../components/AppTile';
 import Body from 'react-native-body-highlighter';
 import { workoutsService } from '../services/workoutsService';
 import { exercisesService } from '../services/exercisesService';
@@ -36,7 +37,7 @@ const getViewsToShow = (data) => {
 };
 
 const WorkoutDetail = ({ route, navigation }) => {
-  const { colors, isDarkMode } = useTheme();
+  const { colors, isDarkMode, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useProfile();
   const gender = profile?.gender === 'female' ? 'female' : 'male';
@@ -216,7 +217,7 @@ const WorkoutDetail = ({ route, navigation }) => {
   if (loadingWorkout) {
     return (
       <View style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <ActivityIndicator size="large" color={accentColor} />
       </View>
     );
   }
@@ -249,7 +250,7 @@ const WorkoutDetail = ({ route, navigation }) => {
         title={isEditMode ? "" : "REPS"}
         rightActions={[{
           text: saving ? 'SAVING...' : (isEditMode ? 'Done' : 'Edit'),
-          color: isEditMode ? colors.accent : colors.text,
+          color: isEditMode ? accentColor : colors.text,
           onPress: () => {
             if (saving) return;
             if (isEditMode) handleSave();
@@ -291,39 +292,17 @@ const WorkoutDetail = ({ route, navigation }) => {
               <Text style={[styles.statValue, { color: colors.text }]}>~ {editedExercises.length * 12} MIN</Text>
             </View>
           </View>
-
-          <View style={styles.focusContainer}>
-            <View style={styles.imageWrapper}>
-              <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=600' }}
-                style={styles.focusImage}
-              />
-              <View style={styles.focusOverlay}>
-                <Text style={styles.focusOverlayText}>PRIMARY FOCUS</Text>
-              </View>
-            </View>
-            <View style={styles.focusTextWrapper}>
-              <Text style={[styles.focusDescription, { color: colors.text }]}>
-                {currentWorkout.description || 'A high-intensity protocol designed for structural hypertrophy and architectural strength. Maintain rigid core tension throughout all movements.'}
-              </Text>
-            </View>
-          </View>
-          <View style={{ height: 20 }} />
         </View>
 
         {/* ── Exercise list ── */}
+        <View style={{ paddingHorizontal: 24 }}>
         {editedExercises.map((item, index) => {
           const isExpanded = expandedExercises[index];
           return (
-            <TouchableOpacity
+            <AppTile
               key={item.exercise_id || item.id ? `ex-${item.exercise_id || item.id}` : `idx-${index}`}
-              disabled={isEditMode}
-              onPress={() => toggleExpand(index)}
-              style={[
-                styles.exerciseCard,
-                { paddingHorizontal: 24, paddingVertical: 10, marginBottom: 20 },
-                isEditMode && { backgroundColor: isDarkMode ? '#1A1A1A' : '#FAFAFA', borderRadius: 8, borderWidth: 1, borderColor: colors.border }
-              ]}
+              onPress={isEditMode ? undefined : () => toggleExpand(index)}
+              style={{ padding: 20, marginBottom: 12 }}
             >
               <View style={styles.exerciseHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -354,7 +333,7 @@ const WorkoutDetail = ({ route, navigation }) => {
               </View>
 
               {isEditMode ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 15, gap: 15, marginTop: 15, backgroundColor: colors.secondaryBackground }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 15, gap: 15, marginTop: 15 }}>
                   <TextInput
                     style={[styles.targetInput, { color: colors.text, borderColor: colors.border }]}
                     placeholder="SETS"
@@ -395,7 +374,7 @@ const WorkoutDetail = ({ route, navigation }) => {
                   ].filter(d => d.slug);
                   const { showFront, showBack } = getViewsToShow(bodyData);
                   return (
-                    <View style={{ paddingVertical: 10, backgroundColor: colors.secondaryBackground }}>
+                    <View style={{ paddingTop: 20 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', paddingHorizontal: 10 }}>
                         {showFront && (
                           <View style={{ alignItems: 'center', overflow: 'hidden' }}>
@@ -412,9 +391,10 @@ const WorkoutDetail = ({ route, navigation }) => {
                   );
                 })()
               )}
-            </TouchableOpacity>
+            </AppTile>
           );
         })}
+        </View>
 
         {/* ── Footer ── */}
         <View style={styles.content}>
@@ -461,9 +441,9 @@ const WorkoutDetail = ({ route, navigation }) => {
                       const alreadyAdded = editedExercises.find(s => (s.exercise_id || s.id) === ex.id);
                       if (alreadyAdded) return null;
                       return (
-                        <TouchableOpacity
+                        <AppTile
                           key={ex.id}
-                          style={{ flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background }}
+                          style={{ flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 12 }}
                           onPress={() => setEditedExercises(prev => [...prev, { ...ex, sets_target: '', reps_target: '' }])}
                         >
                           <Text style={{ fontSize: 18, fontWeight: '800', marginRight: 20, color: colors.secondaryText }}>+</Text>
@@ -471,7 +451,7 @@ const WorkoutDetail = ({ route, navigation }) => {
                             <Text style={{ fontSize: 16, fontWeight: '900', color: colors.text }}>{ex.name.toUpperCase()}</Text>
                             <Text style={{ fontSize: 8, fontWeight: '600', color: colors.secondaryText, marginTop: 2 }}>{ex.muscle_group?.toUpperCase() || 'GENERAL'}</Text>
                           </View>
-                        </TouchableOpacity>
+                        </AppTile>
                       );
                     })
                   )}
@@ -480,12 +460,12 @@ const WorkoutDetail = ({ route, navigation }) => {
             </View>
           ) : (
             <TouchableOpacity
-              style={[styles.logBtn, { backgroundColor: colors.accent }]}
+              style={[styles.logBtn, { backgroundColor: accentColor }]}
               onPress={handleStartSession}
               disabled={starting}
             >
               <Text style={styles.logBtnText}>{starting ? 'INITIALIZING...' : 'START SESSION'}</Text>
-              <AntDesign name="play" size={20} color="#000" />
+              <Ionicons name="play" size={20} color="#000" />
             </TouchableOpacity>
           )}
           <View style={{ height: 100 }} />
@@ -641,8 +621,8 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 4,
-    marginTop: 40,
+    borderRadius: 24,
+    marginTop: 16,
   },
   logBtnText: {
     color: '#000',

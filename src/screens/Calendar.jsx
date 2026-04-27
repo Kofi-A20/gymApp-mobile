@@ -33,7 +33,7 @@ const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const PLANNED_STORAGE_KEY = '@reps_plannedSessions';
 
 const Calendar = ({ navigation }) => {
-  const { colors, isDarkMode } = useTheme();
+  const { colors, isDarkMode, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [sessionsByDate, setSessionsByDate] = useState({});
@@ -558,7 +558,7 @@ const Calendar = ({ navigation }) => {
   };
 
   const Indicator = ({ type, color }) => {
-    const indicatorColor = color || colors.accent;
+    const indicatorColor = color || accentColor;
     // TODO: For completed sessions, color coding requires fetching the workout color from session data
     if (type === 'completed') {
       return (
@@ -625,7 +625,7 @@ const Calendar = ({ navigation }) => {
           </View>
 
           <View style={styles.summaryRow}>
-            <View style={[styles.statBox, { borderLeftColor: colors.accent }]}>
+            <View style={[styles.statBox, { borderLeftColor: accentColor }]}>
               <Text style={[styles.statLabel, { color: colors.secondaryText }]}>COMPLETIONS</Text>
               <Text style={[styles.statValue, { color: colors.text }]}>{monthStats.count}</Text>
             </View>
@@ -637,7 +637,7 @@ const Calendar = ({ navigation }) => {
             </View>
             <View style={styles.gridOuter}>
               {getMonthDays().map((item, idx) => {
-                const plannedColor = item.plannedColors && item.plannedColors.length > 0 ? (item.plannedColors[0] || colors.accent) : null;
+                const plannedColor = item.plannedColors && item.plannedColors.length > 0 ? (item.plannedColors[0] || accentColor) : null;
 
                 return (
                   <TouchableOpacity
@@ -645,7 +645,7 @@ const Calendar = ({ navigation }) => {
                     style={[
                       styles.dayCell,
                       { borderColor: colors.border },
-                      item.isToday && { backgroundColor: isDarkMode ? '#1A1D0E' : '#F7FFD6', borderColor: colors.accent, borderWidth: 1 },
+                      item.isToday && { backgroundColor: isDarkMode ? '#1A1D0E' : '#F7FFD6', borderColor: accentColor, borderWidth: 1 },
                       !item.isCurrentMonth && { opacity: 0.1 },
                       (idx % 7 === 6) && { borderRightWidth: 0 },
                       (idx >= 35) && { borderBottomWidth: 0 },
@@ -654,7 +654,7 @@ const Calendar = ({ navigation }) => {
                     onPress={() => item.isCurrentMonth && handleDayPress(item.dateStr)}
                     disabled={!item.isCurrentMonth}
                   >
-                    <Text style={[styles.dayNum, { color: item.isToday ? colors.accent : (item.isCurrentMonth ? colors.text : colors.secondaryText) }]}>
+                    <Text style={[styles.dayNum, { color: item.isToday ? accentColor : (item.isCurrentMonth ? colors.text : colors.secondaryText) }]}>
                       {item.day.toString().padStart(2, '0')}
                     </Text>
                     <View style={styles.indicatorContainer}>
@@ -684,7 +684,7 @@ const Calendar = ({ navigation }) => {
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.upcomingStrip}>
                 {plannedSessions.filter(s => s.dateTime > new Date().toISOString()).slice(0, 10).map(item => {
-                  const itemColor = item.workoutColor || colors.accent;
+                  const itemColor = item.workoutColor || accentColor;
                   return (
                     <AppTile
                       key={item.id}
@@ -759,7 +759,7 @@ const Calendar = ({ navigation }) => {
                     setShowPlanModal(true);
                   }}>
                   <Text style={[styles.pickerName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
-                  <AntDesign name="plus" size={16} color={colors.accent} />
+                  <AntDesign name="plus" size={16} color={accentColor} />
                 </TouchableOpacity>
               )}
             />
@@ -775,7 +775,7 @@ const Calendar = ({ navigation }) => {
 
             <Text style={[styles.pLabel, { color: colors.secondaryText }]}>DAY</Text>
             {schedulingDate ? (
-              <View style={[styles.dateChip, { backgroundColor: colors.accent, borderColor: colors.accent, alignSelf: 'flex-start', marginBottom: 10 }]}>
+              <View style={[styles.dateChip, { backgroundColor: accentColor, borderColor: accentColor, alignSelf: 'flex-start', marginBottom: 10 }]}>
                 <Text style={[styles.dateChipText, { color: '#000' }]}>
                   {new Date(schedulingDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()}
                 </Text>
@@ -789,7 +789,7 @@ const Calendar = ({ navigation }) => {
                     style={[
                       styles.dateChip,
                       { borderColor: colors.border },
-                      planDateIndex === index && { backgroundColor: colors.accent, borderColor: colors.accent }
+                      planDateIndex === index && { backgroundColor: accentColor, borderColor: accentColor }
                     ]}
                   >
                     <Text style={[styles.dateChipText, { color: planDateIndex === index ? '#000' : colors.text }]}>{d.label}</Text>
@@ -814,7 +814,7 @@ const Calendar = ({ navigation }) => {
                 <Text style={[styles.pBtnText, { color: colors.secondaryText }]}>CANCEL</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.pBtn, { flex: 2, backgroundColor: colors.accent }]}
+                style={[styles.pBtn, { flex: 2, backgroundColor: accentColor }]}
                 onPress={handleConfirmPlan}
               >
                 <Text style={[styles.pBtnText, { color: '#000' }]}>CONFIRM</Text>
@@ -856,7 +856,7 @@ const Calendar = ({ navigation }) => {
                 <Text style={[styles.pBtnText, { color: colors.secondaryText }]}>CANCEL</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.pBtn, { flex: 2, backgroundColor: colors.accent }]}
+                style={[styles.pBtn, { flex: 2, backgroundColor: accentColor }]}
                 onPress={handleConfirmEditTime}
               >
                 <Text style={[styles.pBtnText, { color: '#000' }]}>CONFIRM</Text>
@@ -902,7 +902,7 @@ const Calendar = ({ navigation }) => {
                     <Text style={[styles.subLabel, { color: colors.secondaryText, marginBottom: 0 }]}>SCHEDULED</Text>
                     {selectedDayData.planned.length >= 2 && (
                       <TouchableOpacity onPress={handleSheetSelectAll}>
-                        <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>
+                        <Text style={{ color: accentColor, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>
                           {sheetSelectionMode ? 'CANCEL' : 'SELECT ALL'}
                         </Text>
                       </TouchableOpacity>
@@ -920,11 +920,11 @@ const Calendar = ({ navigation }) => {
                           <MaterialCommunityIcons
                             name={sheetSelectedSessions.includes(item.id) ? "checkbox-marked" : "checkbox-blank-outline"}
                             size={20}
-                            color={sheetSelectedSessions.includes(item.id) ? colors.accent : colors.border}
+                            color={sheetSelectedSessions.includes(item.id) ? accentColor : colors.border}
                             style={{ marginRight: 10 }}
                           />
                         )}
-                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.workoutColor || colors.accent, marginRight: 10 }} />
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.workoutColor || accentColor, marginRight: 10 }} />
                         <View>
                           <Text style={[styles.pickerName, { color: colors.text }]}>{item.workoutName.toUpperCase()}</Text>
                           <Text style={{ color: colors.secondaryText, fontSize: 10, fontWeight: '700', marginTop: 2 }}>
@@ -982,7 +982,7 @@ const Calendar = ({ navigation }) => {
 
             {selectedDayData?.isFutureOrToday && !sheetSelectionMode && (
               <TouchableOpacity
-                style={[styles.addBtn, { backgroundColor: colors.accent, justifyContent: 'center', marginTop: 20, paddingVertical: 15 }]}
+                style={[styles.addBtn, { backgroundColor: accentColor, justifyContent: 'center', marginTop: 20, paddingVertical: 15 }]}
                 onPress={() => {
                   const targetDate = selectedDayData.dateStr;
                   setSelectedDayData(null);

@@ -51,13 +51,13 @@ const calcAge = (dob) => {
   return age;
 };
 
-const InputField = ({ label, value, onChangeText, keyboardType, editable = true, colors, onPress }) => (
+const InputField = ({ label, value, onChangeText, keyboardType, editable = true, colors, accentColor, onPress }) => (
   <TouchableOpacity activeOpacity={onPress ? 0.7 : 1} onPress={onPress}>
     <View style={styles.inputContainer}>
       <Text style={[styles.fieldLabel, { color: colors.secondaryText }]}>{label.toUpperCase()}</Text>
       <AppTile style={styles.textInputWrapper}>
         <TextInput
-          style={[styles.textInput, { color: editable ? colors.text : (onPress ? colors.accent : colors.secondaryText) }]}
+          style={[styles.textInput, { color: editable ? colors.text : (onPress ? accentColor : colors.secondaryText) }]}
           value={value}
           onChangeText={onChangeText}
           keyboardType={keyboardType}
@@ -433,10 +433,10 @@ const Profile = ({ navigation }) => {
             <Text style={[styles.sectionSubTitle, { color: colors.secondaryText }]}>SECURITY & CORE</Text>
           </View>
 
-          <InputField label="First Name" value={firstName} onChangeText={markDirty(setFirstName)} colors={colors} />
-          <InputField label="Last Name" value={lastName} onChangeText={markDirty(setLastName)} colors={colors} />
-          <InputField label="Email Address" value={profile?.email || ''} editable={false} colors={colors} />
-          <InputField label="Mobile Phone" value={phone} onChangeText={markDirty(setPhone)} keyboardType="phone-pad" colors={colors} />
+          <InputField label="First Name" value={firstName} onChangeText={markDirty(setFirstName)} colors={colors} accentColor={accentColor} />
+          <InputField label="Last Name" value={lastName} onChangeText={markDirty(setLastName)} colors={colors} accentColor={accentColor} />
+          <InputField label="Email Address" value={profile?.email || ''} editable={false} colors={colors} accentColor={accentColor} />
+          <InputField label="Mobile Phone" value={phone} onChangeText={markDirty(setPhone)} keyboardType="phone-pad" colors={colors} accentColor={accentColor} />
 
           {/* Physical Metrics */}
           <View style={[styles.sectionTitleRow, { marginTop: 60 }]}>
@@ -482,7 +482,7 @@ const Profile = ({ navigation }) => {
                   <View style={styles.modalHeader}>
                     <Text style={[styles.modalTitle, { color: colors.text }]}>DATE OF BIRTH</Text>
                     <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                      <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 14 }}>DONE</Text>
+                      <Text style={{ color: accentColor, fontWeight: '900', fontSize: 14 }}>DONE</Text>
                     </TouchableOpacity>
                   </View>
                   <DateTimePicker
@@ -503,7 +503,7 @@ const Profile = ({ navigation }) => {
 
           {/* Height */}
           <View onLayout={handleLayout('height')}>
-            <InputField label="Height (cm)" value={height} onChangeText={markDirty(setHeight)} keyboardType="numeric" colors={colors} />
+            <InputField label="Height (cm)" value={height} onChangeText={markDirty(setHeight)} keyboardType="numeric" colors={colors} accentColor={accentColor} />
           </View>
 
           {/* Weight */}
@@ -514,6 +514,7 @@ const Profile = ({ navigation }) => {
               onChangeText={markDirty(setWeight)} 
               keyboardType="numeric" 
               colors={colors} 
+              accentColor={accentColor}
               editable={!hasLogs}
               onPress={hasLogs ? () => navigation.navigate('Calories', { scrollToLog: true }) : null}
             />
@@ -521,7 +522,7 @@ const Profile = ({ navigation }) => {
 
           {/* Goal Weight */}
           <View onLayout={handleLayout('goal_weight')}>
-            <InputField label={`Goal Weight (${units})`} value={goalWeight} onChangeText={markDirty(setGoalWeight)} keyboardType="numeric" colors={colors} />
+            <InputField label={`Goal Weight (${units})`} value={goalWeight} onChangeText={markDirty(setGoalWeight)} keyboardType="numeric" colors={colors} accentColor={accentColor} />
           </View>
 
           {/* Gender Selector */}
@@ -544,7 +545,7 @@ const Profile = ({ navigation }) => {
 
           {/* Save Button */}
           <AppTile
-            style={[styles.saveBtn, { backgroundColor: isDirty ? colors.accent : colors.secondaryBackground }]}
+            style={[styles.saveBtn, { backgroundColor: isDirty ? accentColor : colors.secondaryBackground }]}
             onPress={handleSave}
             disabled={saving}
           >
@@ -599,7 +600,7 @@ const styles = StyleSheet.create({
   bioGrid: { gap: 12 },
   bioGridRow: { flexDirection: 'row', gap: 12, marginBottom: 0 },
   bioTile: {
-    flex: 1, aspectRatio: 0.85, padding: 20,
+    flex: 1, aspectRatio: 1, padding: 20,
     justifyContent: 'center',
   },
   bioLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginBottom: 25 },

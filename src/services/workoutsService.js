@@ -92,7 +92,7 @@ export const workoutsService = {
 
   /**
    * Create a new workout template with its exercises.
-   * Matches signature used in AddWorkout.jsx: (name, description, exercises)
+   * Matches signature used in CreateWorkout.jsx: (name, description, exercises)
    */
   async createWorkout(name, description, exercises, color = null) {
     try {

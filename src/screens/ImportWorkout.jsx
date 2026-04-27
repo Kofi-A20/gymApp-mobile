@@ -8,9 +8,10 @@ import * as Clipboard from 'expo-clipboard';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import RepsHeader from '../components/RepsHeader';
 import { useRepsAlert } from '../context/AlertContext';
+import AppTile from '../components/AppTile';
 
-const JoinWorkoutScreen = ({ navigation }) => {
-  const { colors, isDarkMode } = useTheme();
+const ImportWorkout = ({ navigation }) => {
+  const { colors, isDarkMode, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { showAlert } = useRepsAlert();
 
@@ -23,7 +24,6 @@ const JoinWorkoutScreen = ({ navigation }) => {
   const fetchWorkout = async (token) => {
     Keyboard.dismiss();
     const cleanToken = token.trim().toUpperCase();
-    console.log('[IMPORT] Attempting to fetch workout with token:', cleanToken);
     if (cleanToken.length !== 6) {
       showAlert('INVALID CODE', 'Please enter a 6-character code.');
       return;
@@ -31,12 +31,9 @@ const JoinWorkoutScreen = ({ navigation }) => {
 
     try {
       setLoading(true);
-      console.log('[IMPORT] Calling sharingService.getSharedWorkout...');
       const data = await sharingService.getSharedWorkout(cleanToken);
-      console.log('[IMPORT] Workout fetched successfully:', data?.name);
       navigation.navigate('SharedWorkoutPreview', { token: cleanToken, workout: data });
     } catch (error) {
-      console.error('[IMPORT] Error fetching workout:', error);
       showAlert('INVALID CODE', 'This code doesn\'t match any shared workout. Please check and try again.');
     } finally {
       setLoading(false);
@@ -69,7 +66,6 @@ const JoinWorkoutScreen = ({ navigation }) => {
   const handleBarCodeScanned = ({ data }) => {
     if (hasScanned) return;
     setHasScanned(true);
-    console.log('[IMPORT] QR code scanned:', data);
     const scannedToken = data.trim().toUpperCase().substring(0, 6);
     setScannerOpen(false);
     setCode(scannedToken);
@@ -94,10 +90,10 @@ const JoinWorkoutScreen = ({ navigation }) => {
           {/* Scanner overlay */}
           <View style={styles.scannerOverlay}>
             <View style={styles.scannerFrame}>
-              <View style={[styles.cornerTL, styles.corner, { borderColor: colors.accent }]} />
-              <View style={[styles.cornerTR, styles.corner, { borderColor: colors.accent }]} />
-              <View style={[styles.cornerBL, styles.corner, { borderColor: colors.accent }]} />
-              <View style={[styles.cornerBR, styles.corner, { borderColor: colors.accent }]} />
+              <View style={[styles.cornerTL, styles.corner, { borderColor: accentColor }]} />
+              <View style={[styles.cornerTR, styles.corner, { borderColor: accentColor }]} />
+              <View style={[styles.cornerBL, styles.corner, { borderColor: accentColor }]} />
+              <View style={[styles.cornerBR, styles.corner, { borderColor: accentColor }]} />
             </View>
             <Text style={styles.scannerHint}>ALIGN QR CODE WITHIN FRAME</Text>
           </View>
@@ -121,9 +117,9 @@ const JoinWorkoutScreen = ({ navigation }) => {
           Enter a 6-character code or scan a QR code to import a shared workout.
         </Text>
 
-        <View style={styles.inputContainer}>
+        <AppTile style={styles.inputContainer}>
           <TextInput
-            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.secondaryBackground }]}
+            style={[styles.input, { color: colors.text }]}
             value={code}
             onChangeText={(text) => setCode(text.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6))}
             placeholder="XXXXXX"
@@ -132,22 +128,28 @@ const JoinWorkoutScreen = ({ navigation }) => {
             maxLength={6}
             autoCorrect={false}
           />
-        </View>
+        </AppTile>
 
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 40 }}>
-          <TouchableOpacity style={[styles.actionBtn, { borderColor: colors.border, flex: 1 }]} onPress={handlePaste}>
-            <MaterialCommunityIcons name="content-paste" size={18} color={colors.text} style={{ marginRight: 8 }} />
+          <AppTile 
+            style={[styles.actionBtn, { flex: 1, backgroundColor: colors.secondaryBackground }]} 
+            onPress={handlePaste}
+          >
+            <MaterialCommunityIcons name="content-paste" size={20} color={colors.text} style={{ marginBottom: 8 }} />
             <Text style={[styles.actionBtnText, { color: colors.text }]}>PASTE</Text>
-          </TouchableOpacity>
+          </AppTile>
 
-          <TouchableOpacity style={[styles.actionBtn, { borderColor: colors.border, flex: 1 }]} onPress={handleOpenScanner}>
-            <MaterialCommunityIcons name="qrcode-scan" size={18} color={colors.text} style={{ marginRight: 8 }} />
+          <AppTile 
+            style={[styles.actionBtn, { flex: 1, backgroundColor: colors.secondaryBackground }]} 
+            onPress={handleOpenScanner}
+          >
+            <MaterialCommunityIcons name="qrcode-scan" size={20} color={colors.text} style={{ marginBottom: 8 }} />
             <Text style={[styles.actionBtnText, { color: colors.text }]}>SCAN QR</Text>
-          </TouchableOpacity>
+          </AppTile>
         </View>
 
-        <TouchableOpacity 
-          style={[styles.primaryBtn, { backgroundColor: code.length === 6 ? colors.accent : colors.secondaryBackground }]} 
+        <AppTile 
+          style={[styles.primaryBtn, { backgroundColor: code.length === 6 ? accentColor : colors.secondaryBackground, borderColor: code.length === 6 ? accentColor : colors.border }]} 
           disabled={code.length !== 6 || loading}
           onPress={() => fetchWorkout(code)}
         >
@@ -159,7 +161,7 @@ const JoinWorkoutScreen = ({ navigation }) => {
                <AntDesign name="right" size={16} color={code.length === 6 ? '#000' : colors.secondaryText} style={{ marginLeft: 10 }} />
              </View>
           )}
-        </TouchableOpacity>
+        </AppTile>
 
       </ScrollView>
     </KeyboardAvoidingView>
@@ -173,35 +175,36 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 24, paddingTop: 40 },
   mainTitle: { fontSize: 48, fontWeight: '900', letterSpacing: -1, lineHeight: 44, marginBottom: 20 },
   description: { fontSize: 14, fontWeight: '500', lineHeight: 22, marginBottom: 40 },
-  inputContainer: { marginBottom: 20 },
+  inputContainer: { 
+    marginBottom: 20, 
+    padding: 0, 
+    height: 100, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
   input: {
-    height: 80,
-    borderWidth: 1,
-    borderRadius: 4,
-    fontSize: 36,
+    width: '100%',
+    height: '100%',
+    fontSize: 48,
     fontWeight: '900',
-    letterSpacing: 8,
+    letterSpacing: 12,
     textAlign: 'center',
   },
   actionBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 15,
-    borderWidth: 1,
-    borderRadius: 4,
-    marginBottom: 0,
+    padding: 20,
+    borderRadius: 16,
   },
   actionBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.5,
   },
   primaryBtn: {
-    height: 60,
+    height: 64,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 4,
   },
   primaryBtnText: {
     fontSize: 14,
@@ -225,7 +228,6 @@ const styles = StyleSheet.create({
   corner: {
     position: 'absolute',
     width: 30,
-    height: 30,
     height: 30,
   },
   cornerTL: {
@@ -254,4 +256,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default JoinWorkoutScreen;
+export default ImportWorkout;

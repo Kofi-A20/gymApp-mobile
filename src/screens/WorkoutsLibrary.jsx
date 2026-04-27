@@ -16,7 +16,7 @@ import RepsHeader from '../components/RepsHeader';
 import AppTile from '../components/AppTile';
 
 const WorkoutsLibrary = ({ navigation }) => {
-  const { colors, isDarkMode, units } = useTheme();
+  const { colors, isDarkMode, units, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useProfile();
   const { showAlert } = useRepsAlert();
@@ -156,7 +156,7 @@ const WorkoutsLibrary = ({ navigation }) => {
       <AppTile
         style={[
           styles.card,
-          isSelected && { borderColor: colors.accent, borderWidth: 2 }
+          isSelected && { borderColor: accentColor, borderWidth: 2 }
         ]}
         onPress={() => {
           if (isSelectionMode) {
@@ -179,7 +179,7 @@ const WorkoutsLibrary = ({ navigation }) => {
               <MaterialCommunityIcons
                 name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"}
                 size={24}
-                color={isSelected ? colors.accent : colors.secondaryText} />
+                color={isSelected ? accentColor : colors.secondaryText} />
             ) : (
               <View ref={menuRef} collapsable={false}>
                 <TouchableOpacity onPress={() => openDropdown(item, menuRef)}>
@@ -226,7 +226,7 @@ const WorkoutsLibrary = ({ navigation }) => {
               <Text style={[styles.tokenText, { color: colors.text }]}>{shareToken}</Text>
             </View>
 
-            <TouchableOpacity style={[styles.logBtn, { backgroundColor: colors.accent, marginTop: 30, padding: 15 }]} onPress={async () => {
+            <TouchableOpacity style={[styles.logBtn, { backgroundColor: accentColor, marginTop: 30, padding: 15 }]} onPress={async () => {
               await Clipboard.setStringAsync(shareToken || '');
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
               showAlert('COPIED!', 'The share code has been copied to your clipboard.');
@@ -300,7 +300,7 @@ const WorkoutsLibrary = ({ navigation }) => {
       </Modal>
 
       <RepsHeader
-        rightActions={[{ icon: 'plus-circle', library: 'AntDesign', onPress: () => navigation.navigate('AddWorkout') }]}
+        rightActions={[{ icon: 'plus-circle', library: 'AntDesign', onPress: () => navigation.navigate('CreateWorkout') }]}
         selectionMode={isSelectionMode}
         selectedCount={selectedIds.length}
         onCancelSelection={() => { setIsSelectionMode(false); setSelectedIds([]); }}
@@ -321,7 +321,7 @@ const WorkoutsLibrary = ({ navigation }) => {
             <AppTile style={{ flex: 1 }}>
               <TouchableOpacity
                 style={{ padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
-                onPress={() => navigation.navigate('JoinWorkout')}
+                onPress={() => navigation.navigate('ImportWorkout')}
               >
                 <MaterialCommunityIcons name="download" size={20} color={colors.text} style={{ marginRight: 10 }} />
                 <Text style={{ color: colors.text, fontWeight: '800', letterSpacing: 1 }}>IMPORT WORKOUT</Text>

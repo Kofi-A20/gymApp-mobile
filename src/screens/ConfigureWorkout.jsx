@@ -25,7 +25,7 @@ const ConfigureWorkout = ({ route, navigation }) => {
   const { colors, isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
   const { showAlert } = useRepsAlert();
-  // Exercises arrive from AddWorkout with id, name, muscle_group, etc.
+  // Exercises arrive from CreateWorkout with id, name, muscle_group, etc.
   // We manage sets_target / reps_target locally.
   const [exercises, setExercises] = useState(
     (route.params?.selectedExercises || []).map((ex) => ({

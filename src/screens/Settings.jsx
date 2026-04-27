@@ -19,7 +19,7 @@ const EXPO_WEEKDAYS = {
 };
 
 const Settings = ({ navigation }) => {
-  const { isDarkMode, themeMode, setThemeMode, units, toggleUnits, notifications, toggleNotifications, colors, changeAccentColor } = useTheme();
+  const { isDarkMode, themeMode, setThemeMode, units, toggleUnits, notifications, toggleNotifications, colors, accentColor, changeAccentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const { showAlert } = useRepsAlert();
@@ -181,7 +181,7 @@ const Settings = ({ navigation }) => {
               onPress={() => setThemeMode('light')}
               style={[
                 styles.themeCard, 
-                { backgroundColor: '#FFFFFF', borderColor: themeMode === 'light' ? colors.accent : colors.border, borderWidth: themeMode === 'light' ? 2 : 1 }
+                { backgroundColor: '#FFFFFF', borderColor: themeMode === 'light' ? accentColor : colors.border, borderWidth: themeMode === 'light' ? 2 : 1 }
               ]}
             >
               <MaterialCommunityIcons name="white-balance-sunny" size={32} color="#000" />
@@ -193,7 +193,7 @@ const Settings = ({ navigation }) => {
               onPress={() => setThemeMode('dark')}
               style={[
                 styles.themeCard, 
-                { backgroundColor: '#121212', borderColor: themeMode === 'dark' ? colors.accent : colors.border, borderWidth: themeMode === 'dark' ? 2 : 1 }
+                { backgroundColor: '#121212', borderColor: themeMode === 'dark' ? accentColor : colors.border, borderWidth: themeMode === 'dark' ? 2 : 1 }
               ]}
             >
               <MaterialCommunityIcons name="moon-waning-crescent" size={32} color="#FFF" />
@@ -206,7 +206,7 @@ const Settings = ({ navigation }) => {
             onPress={() => setThemeMode('system')}
             style={[
               { padding: 20, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
-              { backgroundColor: colors.secondaryBackground, borderColor: themeMode === 'system' ? colors.accent : colors.border, borderWidth: themeMode === 'system' ? 2 : 1 }
+              { backgroundColor: colors.secondaryBackground, borderColor: themeMode === 'system' ? accentColor : colors.border, borderWidth: themeMode === 'system' ? 2 : 1 }
             ]}
           >
              <MaterialCommunityIcons name="theme-light-dark" size={28} color={colors.text} style={{marginRight: 15}}/>
@@ -230,7 +230,7 @@ const Settings = ({ navigation }) => {
                 <View 
                    style={{
                      width: 40, height: 40, borderRadius: 20,
-                     backgroundColor: colors.accent,
+                     backgroundColor: accentColor,
                      borderWidth: 2, borderColor: colors.border
                    }} 
                 />
@@ -248,7 +248,7 @@ const Settings = ({ navigation }) => {
                 <Switch 
                   value={notifications} 
                   onValueChange={toggleNotifications}
-                  trackColor={{ false: '#767577', true: colors.accent }}
+                  trackColor={{ false: '#767577', true: accentColor }}
                   thumbColor="#f4f3f4"
                 />
              </View>
@@ -277,7 +277,7 @@ const Settings = ({ navigation }) => {
                 <Switch 
                   value={weightReminderEnabled} 
                   onValueChange={updateEnabled}
-                  trackColor={{ false: '#767577', true: colors.accent }}
+                  trackColor={{ false: '#767577', true: accentColor }}
                   thumbColor="#f4f3f4"
                 />
              </View>
@@ -295,8 +295,8 @@ const Settings = ({ navigation }) => {
                       style={{
                         paddingVertical: 10,
                         paddingHorizontal: 8,
-                        borderColor: isSelected ? colors.accent : colors.border,
-                        backgroundColor: isSelected ? colors.accent : 'transparent',
+                        borderColor: isSelected ? accentColor : colors.border,
+                        backgroundColor: isSelected ? accentColor : 'transparent',
                         flex: 1,
                         alignItems: 'center',
                         marginHorizontal: 2
@@ -317,7 +317,7 @@ const Settings = ({ navigation }) => {
                 style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
               >
                 <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>TIME</Text>
-                <Text style={{ fontSize: 16, fontWeight: '900', color: colors.accent }}>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: accentColor }}>
                   {weightReminderHour.toString().padStart(2, '0')}:{weightReminderMinute.toString().padStart(2, '0')}
                 </Text>
               </AppTile>
@@ -328,7 +328,7 @@ const Settings = ({ navigation }) => {
           <ColorPickerModal
             visible={showColorModal}
             onClose={() => setShowColorModal(false)}
-            selectedColor={colors.accent}
+            selectedColor={accentColor}
             onSelectColor={changeAccentColor}
           />
 
@@ -350,7 +350,7 @@ const Settings = ({ navigation }) => {
                   <View style={styles.modalHeader}>
                     <Text style={[styles.modalTitle, { color: colors.text }]}>REMINDER TIME</Text>
                     <TouchableOpacity onPress={() => setShowTimePicker(false)}>
-                      <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 14 }}>DONE</Text>
+                      <Text style={{ color: accentColor, fontWeight: '900', fontSize: 14 }}>DONE</Text>
                     </TouchableOpacity>
                   </View>
                   <DateTimePicker

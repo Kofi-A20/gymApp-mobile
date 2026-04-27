@@ -4,7 +4,7 @@ import TabNavigator from './TabNavigator';
 import SharedWorkoutPreview from '../screens/SharedWorkoutPreview';
 import ActiveWorkout from '../screens/ActiveWorkout';
 import SessionHistoryDetail from '../screens/SessionHistoryDetail';
-import JoinWorkout from '../screens/JoinWorkoutScreen';
+import ImportWorkout from '../screens/ImportWorkout';
 import SplitsScreen from '../screens/SplitsScreen';
 import EditSplitScreen from '../screens/EditSplitScreen';
 
@@ -15,7 +15,7 @@ const MainNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
       <Stack.Screen name="Tabs" component={TabNavigator} />
       <Stack.Screen name="SharedWorkoutPreview" component={SharedWorkoutPreview} />
-      <Stack.Screen name="JoinWorkout" component={JoinWorkout} />
+      <Stack.Screen name="ImportWorkout" component={ImportWorkout} />
       <Stack.Screen name="SessionHistoryDetail" component={SessionHistoryDetail} />
       <Stack.Screen name="SplitsScreen" component={SplitsScreen} />
       <Stack.Screen name="EditSplitScreen" component={EditSplitScreen} />

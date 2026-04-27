@@ -11,7 +11,7 @@ import { BlurView } from 'expo-blur';
 import WorkoutsLibrary from '../screens/WorkoutsLibrary';
 import WorkoutDetail from '../screens/WorkoutDetail';
 import Calendar from '../screens/Calendar';
-import AddWorkout from '../screens/AddWorkout';
+import CreateWorkout from '../screens/CreateWorkout';
 import ConfigureWorkout from '../screens/ConfigureWorkout';
 import Stats from '../screens/Stats';
 import Calories from '../screens/Calories';
@@ -29,7 +29,7 @@ const WorkoutStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
     <Stack.Screen name="WorkoutsLibrary" component={WorkoutsLibrary} />
     <Stack.Screen name="WorkoutDetail" component={WorkoutDetail} />
-    <Stack.Screen name="AddWorkout" component={AddWorkout} options={{ animation: 'slide_from_right' }} />
+    <Stack.Screen name="CreateWorkout" component={CreateWorkout} options={{ animation: 'slide_from_right' }} />
     <Stack.Screen name="ConfigureWorkout" component={ConfigureWorkout} options={{ animation: 'slide_from_right' }} />
   </Stack.Navigator>
 );

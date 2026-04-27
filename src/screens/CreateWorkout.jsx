@@ -45,8 +45,8 @@ const ExerciseRow = React.memo(({ ex, index, isSelected, onPress, colors, isDark
   </TouchableOpacity>
 ));
 
-const AddWorkout = ({ navigation }) => {
-  const { colors, isDarkMode } = useTheme();
+const CreateWorkout = ({ navigation }) => {
+  const { colors, isDarkMode, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { showAlert } = useRepsAlert();
   const [workoutName, setWorkoutName] = useState('');
@@ -420,4 +420,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddWorkout;
+export default CreateWorkout;

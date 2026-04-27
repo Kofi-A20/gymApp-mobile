@@ -94,7 +94,7 @@ export const splitsService = {
       for (const assignment of dayAssignments) {
         // Check recurrence
         const weekIndex = Math.floor(i / 7);
-        const recurrence = assignment.recurrenceWeeks || 1;
+        const recurrence = split.recurrenceWeeks || 1;
         if (weekIndex % recurrence !== 0) {
           continue; // Skip this week
         }

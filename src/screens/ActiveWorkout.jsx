@@ -18,11 +18,12 @@ import { useWorkout } from '../context/WorkoutContext';
 import { useRepsAlert } from '../context/AlertContext';
 import { MaterialCommunityIcons, AntDesign, Ionicons } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
+import AppTile from '../components/AppTile';
 
 const UI_STORAGE_KEY = '@reps_activeWorkout_ui';
 
 const ActiveWorkout = ({ navigation }) => {
-  const { colors, isDarkMode, units } = useTheme();
+  const { colors, isDarkMode, units, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { activeSession, finishWorkout, cancelWorkout } = useWorkout();
   const { showAlert } = useRepsAlert();
@@ -255,7 +256,7 @@ const ActiveWorkout = ({ navigation }) => {
         centerContent={
           <View style={styles.headerCenter}>
             {restRemaining > 0 && (
-              <View style={[styles.restBadge, { backgroundColor: colors.accent }]}>
+              <View style={[styles.restBadge, { backgroundColor: accentColor }]}>
                 <MaterialCommunityIcons name="timer-sand" size={11} color="#000" />
                 <Text style={styles.restBadgeText}>{formatTime(restRemaining)}</Text>
               </View>
@@ -264,7 +265,7 @@ const ActiveWorkout = ({ navigation }) => {
             <Text style={[styles.timerText, { color: colors.text }]}>{formatTime(sessionTimer)}</Text>
           </View>
         }
-        rightActions={[{ text: 'FINISH', color: colors.accent, onPress: handleFinish }]}
+        rightActions={[{ text: 'FINISH', color: accentColor, onPress: handleFinish }]}
       />
 
       <KeyboardAvoidingView
@@ -304,11 +305,17 @@ const ActiveWorkout = ({ navigation }) => {
             );
 
             return (
-              <View key={exId} style={[styles.exerciseSection, { borderColor: colors.border }]}>
+              <AppTile
+                key={exId}
+                style={[
+                  styles.exerciseSection,
+                  { backgroundColor: 'transparent', borderColor: colors.border }
+                ]}
+              >
                 {/* Exercise name row */}
                 <View style={styles.exerciseNameRow}>
                   {allDone && (
-                    <MaterialCommunityIcons name="check-circle" size={16} color={colors.accent} style={{ marginRight: 8 }} />
+                    <MaterialCommunityIcons name="check-circle" size={16} color={accentColor} style={{ marginRight: 8 }} />
                   )}
                   <Text style={[styles.exerciseName, { color: colors.text }]}>
                     {exercise.name?.toUpperCase()}
@@ -339,7 +346,7 @@ const ActiveWorkout = ({ navigation }) => {
                       style={[styles.setRow, { opacity: rowOpacity, backgroundColor: rowBg }]}
                     >
                       {/* Set number */}
-                      <Text style={[styles.setNum, { color: done ? colors.accent : colors.secondaryText }]}>
+                      <Text style={[styles.setNum, { color: done ? accentColor : colors.secondaryText }]}>
                         {setIdx + 1}
                       </Text>
 
@@ -348,7 +355,7 @@ const ActiveWorkout = ({ navigation }) => {
                         style={[
                           styles.setInput,
                           {
-                            color: done ? colors.accent : colors.text,
+                            color: done ? accentColor : colors.text,
                             borderBottomColor: done ? 'transparent' : colors.border,
                           },
                         ]}
@@ -365,7 +372,7 @@ const ActiveWorkout = ({ navigation }) => {
                         style={[
                           styles.setInput,
                           {
-                            color: done ? colors.accent : colors.text,
+                            color: done ? accentColor : colors.text,
                             borderBottomColor: done ? 'transparent' : colors.border,
                           },
                         ]}
@@ -382,8 +389,8 @@ const ActiveWorkout = ({ navigation }) => {
                         style={[
                           styles.checkbox,
                           {
-                            borderColor: done ? colors.accent : colors.border,
-                            backgroundColor: done ? colors.accent : 'transparent',
+                            borderColor: done ? accentColor : colors.border,
+                            backgroundColor: done ? accentColor : 'transparent',
                           },
                         ]}
                         onPress={() => handleTick(exId, setIdx)}
@@ -394,22 +401,10 @@ const ActiveWorkout = ({ navigation }) => {
                     </View>
                   );
                 })}
-              </View>
+              </AppTile>
             );
           })}
 
-          {/* Session notes */}
-          <View style={styles.notesSection}>
-            <Text style={[styles.subLabel, { color: colors.secondaryText }]}>SESSION LOGS</Text>
-            <TextInput
-              style={[styles.notesInput, { color: colors.text, borderColor: colors.border }]}
-              placeholder="ANY OBSERVATIONS?"
-              placeholderTextColor={colors.secondaryText}
-              multiline
-              value={notes}
-              onChangeText={setNotes}
-            />
-          </View>
 
           <View style={{ height: 120 }} />
         </ScrollView>

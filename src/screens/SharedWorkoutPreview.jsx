@@ -12,7 +12,7 @@ import { useRepsAlert } from '../context/AlertContext';
 
 const SharedWorkoutPreview = ({ route, navigation }) => {
   const { token } = route.params;
-  const { colors, isDarkMode } = useTheme();
+  const { colors, isDarkMode, accentColor } = useTheme();
   const { user } = useAuth();
   const { startWorkout } = useWorkout();
   const insets = useSafeAreaInsets();
@@ -103,7 +103,7 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
           {workout?.workout_exercises?.map((item, index) => (
             <View key={index} style={[styles.exerciseItem, { borderBottomColor: colors.border }]}>
                <View style={styles.exHeader}>
-                  <Text style={[styles.exIndex, { color: isDarkMode ? colors.accent : '#10B981' }]}>{(index + 1).toString().padStart(2, '0')}</Text>
+                  <Text style={[styles.exIndex, { color: accentColor }]}>{(index + 1).toString().padStart(2, '0')}</Text>
                   <Text style={[styles.exName, { color: colors.text }]}>{item.exercises?.name?.toUpperCase()}</Text>
                </View>
                <Text style={[styles.exDetails, { color: colors.secondaryText }]}>
@@ -116,14 +116,14 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <TouchableOpacity 
-          style={[styles.saveButton, { backgroundColor: isDarkMode ? colors.accent : '#000' }]}
+          style={[styles.saveButton, { backgroundColor: accentColor }]}
           onPress={handleSave}
           disabled={saving}
         >
           {saving ? (
-            <ActivityIndicator color={isDarkMode ? '#000' : '#FFF'} />
+            <ActivityIndicator color="#000" />
           ) : (
-            <Text style={[styles.saveText, { color: isDarkMode ? '#000' : '#FFF' }]}>INTEGRATE TO LIBRARY</Text>
+            <Text style={[styles.saveText, { color: '#000' }]}>INTEGRATE TO LIBRARY</Text>
           )}
         </TouchableOpacity>
       </View>

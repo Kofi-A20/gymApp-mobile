@@ -11,7 +11,7 @@ import AppTile from '../components/AppTile';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const SplitsScreen = ({ navigation }) => {
-  const { colors, isDarkMode } = useTheme();
+  const { colors, isDarkMode, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const [splits, setSplits] = useState([]);
 
@@ -56,8 +56,6 @@ const SplitsScreen = ({ navigation }) => {
   const renderItem = ({ item }) => {
     // Unique days this split has assigned
     const activeDays = [...new Set(item.assignments.map(a => a.dayOfWeek))].sort();
-    const daysString = activeDays.length > 0 ? activeDays.map(d => DAYS[d]).join(', ') : 'No days assigned';
-
     return (
       <AppTile style={styles.card}>
         <View style={styles.cardHeader}>
@@ -65,11 +63,30 @@ const SplitsScreen = ({ navigation }) => {
           <Switch
             value={item.isActive}
             onValueChange={(val) => handleToggle(item.id, val)}
-            trackColor={{ false: colors.border, true: colors.accent }}
+            trackColor={{ false: colors.border, true: accentColor }}
             thumbColor={isDarkMode ? '#000' : '#FFF'}
           />
         </View>
-        <Text style={[styles.daysText, { color: colors.secondaryText }]}>{daysString}</Text>
+        <View style={styles.daysRow}>
+          {['S','M','T','W','T','F','S'].map((char, idx) => {
+            const isActive = activeDays.includes(idx);
+            return (
+              <View 
+                key={idx} 
+                style={[
+                  styles.dayPill, 
+                  { borderColor: colors.border },
+                  isActive && { backgroundColor: accentColor, borderColor: accentColor }
+                ]}
+              >
+                <Text style={[
+                  styles.dayChar,
+                  { color: isActive ? '#000' : colors.secondaryText }
+                ]}>{char}</Text>
+              </View>
+            );
+          })}
+        </View>
         <View style={styles.cardActions}>
           <TouchableOpacity onPress={() => navigation.navigate('EditSplitScreen', { split: item })} style={styles.actionBtn}>
             <MaterialCommunityIcons name="pencil" size={20} color={colors.text} />
@@ -133,10 +150,22 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     flex: 1,
   },
-  daysText: {
-    fontSize: 12,
-    fontWeight: '700',
+  daysRow: {
+    flexDirection: 'row',
+    gap: 8,
     marginBottom: 20,
+  },
+  dayPill: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dayChar: {
+    fontSize: 10,
+    fontWeight: '900',
   },
   cardActions: {
     flexDirection: 'row',

@@ -46,7 +46,7 @@ const anchorForIndex = (index) => {
   return 'start';                                    // right half
 };
 
-const RadarChart = ({ data = {}, maxValue = 10, colors, size = 180 }) => {
+const RadarChart = ({ data = {}, maxValue = 10, colors, accentColor, size = 180 }) => {
   const svgSize = size + LABEL_CLEARANCE * 2 + 100; // extra room for labels
   const cx = svgSize / 2;
   const cy = svgSize / 2;
@@ -92,9 +92,9 @@ const RadarChart = ({ data = {}, maxValue = 10, colors, size = 180 }) => {
         })}
         <Polygon
           points={dataPolygonPoints}
-          fill={colors.accent}
+          fill={accentColor}
           fillOpacity={0.4}
-          stroke={colors.accent}
+          stroke={accentColor}
           strokeWidth={2}
           strokeOpacity={1}
           strokeLinejoin="round"
@@ -123,7 +123,7 @@ const RadarChart = ({ data = {}, maxValue = 10, colors, size = 180 }) => {
 };
 
 const Stats = ({ navigation }) => {
-  const { colors, isDarkMode, units } = useTheme();
+  const { colors, isDarkMode, units, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useProfile();
   const { showAlert } = useRepsAlert();
@@ -307,7 +307,7 @@ const Stats = ({ navigation }) => {
       <AppTile
         style={[
           styles.sessionCard,
-          isSelected && { borderColor: colors.accent, borderWidth: 2 }
+          isSelected && { borderColor: accentColor, borderWidth: 2 }
         ]}
         onPress={() => {
           if (isSelectionMode) {
@@ -328,14 +328,14 @@ const Stats = ({ navigation }) => {
             <Text style={[styles.sessionTitle, { color: colors.text }]}>{session.workout_name?.toUpperCase() || 'FREE SESSION'}</Text>
             <View style={styles.sessionHeader}>
               <Text style={[styles.sessionDate, { color: colors.secondaryText }]}>{date}</Text>
-              <MaterialCommunityIcons name="check-decagram" size={16} color={colors.accent} />
+              <MaterialCommunityIcons name="check-decagram" size={16} color={accentColor} />
             </View>
           </View>
           {isSelectionMode && (
             <MaterialCommunityIcons
               name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"}
               size={24}
-              color={isSelected ? colors.accent : colors.secondaryText}
+              color={isSelected ? accentColor : colors.secondaryText}
             />
           )}
         </View>
@@ -403,6 +403,7 @@ const Stats = ({ navigation }) => {
             data={overviewStats.muscleBreakdown}
             maxValue={Math.max(...Object.values(overviewStats.muscleBreakdown), 1)}
             colors={colors}
+            accentColor={accentColor}
             size={200}
           />
         </View>
@@ -479,9 +480,9 @@ const Stats = ({ navigation }) => {
           <View style={styles.progStatItem}>
             <Text style={[styles.progStatLabel, { color: colors.secondaryText }]}>BEST</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={[styles.progStatValue, { color: colors.accent }]}>{item.bestWeight}</Text>
-              <Text style={[styles.progStatUnit, { color: colors.accent }]}>{units.toUpperCase()}</Text>
-              <MaterialCommunityIcons name="trophy" size={14} color={colors.accent} style={{ marginLeft: 4 }} />
+              <Text style={[styles.progStatValue, { color: accentColor }]}>{item.bestWeight}</Text>
+              <Text style={[styles.progStatUnit, { color: accentColor }]}>{units.toUpperCase()}</Text>
+              <MaterialCommunityIcons name="trophy" size={14} color={accentColor} style={{ marginLeft: 4 }} />
             </View>
           </View>
           <View style={styles.progStatItem}>
@@ -516,19 +517,19 @@ const Stats = ({ navigation }) => {
         <View style={styles.content}>
           <View style={styles.viewToggle}>
             <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'OVERVIEW' && { borderBottomColor: colors.accent }]}
+              style={[styles.toggleBtn, viewMode === 'OVERVIEW' && { borderBottomColor: accentColor }]}
               onPress={() => setViewMode('OVERVIEW')}
             >
               <Text style={[styles.toggleBtnText, { color: viewMode === 'OVERVIEW' ? colors.text : colors.secondaryText }]}>OVERVIEW</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'ARCHIVE' && { borderBottomColor: colors.accent }]}
+              style={[styles.toggleBtn, viewMode === 'ARCHIVE' && { borderBottomColor: accentColor }]}
               onPress={() => setViewMode('ARCHIVE')}
             >
               <Text style={[styles.toggleBtnText, { color: viewMode === 'ARCHIVE' ? colors.text : colors.secondaryText }]}>ARCHIVE</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'PROGRESSION' && { borderBottomColor: colors.accent }]}
+              style={[styles.toggleBtn, viewMode === 'PROGRESSION' && { borderBottomColor: accentColor }]}
               onPress={() => setViewMode('PROGRESSION')}
             >
               <Text style={[styles.toggleBtnText, { color: viewMode === 'PROGRESSION' ? colors.text : colors.secondaryText }]}>PROGRESSION</Text>
@@ -555,7 +556,7 @@ const Stats = ({ navigation }) => {
                     {uniqueFilters.map(filter => (
                       <TouchableOpacity
                         key={filter}
-                        style={[styles.filterChip, { borderColor: colors.border }, selectedFilter === filter && { backgroundColor: colors.accent, borderColor: colors.accent }]}
+                        style={[styles.filterChip, { borderColor: colors.border }, selectedFilter === filter && { backgroundColor: accentColor, borderColor: accentColor }]}
                         onPress={() => setSelectedFilter(filter)}
                       >
                         <Text style={[styles.filterChipText, selectedFilter === filter ? { color: '#000' } : { color: colors.text }]}>{filter}</Text>
@@ -598,7 +599,7 @@ const Stats = ({ navigation }) => {
                     {uniqueProgFilters.map(filter => (
                       <TouchableOpacity
                         key={filter}
-                        style={[styles.filterChip, { borderColor: colors.border }, selectedProgFilter === filter && { backgroundColor: colors.accent, borderColor: colors.accent }]}
+                        style={[styles.filterChip, { borderColor: colors.border }, selectedProgFilter === filter && { backgroundColor: accentColor, borderColor: accentColor }]}
                         onPress={() => setSelectedProgFilter(filter)}
                       >
                         <Text style={[styles.filterChipText, selectedProgFilter === filter ? { color: '#000' } : { color: colors.text }]}>{filter}</Text>
@@ -912,7 +913,7 @@ const styles = StyleSheet.create({
   },
   statTileValue: {
     fontSize: 26,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 14,
