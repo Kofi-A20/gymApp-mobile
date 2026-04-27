@@ -22,6 +22,7 @@ import { useProfile } from '../context/ProfileContext';
 import { MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';
 import { useRepsAlert } from '../context/AlertContext';
 import RepsHeader from '../components/RepsHeader';
+import AppTile from '../components/AppTile';
 import { weightLogsService } from '../services/weightLogsService';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -54,17 +55,19 @@ const InputField = ({ label, value, onChangeText, keyboardType, editable = true,
   <TouchableOpacity activeOpacity={onPress ? 0.7 : 1} onPress={onPress}>
     <View style={styles.inputContainer}>
       <Text style={[styles.fieldLabel, { color: colors.secondaryText }]}>{label.toUpperCase()}</Text>
-      <TextInput
-        style={[styles.textInput, { color: editable ? colors.text : (onPress ? colors.accent : colors.secondaryText), borderColor: colors.border }]}
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType}
-        editable={editable}
-        pointerEvents={onPress ? 'none' : 'auto'}
-        returnKeyType="done"
-        onSubmitEditing={() => Keyboard.dismiss()}
-        blurOnSubmit={true}
-      />
+      <AppTile style={styles.textInputWrapper}>
+        <TextInput
+          style={[styles.textInput, { color: editable ? colors.text : (onPress ? colors.accent : colors.secondaryText) }]}
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType}
+          editable={editable}
+          pointerEvents={onPress ? 'none' : 'auto'}
+          returnKeyType="done"
+          onSubmitEditing={() => Keyboard.dismiss()}
+          blurOnSubmit={true}
+        />
+      </AppTile>
     </View>
   </TouchableOpacity>
 );
@@ -289,15 +292,11 @@ const Profile = ({ navigation }) => {
   // ─── Sub-Components ──────────────────────────────────────────────────────
 
   const BiometricTile = ({ label, value, unit, isDark: tileDark, onPress }) => (
-    <TouchableOpacity
-      activeOpacity={0.7}
+    <AppTile
       onPress={onPress}
       style={[
         styles.bioTile,
-        {
-          backgroundColor: tileDark ? (isDarkMode ? '#121212' : '#000') : colors.secondaryBackground,
-          borderColor: colors.border,
-        },
+        tileDark && { backgroundColor: isDarkMode ? '#121212' : '#000' },
       ]}
     >
       <Text style={[styles.bioLabel, { color: tileDark ? '#666' : colors.secondaryText }]}>{label.toUpperCase()}</Text>
@@ -305,7 +304,7 @@ const Profile = ({ navigation }) => {
         <Text style={[styles.bioValue, { color: tileDark ? '#FFF' : colors.text, fontSize: value && value.length > 8 ? 20 : 32 }]}>{value}</Text>
         {unit && <Text style={[styles.bioUnit, { color: tileDark ? '#666' : colors.secondaryText }]}>{unit.toUpperCase()}</Text>}
       </View>
-    </TouchableOpacity>
+    </AppTile>
   );
 
 
@@ -317,14 +316,13 @@ const Profile = ({ navigation }) => {
         {options.map((opt) => {
           const isSelected = opt.value === value;
           return (
-            <TouchableOpacity
+            <AppTile
               key={String(opt.value)}
+              onPress={() => { onChange(opt.value); setIsDirty(true); }}
               style={[
                 styles.selectorChip,
-                { borderColor: isSelected ? accentColor : colors.border },
-                isSelected && { backgroundColor: accentColor },
+                isSelected && { backgroundColor: accentColor, borderColor: accentColor },
               ]}
-              onPress={() => { onChange(opt.value); setIsDirty(true); }}
             >
               <Text style={[
                 styles.selectorChipText,
@@ -332,7 +330,7 @@ const Profile = ({ navigation }) => {
               ]}>
                 {opt.label}
               </Text>
-            </TouchableOpacity>
+            </AppTile>
           );
         })}
       </View>
@@ -448,16 +446,16 @@ const Profile = ({ navigation }) => {
           {/* Date of Birth */}
           <View style={styles.inputContainer} onLayout={handleLayout('dob')}>
             <Text style={[styles.fieldLabel, { color: colors.secondaryText }]}>DATE OF BIRTH</Text>
-            <TouchableOpacity
-              style={[styles.textInput, { borderColor: colors.border, justifyContent: 'center' }]}
+            <AppTile
               onPress={() => setShowDatePicker(true)}
+              style={styles.textInputWrapper}
             >
               <Text style={{ color: dob ? colors.text : colors.secondaryText, fontSize: 18, fontWeight: '700' }}>
                 {dob
                   ? dob.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
                   : 'SELECT DATE OF BIRTH'}
               </Text>
-            </TouchableOpacity>
+            </AppTile>
             {age !== null && (
               <Text style={[styles.ageDisplay, { color: colors.secondaryText }]}>
                 Age: {age} years old
@@ -545,7 +543,7 @@ const Profile = ({ navigation }) => {
           </View>
 
           {/* Save Button */}
-          <TouchableOpacity
+          <AppTile
             style={[styles.saveBtn, { backgroundColor: isDirty ? colors.accent : colors.secondaryBackground }]}
             onPress={handleSave}
             disabled={saving}
@@ -554,7 +552,7 @@ const Profile = ({ navigation }) => {
               ? <ActivityIndicator color="#000" />
               : <Text style={[styles.saveBtnText, { color: isDirty ? '#000' : colors.secondaryText }]}>SAVE CHANGES</Text>
             }
-          </TouchableOpacity>
+          </AppTile>
 
           <View style={{ height: 120 }} />
         </View>
@@ -602,7 +600,7 @@ const styles = StyleSheet.create({
   bioGridRow: { flexDirection: 'row', gap: 12, marginBottom: 0 },
   bioTile: {
     flex: 1, aspectRatio: 0.85, padding: 20,
-    justifyContent: 'center', borderWidth: 1, borderRadius: 2,
+    justifyContent: 'center',
   },
   bioLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginBottom: 25 },
   bioValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
@@ -611,9 +609,11 @@ const styles = StyleSheet.create({
 
   inputContainer: { marginBottom: 25 },
   fieldLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginBottom: 8 },
+  textInputWrapper: {
+    height: 60, justifyContent: 'center', paddingHorizontal: 15,
+  },
   textInput: {
-    height: 60, borderWidth: 1, borderRadius: 2,
-    paddingHorizontal: 15, fontSize: 18, fontWeight: '700',
+    fontSize: 18, fontWeight: '700',
   },
   ageDisplay: { fontSize: 11, fontWeight: '700', marginTop: 6, opacity: 0.7 },
 
@@ -622,11 +622,10 @@ const styles = StyleSheet.create({
   selectorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   selectorChip: {
     paddingHorizontal: 18, paddingVertical: 12,
-    borderWidth: 1, borderRadius: 2,
   },
   selectorChipText: { fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
 
-  saveBtn: { marginTop: 60, padding: 24, alignItems: 'center', borderRadius: 4 },
+  saveBtn: { marginTop: 60, padding: 24, alignItems: 'center' },
   saveBtnText: { fontSize: 20, fontWeight: '900', letterSpacing: 1 },
 
   // Modal (iOS date picker)

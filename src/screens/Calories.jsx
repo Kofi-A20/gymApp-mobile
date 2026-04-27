@@ -17,6 +17,7 @@ import { useRepsAlert } from '../context/AlertContext';
 import { weightLogsService } from '../services/weightLogsService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
+import AppTile from '../components/AppTile';
 
 const ACTIVITY_OPTIONS = [
   { label: '1–2 days/week', value: 1.2 },
@@ -266,25 +267,25 @@ const Calories = ({ navigation, route }) => {
 
           {/* 2. Top Metrics */}
           <View style={styles.metricsGrid}>
-            <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground }]}>
+            <AppTile style={styles.metricBox}>
               <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>BMR</Text>
               <Text style={[styles.metricValue, { color: colors.text }]}>{bmr.toLocaleString()}</Text>
               <Text style={[styles.metricSub, { color: colors.secondaryText }]}>CALORIES AT REST</Text>
-            </View>
-            <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground }]}>
+            </AppTile>
+            <AppTile style={styles.metricBox}>
               <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>TDEE</Text>
               <Text style={[styles.metricValue, { color: colors.text }]}>{tdee.toLocaleString()}</Text>
               <Text style={[styles.metricSub, { color: colors.secondaryText }]}>CALORIES BURNED DAILY</Text>
-            </View>
-            <View style={[styles.metricBox, { backgroundColor: colors.secondaryBackground, borderColor: colors.border, borderWidth: 1 }]}>
+            </AppTile>
+            <AppTile style={styles.metricBox}>
               <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>CALORIE TARGET</Text>
               <Text style={[styles.metricValue, { color: colors.accent }]}>{targetIntake.toLocaleString()}</Text>
               <Text style={[styles.metricSub, { color: colors.secondaryText }]}>CALORIES TO EAT DAILY</Text>
-            </View>
+            </AppTile>
           </View>
 
           {/* 3. MACROS */}
-          <View style={[styles.card, { backgroundColor: isDarkMode ? '#111' : colors.secondaryBackground, borderColor: colors.border }]}>
+          <AppTile style={styles.card}>
             <Text style={[styles.cardHeader, { color: colors.accent }]}>MACRO RATIOS</Text>
 
             <View style={styles.macroRow}>
@@ -310,10 +311,10 @@ const Calories = ({ navigation, route }) => {
               </View>
               <View style={[styles.mBarBg, { backgroundColor: isDarkMode ? '#333' : '#E0E0E0' }]}><View style={[styles.mBarFill, { width: '60%', backgroundColor: accentColor }]} /></View>
             </View>
-          </View>
+          </AppTile>
 
           {/* 4. PROFILE SNAPSHOT */}
-          <View style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+          <AppTile style={styles.card}>
             <Text style={[styles.cardHeader, { color: colors.secondaryText }]}>PROFILE SNAPSHOT</Text>
             <View style={styles.snapshotGrid}>
               <View style={styles.snapshotItem}>
@@ -329,11 +330,11 @@ const Calories = ({ navigation, route }) => {
                 <Text style={[styles.snapshotValue, { color: strategyIdx === 1 ? colors.text : colors.accent }]}>{strategyLabel}</Text>
               </View>
             </View>
-          </View>
+          </AppTile>
 
           {/* 5. GOAL PROGRESS */}
           {showProgress && (
-            <View style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+            <AppTile style={styles.card}>
               <Text style={styles.cardHeader}>GOAL PROGRESS</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                 <View style={[styles.mBarBg, { flex: 1, backgroundColor: '#333' }]}>
@@ -343,7 +344,7 @@ const Calories = ({ navigation, route }) => {
               <Text style={{ fontSize: 9, fontWeight: '800', color: colors.secondaryText, textAlign: 'right', marginTop: 4 }}>
                 {toGoalDisplay} {units.toUpperCase()} TO GOAL
               </Text>
-            </View>
+            </AppTile>
           )}
 
           {/* 6. WEIGHT SECTION */}
@@ -356,7 +357,7 @@ const Calories = ({ navigation, route }) => {
             </Text>
 
             {/* Log new weight */}
-            <View style={[styles.weightLogCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+            <AppTile style={styles.weightLogCard}>
               <Text style={[styles.wlLabel, { color: colors.secondaryText }]}>LOG THIS WEEK</Text>
               <View style={styles.wlInputRow}>
                 <TextInput
@@ -378,7 +379,7 @@ const Calories = ({ navigation, route }) => {
                   }
                 </TouchableOpacity>
               </View>
-            </View>
+            </AppTile>
 
 
 
@@ -390,7 +391,7 @@ const Calories = ({ navigation, route }) => {
                 <Text style={{ color: colors.secondaryText }}>NO WEIGHT ENTRIES YET</Text>
               </View>
             ) : (
-              <View style={{ marginTop: 10, maxHeight: 400, borderWidth: 1, borderColor: colors.border, borderRadius: 4 }}>
+              <AppTile style={{ marginTop: 10, maxHeight: 400, padding: 12 }}>
                 <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
                   {[...logsWithDeltas].reverse().map((log, idx) => {
                     const displayWeight = units === 'lbs'
@@ -470,7 +471,7 @@ const Calories = ({ navigation, route }) => {
                     );
                   })}
                 </ScrollView>
-              </View>
+              </AppTile>
             )}
           </View>
 
@@ -505,7 +506,7 @@ const styles = StyleSheet.create({
   metricValue: { fontSize: 18, fontWeight: '900' },
   metricSub: { fontSize: 7, fontWeight: '800', marginTop: 3, opacity: 0.5 },
 
-  card: { padding: 20, borderWidth: 1, marginBottom: 12 },
+  card: { padding: 20, marginBottom: 12 },
   cardHeader: { fontSize: 10, fontWeight: '900', letterSpacing: 2, marginBottom: 16, opacity: 0.8 },
 
   weightHint: { fontSize: 9, fontWeight: '800', letterSpacing: 1, textAlign: 'center', marginTop: 10 },
@@ -528,8 +529,6 @@ const styles = StyleSheet.create({
   // ── Weight Log ──────────────────────────────────────
   weightLogCard: {
     padding: 20,
-    borderWidth: 1,
-    borderRadius: 4,
     marginBottom: 20,
   },
   wlLabel: {

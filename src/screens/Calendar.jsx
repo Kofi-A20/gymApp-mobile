@@ -26,6 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import RepsHeader from '../components/RepsHeader';
+import AppTile from '../components/AppTile';
 
 const { width } = Dimensions.get('window');
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -685,11 +686,11 @@ const Calendar = ({ navigation }) => {
                 {plannedSessions.filter(s => s.dateTime > new Date().toISOString()).slice(0, 10).map(item => {
                   const itemColor = item.workoutColor || colors.accent;
                   return (
-                    <TouchableOpacity
+                    <AppTile
                       key={item.id}
                       style={[
                         styles.upcomingCard,
-                        { backgroundColor: isDarkMode ? '#1A1A1A' : '#F5F5F5', borderLeftColor: itemColor }
+                        { borderLeftColor: itemColor }
                       ]}
                       onPress={() => {
                         const getLocalYMD = (d) => {
@@ -728,7 +729,7 @@ const Calendar = ({ navigation }) => {
                       <Text style={[styles.ucName, { color: colors.text }]} numberOfLines={2}>
                         {item.workoutName.toUpperCase()}
                       </Text>
-                    </TouchableOpacity>
+                    </AppTile>
                   )
                 })}
               </ScrollView>
@@ -1031,7 +1032,6 @@ const styles = StyleSheet.create({
     width: 160,
     height: 100,
     marginRight: 12,
-    borderRadius: 8,
     borderLeftWidth: 4,
     padding: 12,
     justifyContent: 'space-between'

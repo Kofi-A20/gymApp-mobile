@@ -5,11 +5,13 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { MaterialCommunityIcons, AntDesign, Ionicons } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
+import AppTile from '../components/AppTile';
 import { useRepsAlert } from '../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../lib/supabase';
+import { ColorPickerModal } from '../components/ColorPickerModal';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const EXPO_WEEKDAYS = {
@@ -175,54 +177,50 @@ const Settings = ({ navigation }) => {
           {/* Section: Interface */}
           <SectionHeader id="01" title="Interface" />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-            <TouchableOpacity 
+            <AppTile 
               onPress={() => setThemeMode('light')}
               style={[
                 styles.themeCard, 
                 { backgroundColor: '#FFFFFF', borderColor: themeMode === 'light' ? colors.accent : colors.border, borderWidth: themeMode === 'light' ? 2 : 1 }
               ]}
-              activeOpacity={0.8}
             >
               <MaterialCommunityIcons name="white-balance-sunny" size={32} color="#000" />
               <Text style={styles.themeNameBlack}>STARK WHITE</Text>
               <Text style={styles.themeSubBlack}>{themeMode === 'light' ? 'ACTIVE THEME' : 'SWITCH MODE'}</Text>
-            </TouchableOpacity>
+            </AppTile>
 
-            <TouchableOpacity 
+            <AppTile 
               onPress={() => setThemeMode('dark')}
               style={[
                 styles.themeCard, 
                 { backgroundColor: '#121212', borderColor: themeMode === 'dark' ? colors.accent : colors.border, borderWidth: themeMode === 'dark' ? 2 : 1 }
               ]}
-              activeOpacity={0.8}
             >
               <MaterialCommunityIcons name="moon-waning-crescent" size={32} color="#FFF" />
               <Text style={styles.themeNameWhite}>DEEP BLACK</Text>
               <Text style={styles.themeSubWhite}>{themeMode === 'dark' ? 'ACTIVE THEME' : 'SWITCH MODE'}</Text>
-            </TouchableOpacity>
+            </AppTile>
           </View>
           
-          <TouchableOpacity 
+          <AppTile 
             onPress={() => setThemeMode('system')}
             style={[
-              { padding: 20, borderRadius: 2, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+              { padding: 20, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
               { backgroundColor: colors.secondaryBackground, borderColor: themeMode === 'system' ? colors.accent : colors.border, borderWidth: themeMode === 'system' ? 2 : 1 }
             ]}
-            activeOpacity={0.8}
           >
              <MaterialCommunityIcons name="theme-light-dark" size={28} color={colors.text} style={{marginRight: 15}}/>
              <View>
                <Text style={{ color: colors.text, fontSize: 16, fontWeight: '900' }}>SYSTEM DEFAULT</Text>
                <Text style={{ color: colors.secondaryText, fontSize: 10, fontWeight: '700', marginTop: 2 }}>{themeMode === 'system' ? 'ACTIVE THEME' : 'SWITCH MODE'}</Text>
              </View>
-          </TouchableOpacity>
+          </AppTile>
 
           {/* Section: App Accent */}
           <SectionHeader id="02" title="App Accent" />
-          <TouchableOpacity 
+          <AppTile 
             style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground }]}
             onPress={() => setShowColorModal(true)}
-            activeOpacity={0.7}
           >
              <View style={styles.toggleRow}>
                 <View>
@@ -237,11 +235,11 @@ const Settings = ({ navigation }) => {
                    }} 
                 />
              </View>
-          </TouchableOpacity>
+          </AppTile>
 
           {/* Section: Alerts & Units */}
           <SectionHeader id="03" title="Alerts & Units" />
-          <View style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground }]}>
+          <AppTile style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground }]}>
              <View style={styles.toggleRow}>
                 <View>
                    <Text style={[styles.toggleLabel, { color: colors.text }]}>WORKOUT REMINDERS</Text>
@@ -254,9 +252,9 @@ const Settings = ({ navigation }) => {
                   thumbColor="#f4f3f4"
                 />
              </View>
-          </View>
+          </AppTile>
 
-          <View style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground, marginTop: 12 }]}>
+          <AppTile style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground, marginTop: 12 }]}>
              <View style={styles.toggleRow}>
                 <View>
                    <Text style={[styles.toggleLabel, { color: colors.text }]}>SYSTEM UNITS</Text>
@@ -266,11 +264,11 @@ const Settings = ({ navigation }) => {
                    <Text style={[styles.unitToggleText, { color: colors.background }]}>{units.toUpperCase()}</Text>
                 </TouchableOpacity>
              </View>
-          </View>
+          </AppTile>
 
           {/* Section: Weight Reminder */}
           <SectionHeader id="04" title="Weight Reminder" />
-          <View style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground }]}>
+          <AppTile style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground }]}>
              <View style={styles.toggleRow}>
                 <View>
                    <Text style={[styles.toggleLabel, { color: colors.text }]}>WEEKLY LOGGING</Text>
@@ -283,7 +281,7 @@ const Settings = ({ navigation }) => {
                   thumbColor="#f4f3f4"
                 />
              </View>
-          </View>
+          </AppTile>
 
           {weightReminderEnabled && (
             <View style={{ marginTop: 15 }}>
@@ -291,14 +289,12 @@ const Settings = ({ navigation }) => {
                 {DAYS.map(day => {
                   const isSelected = day === weightReminderDay;
                   return (
-                    <TouchableOpacity 
+                    <AppTile 
                       key={day}
                       onPress={() => updateDay(day)}
                       style={{
                         paddingVertical: 10,
                         paddingHorizontal: 8,
-                        borderRadius: 4,
-                        borderWidth: 1,
                         borderColor: isSelected ? colors.accent : colors.border,
                         backgroundColor: isSelected ? colors.accent : 'transparent',
                         flex: 1,
@@ -311,12 +307,12 @@ const Settings = ({ navigation }) => {
                         fontWeight: '900',
                         color: isSelected ? '#000' : colors.text
                       }}>{day}</Text>
-                    </TouchableOpacity>
+                    </AppTile>
                   )
                 })}
               </View>
 
-              <TouchableOpacity
+              <AppTile
                 onPress={() => setShowTimePicker(true)}
                 style={[styles.toggleCard, { backgroundColor: colors.secondaryBackground, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
               >
@@ -324,44 +320,17 @@ const Settings = ({ navigation }) => {
                 <Text style={{ fontSize: 16, fontWeight: '900', color: colors.accent }}>
                   {weightReminderHour.toString().padStart(2, '0')}:{weightReminderMinute.toString().padStart(2, '0')}
                 </Text>
-              </TouchableOpacity>
+              </AppTile>
             </View>
           )}
 
           {/* Color Picker Modal */}
-          <Modal transparent animationType="fade" visible={showColorModal} onRequestClose={() => setShowColorModal(false)}>
-            <View style={styles.modalOverlay}>
-               <View style={[styles.modalBox, { backgroundColor: colors.background, paddingBottom: insets.bottom + 40 }]}>
-                 <View style={styles.modalHeader}>
-                    <Text style={[styles.modalTitle, { color: colors.text }]}>SELECT APP THEME</Text>
-                    <TouchableOpacity onPress={() => setShowColorModal(false)}>
-                      <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 14 }}>DONE</Text>
-                    </TouchableOpacity>
-                 </View>
-                 
-                 <View style={{ alignItems: 'center', paddingTop: 60, paddingBottom: 40 }}>
-                    <View style={{ width: 280, alignItems: 'center' }}>
-                       {/* Top Row: 2 Items */}
-                       <View style={{ flexDirection: 'row', gap: 30, marginBottom: -15 }}>
-                          <SquircleHex color="#CCFF00" selected={colors.accent === '#CCFF00'} onPress={() => changeAccentColor('#CCFF00')} />
-                          <SquircleHex color="#007AFF" selected={colors.accent === '#007AFF'} onPress={() => changeAccentColor('#007AFF')} />
-                       </View>
-                       {/* Middle Row: 3 Items */}
-                       <View style={{ flexDirection: 'row', gap: 30, marginBottom: -15 }}>
-                          <SquircleHex color="#FF9500" selected={colors.accent === '#FF9500'} onPress={() => changeAccentColor('#FF9500')} />
-                          <SquircleHex color="#FF2D55" selected={colors.accent === '#FF2D55'} onPress={() => changeAccentColor('#FF2D55')} />
-                          <SquircleHex color="#AF52DE" selected={colors.accent === '#AF52DE'} onPress={() => changeAccentColor('#AF52DE')} />
-                       </View>
-                       {/* Bottom Row: 2 Items */}
-                       <View style={{ flexDirection: 'row', gap: 30 }}>
-                          <SquircleHex color="#FF3B30" selected={colors.accent === '#FF3B30'} onPress={() => changeAccentColor('#FF3B30')} />
-                          <SquircleHex color="#34C759" selected={colors.accent === '#34C759'} onPress={() => changeAccentColor('#34C759')} />
-                       </View>
-                    </View>
-                 </View>
-               </View>
-            </View>
-          </Modal>
+          <ColorPickerModal
+            visible={showColorModal}
+            onClose={() => setShowColorModal(false)}
+            selectedColor={colors.accent}
+            onSelectColor={changeAccentColor}
+          />
 
           {/* Time Picker Modals */}
           {showTimePicker && Platform.OS === 'android' && (
@@ -397,13 +366,13 @@ const Settings = ({ navigation }) => {
             </Modal>
           )}
 
-          <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.border }]} onPress={handleLogout}>
+          <AppTile style={styles.logoutBtn} onPress={handleLogout}>
              <Text style={[styles.logoutText, { color: colors.text }]}>SIGN OUT</Text>
-          </TouchableOpacity>
+          </AppTile>
 
-          <TouchableOpacity style={[styles.deleteBtn, { backgroundColor: colors.danger }]} onPress={handleDeleteAccount}>
+          <AppTile style={[styles.deleteBtn, { backgroundColor: colors.danger }]} onPress={handleDeleteAccount}>
              <Text style={[styles.logoutText, { color: '#FFF' }]}>DELETE ACCOUNT</Text>
-          </TouchableOpacity>
+          </AppTile>
 
           <View style={{ height: 100 }} />
         </View>
@@ -411,15 +380,6 @@ const Settings = ({ navigation }) => {
     </View>
   );
 };
-
-const SquircleHex = ({ color, selected, onPress }) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ width: 70, height: 70, alignItems: 'center', justifyContent: 'center' }}>
-    {selected && (
-      <View style={{ position: 'absolute', width: 76, height: 76, borderWidth: 2, borderColor: color, borderRadius: 22, transform: [{ rotate: '45deg' }] }} />
-    )}
-    <View style={{ width: 62, height: 62, backgroundColor: color, borderRadius: 18, transform: [{ rotate: '45deg' }], alignItems: 'center', justifyContent: 'center' }} />
-  </TouchableOpacity>
-);
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
@@ -431,29 +391,29 @@ const styles = StyleSheet.create({
   brandTitle: { fontSize: 22, fontWeight: '900', letterSpacing: 2 },
   content: { paddingHorizontal: 24, paddingTop: 30 },
   topLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 1, marginBottom: 8 },
-  mainTitle: { fontSize: 48, fontWeight: '900', marginBottom: 40, letterSpacing: -1 },
+  mainTitle: { fontSize: 48, fontWeight: '900', marginBottom: 10, letterSpacing: -1 },
   sectionHeaderContainer: {
-    flexDirection: 'row', alignItems: 'center', marginTop: 40, marginBottom: 20,
+    flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 20,
   },
   sectionHeader: { fontSize: 18, fontWeight: '700', fontStyle: 'italic', marginRight: 10 },
   headerLine: { flex: 1, height: 1, opacity: 0.3 },
   interfaceGrid: { flexDirection: 'row', justifyContent: 'space-between' },
   themeCard: {
     width: '48%', padding: 20, aspectRatio: 1,
-    justifyContent: 'center', alignItems: 'flex-start', borderRadius: 2,
+    justifyContent: 'center', alignItems: 'flex-start',
   },
   themeNameBlack: { color: '#000', fontSize: 20, fontWeight: '900', marginTop: 15 },
   themeSubBlack: { color: '#000', fontSize: 10, fontWeight: '700', marginTop: 5, opacity: 0.6 },
   themeNameWhite: { color: '#FFF', fontSize: 20, fontWeight: '900', marginTop: 15 },
   themeSubWhite: { color: '#FFF', fontSize: 10, fontWeight: '700', marginTop: 5, opacity: 0.6 },
-  toggleCard: { padding: 20, borderRadius: 4 },
+  toggleCard: { padding: 20 },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   toggleLabel: { fontSize: 16, fontWeight: '700' },
   toggleSub: { fontSize: 10, fontWeight: '600', marginTop: 5 },
   unitToggle: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 4 },
   unitToggleText: { fontWeight: '900', fontSize: 14 },
-  logoutBtn: { marginTop: 50, padding: 20, borderWidth: 2, alignItems: 'center', borderRadius: 4 },
-  deleteBtn: { marginTop: 15, padding: 20, alignItems: 'center', borderRadius: 4 },
+  logoutBtn: { marginTop: 50, padding: 20, alignItems: 'center' },
+  deleteBtn: { marginTop: 15, padding: 20, alignItems: 'center' },
   logoutText: { fontSize: 16, fontWeight: '900', letterSpacing: 1 },
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end',

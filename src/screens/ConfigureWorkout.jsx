@@ -16,23 +16,8 @@ import { useTheme } from '../context/ThemeContext';
 import { workoutsService } from '../services/workoutsService';
 import { useRepsAlert } from '../context/AlertContext';
 import RepsHeader from '../components/RepsHeader';
-
-const COLOR_PALETTE = [
-  '#FF3B30', '#FF375F', '#FF2D55', '#FF6B35',
-  '#FF9500', '#FFD60A', '#FFCC00', '#34C759',
-  '#00D4AA', '#00C7BE', '#30B0C7', '#32ADE6',
-  '#007AFF', '#5856D6', '#BF5AF2', '#AF52DE',
-  '#A2845E', '#8E8E93',
-];
-
-const SquircleHex = ({ color, selected, onPress }) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ width: 60, height: 60, alignItems: 'center', justifyContent: 'center' }}>
-    {selected && (
-      <View style={{ position: 'absolute', width: 66, height: 66, borderWidth: 2, borderColor: color, borderRadius: 20, transform: [{ rotate: '45deg' }] }} />
-    )}
-    <View style={{ width: 54, height: 54, backgroundColor: color, borderRadius: 16, transform: [{ rotate: '45deg' }], alignItems: 'center', justifyContent: 'center' }} />
-  </TouchableOpacity>
-);
+import { ColorPickerModal } from '../components/ColorPickerModal';
+import AppTile from '../components/AppTile';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -54,7 +39,7 @@ const ConfigureWorkout = ({ route, navigation }) => {
   const [showColorModal, setShowColorModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // ─── Reorder (same up/down logic as WorkoutDetail edit mode) ─────────────
+  // ─── Reorder ───────────────────────────────────────────────────────────────
 
   const moveExercise = useCallback((index, direction) => {
     if (direction === -1 && index === 0) return;
@@ -107,11 +92,6 @@ const ConfigureWorkout = ({ route, navigation }) => {
         leftIcon="arrow-back"
         onLeftPress={() => navigation.goBack()}
         title="REPS"
-        rightActions={[{
-          text: saving ? 'SAVING...' : 'SAVE',
-          color: colors.accent,
-          onPress: saving ? undefined : handleSave,
-        }]}
       />
 
       <ScrollView
@@ -122,27 +102,23 @@ const ConfigureWorkout = ({ route, navigation }) => {
       >
         <View style={styles.content}>
           {/* Page header */}
-          <Text style={[styles.subLabel, { color: colors.secondaryText }]}>STEP 2 OF 2</Text>
           <Text style={[styles.mainTitle, { color: colors.text }]}>
             CONFIGURE{'\n'}THE SETS
           </Text>
-          <Text style={[styles.workoutNameBadge, { color: colors.secondaryText, borderColor: colors.border }]}>
+          <Text style={[styles.workoutNameLarge, { color: colors.text }]}>
             {workoutName}
-          </Text>
-          <Text style={[styles.description, { color: colors.secondaryText }]}>
-            Set targets for each movement and arrange the order of your routine.
           </Text>
 
           {/* Exercise cards */}
           <View style={styles.exerciseList}>
             {exercises.map((item, index) => (
-              <View
+              <AppTile
                 key={item.exercise_id || item.id ? `ex-${item.exercise_id || item.id}-${index}` : `idx-${index}`}
                 style={[
                   styles.card,
                   {
                     backgroundColor: isDarkMode ? '#111' : '#F7F7F7',
-                    borderColor: colors.border,
+                    marginBottom: 16,
                   },
                 ]}
               >
@@ -242,7 +218,7 @@ const ConfigureWorkout = ({ route, navigation }) => {
                     <Ionicons name="remove-circle-outline" size={24} color="#FF3B30" />
                   </TouchableOpacity>
                 </View>
-              </View>
+              </AppTile>
             ))}
           </View>
 
@@ -252,11 +228,11 @@ const ConfigureWorkout = ({ route, navigation }) => {
             </Text>
           )}
 
-          <Text style={[styles.subLabel, { color: colors.secondaryText, marginTop: 40, marginBottom: 16 }]}>
+          <Text style={[styles.routineColorLabel, { color: colors.secondaryText, marginTop: 40, marginBottom: 16 }]}>
             ROUTINE COLOR
           </Text>
-          <TouchableOpacity
-            style={[styles.colorPreviewBtn, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
+          <AppTile
+            style={styles.colorPreviewBtn}
             onPress={() => setShowColorModal(true)}
             activeOpacity={0.7}
           >
@@ -271,13 +247,13 @@ const ConfigureWorkout = ({ route, navigation }) => {
                 borderWidth: 2, borderColor: colors.border
               }} />
             </View>
-          </TouchableOpacity>
+          </AppTile>
 
           {/* Save CTA */}
-          <TouchableOpacity
+          <AppTile
             style={[
               styles.saveBtn,
-              { backgroundColor: exercises.length > 0 ? colors.accent : colors.border },
+              { backgroundColor: exercises.length > 0 ? colors.accent : colors.border, borderColor: exercises.length > 0 ? colors.accent : colors.border },
             ]}
             onPress={handleSave}
             disabled={saving || exercises.length === 0}
@@ -287,59 +263,16 @@ const ConfigureWorkout = ({ route, navigation }) => {
             ) : (
               <Text style={[styles.saveBtnText, { color: isDarkMode ? '#000' : '#FFF' }]}>CREATE WORKOUT ROUTINE</Text>
             )}
-          </TouchableOpacity>
+          </AppTile>
 
-          <View style={{ height: 350 }} />
+          <View style={{ height: 100 }} />
 
-          <Modal transparent animationType="fade" visible={showColorModal} onRequestClose={() => setShowColorModal(false)}>
-            <View style={styles.modalOverlay}>
-              <View style={[styles.modalBox, { backgroundColor: colors.background }]}>
-                <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, { color: colors.text }]}>ROUTINE COLOR</Text>
-                  <TouchableOpacity onPress={() => setShowColorModal(false)}>
-                    <Text style={{ color: colors.accent, fontWeight: '900', fontSize: 14 }}>DONE</Text>
-                  </TouchableOpacity>
-                </View>
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 }}
-                >
-                  <View style={{ width: 280, alignItems: 'center' }}>
-                    {/* Row 1: 3 */}
-                    <View style={{ flexDirection: 'row', gap: 14, marginBottom: -12 }}>
-                      {COLOR_PALETTE.slice(0, 3).map(c => (
-                        <SquircleHex key={c} color={c} selected={selectedColor === c} onPress={() => setSelectedColor(c)} />
-                      ))}
-                    </View>
-                    {/* Row 2: 4 */}
-                    <View style={{ flexDirection: 'row', gap: 14, marginBottom: -12 }}>
-                      {COLOR_PALETTE.slice(3, 7).map(c => (
-                        <SquircleHex key={c} color={c} selected={selectedColor === c} onPress={() => setSelectedColor(c)} />
-                      ))}
-                    </View>
-                    {/* Row 3: 4 */}
-                    <View style={{ flexDirection: 'row', gap: 14, marginBottom: -12 }}>
-                      {COLOR_PALETTE.slice(7, 11).map(c => (
-                        <SquircleHex key={c} color={c} selected={selectedColor === c} onPress={() => setSelectedColor(c)} />
-                      ))}
-                    </View>
-                    {/* Row 4: 4 */}
-                    <View style={{ flexDirection: 'row', gap: 14, marginBottom: -12 }}>
-                      {COLOR_PALETTE.slice(11, 15).map(c => (
-                        <SquircleHex key={c} color={c} selected={selectedColor === c} onPress={() => setSelectedColor(c)} />
-                      ))}
-                    </View>
-                    {/* Row 5: 3 */}
-                    <View style={{ flexDirection: 'row', gap: 14 }}>
-                      {COLOR_PALETTE.slice(15, 18).map(c => (
-                        <SquircleHex key={c} color={c} selected={selectedColor === c} onPress={() => setSelectedColor(c)} />
-                      ))}
-                    </View>
-                  </View>
-                </ScrollView>
-              </View>
-            </View>
-          </Modal>
+          <ColorPickerModal
+            visible={showColorModal}
+            onClose={() => setShowColorModal(false)}
+            selectedColor={selectedColor}
+            onSelectColor={setSelectedColor}
+          />
         </View>
       </ScrollView>
     </View>
@@ -353,7 +286,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 24, paddingTop: 36 },
 
-  subLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },
   mainTitle: {
     fontSize: 52,
     fontWeight: '900',
@@ -361,21 +293,11 @@ const styles = StyleSheet.create({
     letterSpacing: -2,
     lineHeight: 48,
   },
-  workoutNameBadge: {
-    marginTop: 18,
-    fontSize: 10,
+  workoutNameLarge: {
+    marginTop: 10,
+    fontSize: 24,
     fontWeight: '800',
-    letterSpacing: 1.5,
-    borderWidth: 1,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '500',
-    marginTop: 18,
+    letterSpacing: 0.5,
     marginBottom: 40,
   },
 
@@ -383,8 +305,8 @@ const styles = StyleSheet.create({
 
   card: {
     borderWidth: 1,
-    borderRadius: 4,
     overflow: 'hidden',
+    borderRadius: 24,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -459,14 +381,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginVertical: 40,
   },
+  routineColorLabel: {
+    fontSize: 10, 
+    fontWeight: '800', 
+    letterSpacing: 1.5,
+  },
 
   saveBtn: {
-    marginTop: 50,
+    marginTop: 16,
     paddingVertical: 22,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 4,
   },
   saveBtnText: {
     fontSize: 14,
@@ -475,8 +401,6 @@ const styles = StyleSheet.create({
   },
   colorPreviewBtn: {
     padding: 20,
-    borderWidth: 1,
-    borderRadius: 4,
     marginBottom: 20,
   },
   modalOverlay: {

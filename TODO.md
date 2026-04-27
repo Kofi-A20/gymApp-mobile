@@ -1,7 +1,6 @@
 # REPS — MASTER TODO
 
 ## 🟠 UI / UX
-- [ ] Fix the pallete of theme colours both ihn creating workots and the theme section of profile, its cluttered
 - [ ] Text visibility and contrast pass across entire app
 - [ ] Nav pill glassmorphism effect
 - [ ] Switch all custom modals to native modals throughout entire app
@@ -55,17 +54,6 @@ when we type them in it would be nice that the keyboard has the enter key so it 
       - AI builds a tailored workout + diet + rest plan
       - Automatically schedules everything into the calendar
       - Could run on Claude API as the backend
-- [ ] Advanced stats dashboard
-      - Hex/radar diagram showing activity across: back, 
-        legs, arms, shoulders, core, chest
-      - Stat tiles: workouts completed, total duration, 
-        volume, number of sets
-      - Per muscle group set breakdown (biceps: 12 sets, 
-        abdominals: 0, etc.)
-- [ ] Enhanced muscle heatmap
-      - Heat signals per muscle based on recent training 
-        volume and frequency
-      - More detailed than current anatomical map
 - [ ] Exercise video library
       - YouTube or hosted videos showing proper form 
         per exercise

@@ -10,9 +10,11 @@ import { sessionsService } from '../services/sessionsService';
 import { setsService } from '../services/setsService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useRepsAlert } from '../context/AlertContext';
+import { useWorkout } from '../context/WorkoutContext';
 import RepsHeader from '../components/RepsHeader';
+import AppTile from '../components/AppTile';
 import Svg, { Polygon, Line, Text as SvgText } from 'react-native-svg';
-import { mapMuscleSlug, intensityColors, getIntensityForPct } from '../utils/muscleUtils';
+import { mapMuscleSlug, intensityColors, getIntensityForPct, EXERCISE_FILTERS, exerciseMatchesFilter } from '../utils/muscleUtils';
 
 const LABELS = ['Core', 'Shoulders', 'Arms', 'Legs', 'Back', 'Chest'];
 const SIDES = LABELS.length;
@@ -131,14 +133,22 @@ const Stats = ({ navigation }) => {
   const [overviewStats, setOverviewStats] = useState(null);
   const [activeHours, setActiveHours] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [hasFetched, setHasFetched] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('ALL');
-  const [selectedDays, setSelectedDays] = useState(30);
+  const [selectedProgFilter, setSelectedProgFilter] = useState('ALL');
+  const [selectedDays, setSelectedDays] = useState(7);
   const scrollRef = useRef(null);
+  const { lastCompletedAt } = useWorkout();
+
+  // Cache: track when each tab last fetched. Only re-fetch if a workout
+  // was completed after that timestamp, or if the period changed.
+  const lastFetched = useRef({ overview: 0, archive: 0, progression: 0 });
+  const lastOverviewDays = useRef(7);
 
   const periodLabels = {
+    7: 'Last Week',
+    14: 'Last 2 Weeks',
     30: 'Last 30 Days',
     60: 'Last 60 Days',
     90: 'Last 90 Days',
@@ -146,14 +156,14 @@ const Stats = ({ navigation }) => {
   };
 
   const handlePeriodSelect = () => {
-    const options = ['Last 30 Days', 'Last 60 Days', 'Last 90 Days', 'Last 6 Months', 'Cancel'];
-    const values = [30, 60, 90, 180];
+    const options = ['Last Week', 'Last 2 Weeks', 'Last 30 Days', 'Last 60 Days', 'Last 90 Days', 'Last 6 Months', 'Cancel'];
+    const values = [7, 14, 30, 60, 90, 180];
 
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
-        { options, cancelButtonIndex: 4 },
+        { options, cancelButtonIndex: 6 },
         (index) => {
-          if (index < 4) setSelectedDays(values[index]);
+          if (index < 6) setSelectedDays(values[index]);
         }
       );
     } else {
@@ -166,17 +176,29 @@ const Stats = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
+      const needsRefresh = (tab) => {
+        // First load — no cached data yet
+        if (lastFetched.current[tab] === 0) return true;
+        // A workout was completed after our last fetch
+        if (lastCompletedAt > lastFetched.current[tab]) return true;
+        return false;
+      };
+
       if (viewMode === 'OVERVIEW') {
-        fetchOverview(selectedDays);
+        const daysChanged = lastOverviewDays.current !== selectedDays;
+        if (daysChanged || needsRefresh('overview')) {
+          fetchOverview(selectedDays);
+        }
       } else if (viewMode === 'ARCHIVE') {
-        fetchSessions();
+        if (needsRefresh('archive')) {
+          fetchSessions();
+        }
       } else if (viewMode === 'PROGRESSION') {
-        fetchProgression();
+        if (needsRefresh('progression')) {
+          fetchProgression();
+        }
       }
-      if (scrollRef.current) {
-        scrollRef.current.scrollTo({ y: 0, animated: false });
-      }
-    }, [viewMode, selectedDays])
+    }, [viewMode, selectedDays, lastCompletedAt])
   );
 
   const fetchOverview = async (days = 30) => {
@@ -187,6 +209,9 @@ const Stats = ({ navigation }) => {
 
       const trainingStats = await sessionsService.getTrainingStats(days);
       setActiveHours(trainingStats.activeHours);
+
+      lastFetched.current.overview = Date.now();
+      lastOverviewDays.current = days;
     } catch (error) {
       console.error('Failed to fetch overview stats:', error);
     } finally {
@@ -195,23 +220,26 @@ const Stats = ({ navigation }) => {
   };
 
   const fetchSessions = async () => {
-    if (!hasFetched) setLoading(true);
+    const isFirstLoad = lastFetched.current.archive === 0;
+    if (isFirstLoad) setLoading(true);
     try {
       const data = await sessionsService.getSessionHistory();
       setSessions(data || []);
+      lastFetched.current.archive = Date.now();
     } catch (error) {
       console.error('Failed to fetch sessions:', error);
     } finally {
       setLoading(false);
-      setHasFetched(true);
     }
   };
 
   const fetchProgression = async () => {
-    setLoading(true);
+    const isFirstLoad = lastFetched.current.progression === 0;
+    if (isFirstLoad) setLoading(true);
     try {
       const data = await setsService.getUserProgression();
       setProgression(data || []);
+      lastFetched.current.progression = Date.now();
     } catch (error) {
       console.error('Failed to fetch progression:', error);
     } finally {
@@ -249,6 +277,9 @@ const Stats = ({ navigation }) => {
               setSessions(prev => prev.filter(s => !selectedIds.includes(s.id)));
               setIsSelectionMode(false);
               setSelectedIds([]);
+              // Invalidate caches so overview/archive re-fetch after mutation
+              lastFetched.current.overview = 0;
+              lastFetched.current.archive = 0;
             } catch (error) {
               showAlert("Error", "Failed to delete selected sessions.");
             } finally {
@@ -273,10 +304,9 @@ const Stats = ({ navigation }) => {
     }
 
     return (
-      <TouchableOpacity
+      <AppTile
         style={[
           styles.sessionCard,
-          { backgroundColor: colors.secondaryBackground, borderColor: colors.border },
           isSelected && { borderColor: colors.accent, borderWidth: 2 }
         ]}
         onPress={() => {
@@ -292,7 +322,6 @@ const Stats = ({ navigation }) => {
             setSelectedIds([session.id]);
           }
         }}
-        delayLongPress={300}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
@@ -310,7 +339,7 @@ const Stats = ({ navigation }) => {
             />
           )}
         </View>
-      </TouchableOpacity>
+      </AppTile>
     );
   };
 
@@ -318,6 +347,11 @@ const Stats = ({ navigation }) => {
   const displayedSessions = selectedFilter === "ALL"
     ? sessions
     : sessions.filter(s => (s.workout_name?.toUpperCase() || 'FREE SESSION') === selectedFilter);
+
+  const uniqueProgFilters = EXERCISE_FILTERS;
+  const displayedProgression = selectedProgFilter === "ALL"
+    ? progression
+    : progression.filter(p => exerciseMatchesFilter(p, selectedProgFilter));
 
   const renderOverview = () => {
     if (!overviewStats) return null;
@@ -374,42 +408,40 @@ const Stats = ({ navigation }) => {
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.text }]}>MUSCLE HEATMAP</Text>
-        <View style={[styles.heatmapContainer, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+        <AppTile style={styles.heatmapContainer}>
           <View style={{ flex: 1, alignItems: 'center' }}>
             <Body data={bodyData} side="front" gender={gender} scale={0.7} colors={[intensityColors[1], intensityColors[2], intensityColors[3], intensityColors[4], intensityColors[5], intensityColors[6]]} border="#1C2733" />
           </View>
           <View style={{ flex: 1, alignItems: 'center' }}>
             <Body data={bodyData} side="back" gender={gender} scale={0.7} colors={[intensityColors[1], intensityColors[2], intensityColors[3], intensityColors[4], intensityColors[5], intensityColors[6]]} border="#1C2733" />
           </View>
-        </View>
+        </AppTile>
 
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10, marginTop: 20 }}>
-          <View style={[styles.statTile, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+          <AppTile style={styles.statTile}>
             <Text style={[styles.statTileLabel, { color: colors.secondaryText }]}>WORKOUTS</Text>
             <Text style={[styles.statTileValue, { color: colors.text }]}>{overviewStats.totalWorkouts}</Text>
-          </View>
-          <View style={[styles.statTile, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+          </AppTile>
+          <AppTile style={styles.statTile}>
             <Text style={[styles.statTileLabel, { color: colors.secondaryText }]}>TOTAL SETS</Text>
             <Text style={[styles.statTileValue, { color: colors.text }]}>{overviewStats.totalSets}</Text>
-          </View>
+          </AppTile>
         </View>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 30 }}>
-          <View style={[styles.statTile, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+          <AppTile style={styles.statTile}>
             <Text style={[styles.statTileLabel, { color: colors.secondaryText }]}>TOTAL VOLUME</Text>
             <Text style={[styles.statTileValue, { color: colors.text }]}>{Math.round(overviewStats.totalVolume)} {units}</Text>
-          </View>
-          <View style={[styles.statTile, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+          </AppTile>
+          <AppTile style={styles.statTile}>
             <Text style={[styles.statTileLabel, { color: colors.secondaryText }]}>ACTIVE HOURS</Text>
             <Text style={[styles.statTileValue, { color: colors.text }]}>{activeHours.toFixed(1)}h</Text>
-          </View>
+          </AppTile>
         </View>
 
         {sortedMuscles.length > 0 && (
           <>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>SET DISTRIBUTION</Text>
-            <View style={[
-              { backgroundColor: colors.secondaryBackground, borderColor: colors.border, borderWidth: 1, borderRadius: 4, padding: 16 }
-            ]}>
+            <AppTile style={{ padding: 16 }}>
               {sortedMuscles.map(([muscle, count], idx) => {
                 const pctDecimal = totalSpecificSets > 0 ? count / totalSpecificSets : 0;
                 const intensity = getIntensityForPct(pctDecimal);
@@ -426,7 +458,7 @@ const Stats = ({ navigation }) => {
                   </View>
                 );
               })}
-            </View>
+            </AppTile>
           </>
         )}
       </View>
@@ -438,7 +470,7 @@ const Stats = ({ navigation }) => {
     const dateLabel = lastDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
 
     return (
-      <View style={[styles.progRow, { borderColor: colors.border }]}>
+      <AppTile style={styles.progRow}>
         <View style={styles.progMain}>
           <Text style={[styles.progName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
           <Text style={[styles.progDate, { color: colors.secondaryText }]}>LAST: {dateLabel}</Text>
@@ -460,7 +492,7 @@ const Stats = ({ navigation }) => {
             </View>
           </View>
         </View>
-      </View>
+      </AppTile>
     );
   };
 
@@ -491,7 +523,7 @@ const Stats = ({ navigation }) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.toggleBtn, viewMode === 'ARCHIVE' && { borderBottomColor: colors.accent }]}
-              onPress={() => { setViewMode('ARCHIVE'); setHasFetched(false); }}
+              onPress={() => setViewMode('ARCHIVE')}
             >
               <Text style={[styles.toggleBtnText, { color: viewMode === 'ARCHIVE' ? colors.text : colors.secondaryText }]}>ARCHIVE</Text>
             </TouchableOpacity>
@@ -510,7 +542,7 @@ const Stats = ({ navigation }) => {
             {viewMode === 'OVERVIEW' ? 'OVERVIEW\nSTATS.' : viewMode === 'ARCHIVE' ? 'SESSION\nHISTORY.' : 'WEIGHT\nPROGRESS.'}
           </Text>
 
-          {loading && (viewMode === 'OVERVIEW' || viewMode === 'PROGRESSION' || (viewMode === 'ARCHIVE' && !hasFetched)) ? (
+          {loading && (viewMode === 'OVERVIEW' || viewMode === 'PROGRESSION' || (viewMode === 'ARCHIVE' && lastFetched.current.archive === 0)) ? (
 
             <ActivityIndicator color={colors.text} style={{ marginTop: 50 }} />
           ) : viewMode === 'OVERVIEW' ? (
@@ -558,17 +590,40 @@ const Stats = ({ navigation }) => {
                 </View>
               )}
             </View>
-          ) : (
-            progression.length > 0 ? (
-              progression.map((item) => (
-                <ProgressionCard key={item.id} item={item} />
-              ))
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={{ color: colors.secondaryText }}>NO TRACKED PROGRESS YET</Text>
-              </View>
-            )
-          )}
+          ) : viewMode === 'PROGRESSION' ? (
+            <View>
+              {progression.length > 0 && (
+                <View style={{ marginBottom: 20 }}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {uniqueProgFilters.map(filter => (
+                      <TouchableOpacity
+                        key={filter}
+                        style={[styles.filterChip, { borderColor: colors.border }, selectedProgFilter === filter && { backgroundColor: colors.accent, borderColor: colors.accent }]}
+                        onPress={() => setSelectedProgFilter(filter)}
+                      >
+                        <Text style={[styles.filterChipText, selectedProgFilter === filter ? { color: '#000' } : { color: colors.text }]}>{filter}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {displayedProgression.length > 0 ? (
+                <View style={{ maxHeight: 400, borderWidth: 1, borderColor: colors.border, borderRadius: 4, padding: 12, paddingRight: 5 }}>
+                  <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true}>
+                    {displayedProgression.map((item) => (
+                      <ProgressionCard key={item.id} item={item} />
+                    ))}
+                    <View style={{ height: 20 }} />
+                  </ScrollView>
+                </View>
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={{ color: colors.secondaryText }}>NO MATCHING PROGRESSION</Text>
+                </View>
+              )}
+            </View>
+          ) : null}
 
           <View style={{ height: 100 }} />
         </View>
@@ -651,8 +706,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 20,
-    borderBottomWidth: 1,
+    padding: 16,
+    marginBottom: 12,
   },
   progMain: {
     flex: 1,
@@ -824,8 +879,6 @@ const styles = StyleSheet.create({
   },
   sessionCard: {
     padding: 16,
-    borderRadius: 4,
-    borderWidth: 1,
     height: 85,
     marginBottom: 16,
     justifyContent: 'center',
@@ -849,8 +902,6 @@ const styles = StyleSheet.create({
   statTile: {
     flex: 1,
     padding: 16,
-    borderWidth: 1,
-    borderRadius: 4,
   },
   statTileLabel: {
     fontSize: 12,
@@ -874,8 +925,6 @@ const styles = StyleSheet.create({
   heatmapContainer: {
     flexDirection: 'row',
     padding: 20,
-    borderWidth: 1,
-    borderRadius: 4,
     justifyContent: 'space-between',
     height: 300,
   },

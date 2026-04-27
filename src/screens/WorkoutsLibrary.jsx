@@ -7,12 +7,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
 import { workoutsService } from '../services/workoutsService';
-import { sessionsService } from '../services/sessionsService';
+
 import { sharingService } from '../services/sharingService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useRepsAlert } from '../context/AlertContext';
 import QRCode from 'react-native-qrcode-svg';
 import RepsHeader from '../components/RepsHeader';
+import AppTile from '../components/AppTile';
 
 const WorkoutsLibrary = ({ navigation }) => {
   const { colors, isDarkMode, units } = useTheme();
@@ -33,7 +34,6 @@ const WorkoutsLibrary = ({ navigation }) => {
     item: null,
     position: { top: 0, right: 0 }
   });
-  const [stats, setStats] = useState({ cumulativeVolume: 0, weeklyLoad: 0, activeHours: 0 });
 
   const { width: windowWidth } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
@@ -58,22 +58,11 @@ const WorkoutsLibrary = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       fetchWorkouts();
-      fetchStats();
       if (scrollViewRef.current) {
         scrollViewRef.current.scrollTo({ y: 0, animated: false });
       }
     }, [])
   );
-
-  const fetchStats = async () => {
-    try {
-      const data = await sessionsService.getTrainingStats();
-      console.log('Training Stats Fetched:', data);
-      setStats(data || { cumulativeVolume: 0, weeklyLoad: 0, activeHours: 0 });
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-    }
-  };
 
   const fetchWorkouts = async () => {
     try {
@@ -164,13 +153,11 @@ const WorkoutsLibrary = ({ navigation }) => {
     const estimatedMins = Math.round((totalSets * 135) / 60);
 
     return (
-      <TouchableOpacity
+      <AppTile
         style={[
           styles.card,
-          { backgroundColor: colors.secondaryBackground, borderColor: colors.border },
           isSelected && { borderColor: colors.accent, borderWidth: 2 }
         ]}
-        activeOpacity={0.8}
         onPress={() => {
           if (isSelectionMode) {
             toggleSelection(item.id);
@@ -184,7 +171,6 @@ const WorkoutsLibrary = ({ navigation }) => {
             setSelectedIds([item.id]);
           }
         }}
-        delayLongPress={300}
       >
         <View style={styles.cardHeader}>
           <Text style={[styles.workoutName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
@@ -212,7 +198,7 @@ const WorkoutsLibrary = ({ navigation }) => {
             ~{estimatedMins} MIN
           </Text>
         </View>
-      </TouchableOpacity>
+      </AppTile>
     );
   };
 
@@ -329,21 +315,18 @@ const WorkoutsLibrary = ({ navigation }) => {
         keyboardDismissMode="interactive"
       >
         <View style={styles.content}>
-          <Text style={[styles.subLabel, { color: colors.secondaryText }]}>WORKOUT LIBRARY / Q3 CYCLE</Text>
-          <Text style={[styles.mainTitle, { color: colors.text }]}>STRENGTH{"\n"}ARCHIVE.</Text>
+          <Text style={[styles.mainTitle, { color: colors.text, marginBottom: 20 }]}>WORKOUT{"\n"}LIBRARY.</Text>
 
-          <Text style={[styles.description, { color: colors.secondaryText }]}>
-            A curated selection of high-intensity protocols designed for structural hypertrophy and neurological adaptation.
-          </Text>
-
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
-            <TouchableOpacity
-              style={{ flex: 1, backgroundColor: colors.secondaryBackground, padding: 16, borderRadius: 4, borderWidth: 1, borderColor: colors.border, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
-              onPress={() => navigation.navigate('JoinWorkout')}
-            >
-              <MaterialCommunityIcons name="download" size={20} color={colors.text} style={{ marginRight: 10 }} />
-              <Text style={{ color: colors.text, fontWeight: '800', letterSpacing: 1 }}>IMPORT WORKOUT</Text>
-            </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+            <AppTile style={{ flex: 1 }}>
+              <TouchableOpacity
+                style={{ padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
+                onPress={() => navigation.navigate('JoinWorkout')}
+              >
+                <MaterialCommunityIcons name="download" size={20} color={colors.text} style={{ marginRight: 10 }} />
+                <Text style={{ color: colors.text, fontWeight: '800', letterSpacing: 1 }}>IMPORT WORKOUT</Text>
+              </TouchableOpacity>
+            </AppTile>
           </View>
 
           <View style={[styles.listContainer, { maxHeight: 500, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
@@ -360,38 +343,6 @@ const WorkoutsLibrary = ({ navigation }) => {
                 <Text style={{ color: colors.secondaryText, fontSize: 14 }}>No workout routines yet.</Text>
               </View>
             )}
-          </View>
-
-          {/* Cumulative Volume Footer */}
-          <View style={styles.volumeContainer}>
-            <Text style={[styles.volumeTitle, { color: colors.text }]}>
-              {profile?.units === 'lbs'
-                ? (stats.cumulativeVolume * 2.20462).toLocaleString(undefined, { maximumFractionDigits: 0 })
-                : stats.cumulativeVolume.toLocaleString()
-              }{' '}
-              {profile?.units?.toUpperCase() || 'KG'} VOLUME
-            </Text>
-            <View style={styles.volumeGrid}>
-              <View style={styles.volumeItem}>
-                <Text style={[styles.volumeLabel, { color: colors.secondaryText }]}>WEEKLY LOAD</Text>
-                <Text style={[styles.volumeValue, { color: colors.text }]}>
-                  {profile?.units === 'lbs'
-                    ? (stats.weeklyLoad * 2.20462).toLocaleString(undefined, { maximumFractionDigits: 0 })
-                    : stats.weeklyLoad.toLocaleString()
-                  }
-                </Text>
-                <Text style={[styles.volumeSub, { color: colors.secondaryText }]}>
-                  {profile?.units === 'lbs' ? 'POUNDS' : 'KILOGRAMS'}
-                </Text>
-              </View>
-              <View style={styles.volumeItem}>
-                <Text style={[styles.volumeLabel, { color: colors.secondaryText }]}>ACTIVE TIME</Text>
-                <Text style={[styles.volumeValue, { color: colors.text }]}>
-                  {stats.activeHours.toFixed(1)}
-                </Text>
-                <Text style={[styles.volumeSub, { color: colors.secondaryText }]}>HOURS / WEEK</Text>
-              </View>
-            </View>
           </View>
 
           <View style={{ height: 40 }} />
@@ -455,8 +406,6 @@ const styles = StyleSheet.create({
   card: {
     padding: 24,
     marginBottom: 20,
-    borderRadius: 4,
-    borderWidth: 1,
   },
   cardHeader: {
     flexDirection: 'row',

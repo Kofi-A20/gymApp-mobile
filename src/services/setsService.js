@@ -137,7 +137,7 @@ export const setsService = {
           reps,
           logged_at,
           exercise_id,
-          exercises (name),
+          exercises (name, muscle_group, primary_muscles),
           sessions!inner (user_id)
         `)
         .eq('sessions.user_id', user.id)
@@ -150,11 +150,15 @@ export const setsService = {
       (data || []).forEach(set => {
         const exId = set.exercise_id;
         const exName = set.exercises?.name || 'UNKNOWN';
+        const exMuscleGroup = set.exercises?.muscle_group || '';
+        const exPrimaryMuscles = set.exercises?.primary_muscles || [];
 
         if (!progressionMap[exId]) {
           progressionMap[exId] = {
             id: exId,
             name: exName,
+            muscle_group: exMuscleGroup,
+            primary_muscles: exPrimaryMuscles,
             bestWeight: set.weight_kg,
             lastWeight: set.weight_kg,
             lastDate: set.logged_at

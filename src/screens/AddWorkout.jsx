@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, FlatList } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, TextInput, ActivityIndicator, Keyboard, InteractionManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { exercisesService } from '../services/exercisesService';
@@ -7,6 +7,43 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
 import { useRepsAlert } from '../context/AlertContext';
 import { EXERCISE_FILTERS, exerciseMatchesFilter } from '../utils/muscleUtils';
+import AppTile from '../components/AppTile';
+
+// ─── Memoised exercise row to avoid full-list re-renders ─────────────────────
+const ExerciseRow = React.memo(({ ex, index, isSelected, onPress, colors, isDarkMode }) => (
+  <TouchableOpacity
+    activeOpacity={0.7}
+    style={[
+      styles.exerciseItemContainer,
+      {
+        backgroundColor: isSelected ? (isDarkMode ? '#111' : '#F0F0F0') : 'transparent',
+        borderColor: isSelected ? colors.accent : colors.border,
+        borderWidth: 1,
+        marginBottom: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+      }
+    ]}
+    onPress={onPress}
+  >
+    {isSelected ? (
+      <Ionicons name="checkmark-circle" size={22} color={colors.accent} style={{ marginRight: 16 }} />
+    ) : (
+      <Text style={[styles.exerciseId, { color: colors.secondaryText, marginRight: 16 }]}>
+        {String(index + 1).padStart(2, '0')}
+      </Text>
+    )}
+    <View style={{ flex: 1 }}>
+      <Text style={[styles.exerciseName, { color: colors.text }]}>
+        {ex.name.toUpperCase()}
+      </Text>
+      <Text style={[styles.exerciseFocus, { color: colors.secondaryText }]}>
+        {ex.muscle_group?.toUpperCase() || 'GENERAL'}
+      </Text>
+    </View>
+  </TouchableOpacity>
+));
 
 const AddWorkout = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
@@ -16,10 +53,10 @@ const AddWorkout = ({ navigation }) => {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [allExercises, setAllExercises] = useState([]);
-  const [filteredExercises, setFilteredExercises] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const listRef = useRef(null);
 
 
   useEffect(() => {
@@ -31,7 +68,6 @@ const AddWorkout = ({ navigation }) => {
       setLoading(true);
       const data = await exercisesService.getAllExercises();
       setAllExercises(data);
-      setFilteredExercises(data);
     } catch (error) {
       console.error('Failed to fetch exercises:', error);
     } finally {
@@ -39,7 +75,7 @@ const AddWorkout = ({ navigation }) => {
     }
   };
 
-  useEffect(() => {
+  const filteredExercises = useMemo(() => {
     let result = allExercises;
 
     if (activeFilter !== 'ALL') {
@@ -53,28 +89,29 @@ const AddWorkout = ({ navigation }) => {
       );
     }
 
-    setFilteredExercises(result);
+    return result;
   }, [search, activeFilter, allExercises]);
 
+  // Reset scroll position when filter or search changes
   useEffect(() => {
-    const unsubscribe = navigation.addListener('blur', () => {
-      setWorkoutName('');
-      setSearch('');
-      setActiveFilter('ALL');
-      setSelectedExercises([]);
-    });
-    return unsubscribe;
-  }, [navigation]);
+    if (listRef.current) {
+      setTimeout(() => {
+        listRef.current?.scrollTo({ y: 0, animated: false });
+      }, 0);
+    }
+  }, [activeFilter, search]);
 
   // Toggle selection on tap (no inline sets/reps — that's on Screen 2)
-  const handleRowPress = (ex) => {
-    const isSelected = selectedExercises.find(s => s.id === ex.id);
-    if (isSelected) {
-      setSelectedExercises(prev => prev.filter(s => s.id !== ex.id));
-    } else {
-      setSelectedExercises(prev => [...prev, { ...ex, sets_target: '', reps_target: '' }]);
-    }
-  };
+  const handleRowPress = useCallback((ex) => {
+    setSelectedExercises(prev => {
+      const isSelected = prev.find(s => s.id === ex.id);
+      if (isSelected) {
+        return prev.filter(s => s.id !== ex.id);
+      } else {
+        return [...prev, { ...ex, sets_target: '', reps_target: '' }];
+      }
+    });
+  }, []);
 
   // Validate then proceed to Screen 2
   const handleNext = () => {
@@ -93,42 +130,37 @@ const AddWorkout = ({ navigation }) => {
   };
 
   return (
-    <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+    <View
+      style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}
+    >
       <RepsHeader
         leftIcon="close"
         onLeftPress={() => navigation.goBack()}
         rightActions={[{ text: 'CANCEL', onPress: () => navigation.goBack() }]}
       />
 
-      <ScrollView
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-      >
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
-          <Text style={[styles.subLabel, { color: colors.secondaryText }]}>NEW ENTRY</Text>
-          <Text style={[styles.mainTitle, { color: colors.text }]}>DEFINE{"\n"}THE SESSION</Text>
 
-          <Text style={[styles.description, { color: colors.secondaryText }]}>
-            Precision starts before the first lift. Name your routine and select your movements from the reps library.
-          </Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>CREATE{"\n"}WORKOUT</Text>
 
           {/* Workout Name Input */}
-          <View style={styles.inputGroup}>
+          <AppTile style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: colors.secondaryText }]}>WORKOUT NAME</Text>
             <TextInput
-              style={[styles.mainInput, { color: colors.text, borderBottomColor: colors.border }]}
+              style={[styles.mainInput, { color: colors.text }]}
               placeholder="E.G. HYPERTROPHY A"
               placeholderTextColor={isDarkMode ? '#333' : '#CCC'}
               value={workoutName}
               onChangeText={setWorkoutName}
               autoCapitalize="characters"
+              blurOnSubmit={true}
+              onSubmitEditing={Keyboard.dismiss}
             />
-          </View>
+          </AppTile>
 
           {/* Movement Search */}
-          <View style={[styles.searchBox, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+          <AppTile style={styles.searchBox}>
             <Text style={[styles.searchLabel, { color: colors.secondaryText }]}>MOVEMENT SEARCH</Text>
             <View style={styles.searchRow}>
               <Feather name="search" size={16} color={colors.secondaryText} style={{ marginRight: 8 }} />
@@ -140,35 +172,45 @@ const AddWorkout = ({ navigation }) => {
                 onChangeText={setSearch}
               />
             </View>
-          </View>
+          </AppTile>
 
           {/* Body Focus Filters */}
           <View style={styles.filterSection}>
             <Text style={[styles.filterLabel, { color: colors.secondaryText }]}>BODY FOCUS</Text>
-            <View style={styles.filterGrid}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterScroll}
+            >
               {EXERCISE_FILTERS.map((f) => (
-                <TouchableOpacity
+                <Pressable
                   key={f}
-                  onPress={() => setActiveFilter(f)}
-                  style={[
+                  onPress={() => {
+                    InteractionManager.runAfterInteractions(() => {
+                      setActiveFilter(f);
+                    });
+                  }}
+                  style={({ pressed }) => [
                     styles.filterChip,
                     {
-                      backgroundColor: activeFilter === f ? (isDarkMode ? '#FFF' : '#000') : 'transparent',
-                      borderColor: colors.border
-                    }
+                      borderColor: colors.border,
+                      backgroundColor: activeFilter === f ? colors.accent : 'transparent',
+                      opacity: pressed ? 0.6 : 1,
+                    },
+                    activeFilter === f && { borderColor: colors.accent }
                   ]}
                 >
                   <Text style={[
                     styles.filterChipText,
-                    { color: activeFilter === f ? (isDarkMode ? '#000' : '#FFF') : colors.text }
+                    { color: activeFilter === f ? '#000' : colors.text }
                   ]}>{f}</Text>
-                </TouchableOpacity>
+                </Pressable>
               ))}
-            </View>
+            </ScrollView>
           </View>
 
           {/* Exercise Selection List */}
-          <View style={[styles.selectionCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+          <AppTile style={styles.selectionCard}>
             <View style={styles.selectionHeader}>
               <Text style={[styles.selectionTitle, { color: colors.text }]}>EXERCISE{"\n"}SELECTION</Text>
               <Text style={[styles.selectionCount, { color: colors.secondaryText }]}>
@@ -176,87 +218,52 @@ const AddWorkout = ({ navigation }) => {
               </Text>
             </View>
 
-            {/* Selected count badge in card header */}
-          <View style={styles.selectedList}>
+            <View style={styles.selectedList}>
               {loading ? (
                 <ActivityIndicator color={colors.text} style={{ padding: 40 }} />
               ) : (
-                  <FlatList
-                    data={filteredExercises}
-                    keyExtractor={(ex) => String(ex.id)}
-                    scrollEnabled={true}
-                    nestedScrollEnabled={true}
-                    showsVerticalScrollIndicator={true}
-                    style={{ maxHeight: 400 }}
-                    keyboardShouldPersistTaps="handled"
-                    renderItem={({ item: ex, index }) => {
-                      const isSelected = selectedExercises.find(s => s.id === ex.id);
-                      return (
-                        <TouchableOpacity
-                          key={ex.id}
-                          activeOpacity={1}
-                          style={[
-                            styles.exerciseItemContainer,
-                            {
-                              backgroundColor: isSelected ? (isDarkMode ? '#111' : '#F0F0F0') : colors.background,
-                              borderColor: isSelected ? colors.accent : colors.border,
-                              borderWidth: 1,
-                              marginBottom: 12,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              padding: 15,
-                            }
-                          ]}
-                          onPress={() => handleRowPress(ex)}
-                        >
-                          {/* Check / index */}
-                          {isSelected ? (
-                            <Ionicons name="checkmark-circle" size={22} color={colors.accent} style={{ marginRight: 16 }} />
-                          ) : (
-                            <Text style={[styles.exerciseId, { color: colors.secondaryText, marginRight: 16 }]}>
-                              {String(index + 1).padStart(2, '0')}
-                            </Text>
-                          )}
-                          <View style={{ flex: 1 }}>
-                            <Text style={[styles.exerciseName, { color: colors.text }]}>
-                              {ex.name.toUpperCase()}
-                            </Text>
-                            <Text style={[styles.exerciseFocus, { color: colors.secondaryText }]}>
-                              {ex.muscle_group?.toUpperCase() || 'GENERAL'}
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    }}
-                  />
-              )}
-
-              {filteredExercises.length === 0 && !loading && (
-                <Text style={{ color: colors.secondaryText, textAlign: 'center', marginVertical: 20 }}>
-                  NO MOVEMENTS MATCH YOUR SEARCH
-                </Text>
+                <ScrollView
+                  ref={listRef}
+                  nestedScrollEnabled={true}
+                  showsVerticalScrollIndicator={true}
+                  style={{ maxHeight: 300 }}
+                  contentContainerStyle={{ paddingBottom: 20 }}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {filteredExercises.map((ex, index) => {
+                    const isSelected = !!selectedExercises.find(s => s.id === ex.id);
+                    return (
+                      <ExerciseRow
+                        key={ex.id}
+                        ex={ex}
+                        index={index}
+                        isSelected={isSelected}
+                        onPress={() => handleRowPress(ex)}
+                        colors={colors}
+                        isDarkMode={isDarkMode}
+                      />
+                    );
+                  })}
+                  {filteredExercises.length === 0 && (
+                    <Text style={{ color: colors.secondaryText, textAlign: 'center', marginVertical: 20 }}>
+                      NO MOVEMENTS MATCH YOUR SEARCH
+                    </Text>
+                  )}
+                </ScrollView>
               )}
             </View>
-          </View>
-
-          {/* Selection summary */}
-          {selectedExercises.length > 0 && (
-            <View style={[styles.selectionSummary, { borderColor: colors.border }]}>
-              <Text style={[styles.selectionSummaryText, { color: colors.secondaryText }]}>
-                {selectedExercises.length} MOVEMENT{selectedExercises.length !== 1 ? 'S' : ''} SELECTED
-              </Text>
-            </View>
-          )}
+          </AppTile>
 
           {/* Next CTA */}
-          <TouchableOpacity
-            style={[styles.saveBtn, { backgroundColor: colors.accent }]}
+          <AppTile
             onPress={handleNext}
+            style={[styles.saveBtn, { backgroundColor: colors.accent, borderColor: colors.accent }]}
           >
-            <Text style={[styles.saveBtnText, { color: isDarkMode ? '#000' : '#FFF' }]}>NEXT — SET TARGETS →</Text>
-          </TouchableOpacity>
+            <Text style={[styles.saveBtnText, { color: '#000' }]}>NEXT — SET TARGETS →</Text>
+          </AppTile>
 
-          <View style={{ height: 100 }} />
+          <View style={{ height: 60 }} />
+
         </View>
       </ScrollView>
     </View>
@@ -289,12 +296,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 24,
-    paddingTop: 40,
-  },
-  subLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
+    paddingTop: 10,
   },
   mainTitle: {
     fontSize: 56,
@@ -303,14 +305,9 @@ const styles = StyleSheet.create({
     letterSpacing: -2,
     lineHeight: 52,
   },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '500',
-    marginTop: 25,
-  },
   inputGroup: {
-    marginTop: 50,
+    padding: 20,
+    marginTop: 10,
   },
   inputLabel: {
     fontSize: 9,
@@ -319,17 +316,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   mainInput: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: '900',
-    borderBottomWidth: 2,
-    paddingVertical: 10,
     letterSpacing: -1,
+    paddingVertical: 5,
   },
   searchBox: {
-    marginTop: 40,
+    marginTop: 20,
     padding: 20,
-    borderRadius: 2,
-    borderWidth: 1,
   },
   searchLabel: {
     fontSize: 9,
@@ -348,7 +342,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   filterSection: {
-    marginTop: 40,
+    marginTop: 20,
   },
   filterLabel: {
     fontSize: 10,
@@ -356,32 +350,31 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 15,
   },
-  filterGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  filterScroll: {
+    paddingRight: 20,
     gap: 8,
   },
   filterChip: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderWidth: 1,
-    borderRadius: 1,
+    borderRadius: 24,
+    marginRight: 8,
   },
   filterChipText: {
     fontSize: 10,
     fontWeight: '800',
   },
   selectionCard: {
-    marginTop: 60,
+    marginTop: 20,
+    marginBottom: 20,
     padding: 24,
-    borderWidth: 1,
-    borderRadius: 2,
   },
   selectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginBottom: 30,
+    marginBottom: 20,
   },
   selectionTitle: {
     fontSize: 22,
@@ -393,8 +386,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'right',
   },
+  selectedList: {
+    // container for the scrollview
+  },
   exerciseItemContainer: {
-    borderRadius: 0,
+    borderRadius: 16,
   },
   exerciseId: {
     fontSize: 18,
@@ -410,24 +406,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
-  selectionSummary: {
-    marginTop: 20,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    alignItems: 'center',
-  },
-  selectionSummaryText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
   saveBtn: {
     paddingVertical: 20,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 24,
-    borderRadius: 2,
+    marginBottom: 40,
   },
   saveBtnText: {
     fontSize: 14,

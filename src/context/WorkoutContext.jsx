@@ -11,6 +11,7 @@ const WorkoutContext = createContext({});
 export const WorkoutProvider = ({ children }) => {
   const [activeSession, setActiveSession] = useState(null);
   const [isLogging, setIsLogging] = useState(false);
+  const [lastCompletedAt, setLastCompletedAt] = useState(0);
 
   // Restore session on app mount (resume after backgrounding/crash)
   useEffect(() => {
@@ -112,6 +113,7 @@ export const WorkoutProvider = ({ children }) => {
       // 4. Clear local state
       setActiveSession(null);
       setIsLogging(false);
+      setLastCompletedAt(Date.now());
       await AsyncStorage.removeItem(STORAGE_KEY);
     } catch (error) {
       throw error;
@@ -131,6 +133,7 @@ export const WorkoutProvider = ({ children }) => {
     <WorkoutContext.Provider value={{
       activeSession,
       isLogging,
+      lastCompletedAt,
       startWorkout,
       finishWorkout,
       cancelWorkout,

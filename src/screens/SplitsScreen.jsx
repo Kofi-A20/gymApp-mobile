@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import RepsHeader from '../components/RepsHeader';
 import { splitsService } from '../services/splitsService';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AppTile from '../components/AppTile';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -58,7 +59,7 @@ const SplitsScreen = ({ navigation }) => {
     const daysString = activeDays.length > 0 ? activeDays.map(d => DAYS[d]).join(', ') : 'No days assigned';
 
     return (
-      <View style={[styles.card, { backgroundColor: isDarkMode ? '#111' : '#FFF', borderColor: colors.border }]}>
+      <AppTile style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={[styles.splitName, { color: colors.text }]}>{item.name}</Text>
           <Switch
@@ -79,7 +80,7 @@ const SplitsScreen = ({ navigation }) => {
             <Text style={[styles.actionText, { color: '#FF3B30' }]}>DELETE</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </AppTile>
     );
   };
 
@@ -117,8 +118,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   listContent: { padding: 24, paddingBottom: 100 },
   card: {
-    borderWidth: 1,
-    borderRadius: 8,
     padding: 20,
     marginBottom: 16,
   },
