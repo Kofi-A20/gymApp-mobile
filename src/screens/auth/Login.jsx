@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRepsAlert } from '../../context/AlertContext';
+import AppTile from '../../components/AppTile';
 
 const Login = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -45,31 +46,35 @@ const Login = ({ navigation }) => {
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.secondaryText }]}>EMAIL</Text>
-              <TextInput
-                style={[styles.input, { color: colors.text, borderBottomColor: colors.border }]}
-                placeholder="YOUR_EMAIL@EXAMPLE.COM"
-                placeholderTextColor={colors.secondaryText}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+              <AppTile style={styles.tileInputContainer}>
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder="YOUR_EMAIL@EXAMPLE.COM"
+                  placeholderTextColor={colors.secondaryText}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </AppTile>
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.secondaryText }]}>PASSWORD</Text>
-              <TextInput
-                style={[styles.input, { color: colors.text, borderBottomColor: colors.border }]}
-                placeholder="••••••••••••"
-                placeholderTextColor={colors.secondaryText}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
+              <AppTile style={styles.tileInputContainer}>
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder="••••••••••••"
+                  placeholderTextColor={colors.secondaryText}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+              </AppTile>
             </View>
 
-            <TouchableOpacity
-              style={[styles.loginButton, { backgroundColor: colors.text }]}
+            <AppTile
+              style={[styles.loginButton, { backgroundColor: colors.text, borderColor: colors.text }]}
               onPress={handleLogin}
               disabled={loading}
             >
@@ -78,7 +83,7 @@ const Login = ({ navigation }) => {
               ) : (
                 <Text style={[styles.loginButtonText, { color: colors.background }]}>LOG IN</Text>
               )}
-            </TouchableOpacity>
+            </AppTile>
 
             <View style={styles.footer}>
               <Text style={{ color: colors.secondaryText }}>NEW TO REPS? </Text>
@@ -128,23 +133,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 10,
   },
+  tileInputContainer: {
+    paddingHorizontal: 15,
+    paddingVertical: 5,
+  },
   input: {
     height: 45,
-    borderBottomWidth: 1,
     fontSize: 16,
     paddingVertical: 5,
   },
   loginButton: {
     height: 55,
-    borderRadius: 0,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 3,
   },
   loginButtonText: {
     fontSize: 16,

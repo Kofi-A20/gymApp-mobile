@@ -6,6 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import RepsHeader from '../../components/RepsHeader';
 import { useRepsAlert } from '../../context/AlertContext';
+import AppTile from '../../components/AppTile';
 
 const SignUp = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
@@ -13,6 +14,7 @@ const SignUp = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const { colors } = useTheme();
@@ -20,8 +22,24 @@ const SignUp = ({ navigation }) => {
   const { showAlert } = useRepsAlert();
 
   const handleSignUp = async () => {
+    setPasswordError('');
+
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
       showAlert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password.length < 8) {
+      setPasswordError('Minimum 8 characters required');
+      return;
+    } else if (!/[a-zA-Z]/.test(password)) {
+      setPasswordError('Must contain at least one letter');
+      return;
+    } else if (!/[0-9]/.test(password)) {
+      setPasswordError('Must contain at least one number');
+      return;
+    } else if (!/[^a-zA-Z0-9]/.test(password)) {
+      setPasswordError('Must contain at least one special character');
       return;
     }
 
@@ -66,65 +84,76 @@ const SignUp = ({ navigation }) => {
             <View style={styles.row}>
               <View style={[styles.inputContainer, { flex: 1, marginRight: 10 }]}>
                 <Text style={[styles.label, { color: colors.secondaryText }]}>FIRST NAME</Text>
-                <TextInput
-                  style={[styles.input, { color: colors.text, borderBottomColor: colors.border }]}
-                  placeholder="NAME"
-                  placeholderTextColor={colors.secondaryText}
-                  value={firstName}
-                  onChangeText={setFirstName}
-                />
+                <AppTile style={styles.tileInputContainer}>
+                  <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    placeholder="NAME"
+                    placeholderTextColor={colors.secondaryText}
+                    value={firstName}
+                    onChangeText={setFirstName}
+                  />
+                </AppTile>
               </View>
               <View style={[styles.inputContainer, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.secondaryText }]}>LAST NAME</Text>
-                <TextInput
-                  style={[styles.input, { color: colors.text, borderBottomColor: colors.border }]}
-                  placeholder="LAST"
-                  placeholderTextColor={colors.secondaryText}
-                  value={lastName}
-                  onChangeText={setLastName}
-                />
+                <AppTile style={styles.tileInputContainer}>
+                  <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    placeholder="LAST"
+                    placeholderTextColor={colors.secondaryText}
+                    value={lastName}
+                    onChangeText={setLastName}
+                  />
+                </AppTile>
               </View>
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.secondaryText }]}>EMAIL</Text>
-              <TextInput
-                style={[styles.input, { color: colors.text, borderBottomColor: colors.border }]}
-                placeholder="YOUR_EMAIL@EXAMPLE.COM"
-                placeholderTextColor={colors.secondaryText}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+              <AppTile style={styles.tileInputContainer}>
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder="YOUR_EMAIL@EXAMPLE.COM"
+                  placeholderTextColor={colors.secondaryText}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </AppTile>
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.secondaryText }]}>PASSWORD</Text>
-              <TextInput
-                style={[styles.input, { color: colors.text, borderBottomColor: colors.border }]}
-                placeholder="••••••••••••"
-                placeholderTextColor={colors.secondaryText}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
+              <AppTile style={[styles.tileInputContainer, passwordError ? { borderColor: colors.danger || 'red', borderWidth: 1 } : {}]}>
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder="••••••••••••"
+                  placeholderTextColor={colors.secondaryText}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+              </AppTile>
+              {passwordError ? <Text style={[styles.errorText, { color: colors.danger || 'red' }]}>{passwordError}</Text> : null}
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.secondaryText }]}>CONFIRM PASSWORD</Text>
-              <TextInput
-                style={[styles.input, { color: colors.text, borderBottomColor: colors.border }]}
-                placeholder="••••••••••••"
-                placeholderTextColor={colors.secondaryText}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-              />
+              <AppTile style={styles.tileInputContainer}>
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder="••••••••••••"
+                  placeholderTextColor={colors.secondaryText}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                />
+              </AppTile>
             </View>
 
-            <TouchableOpacity
-              style={[styles.signUpButton, { backgroundColor: colors.text }]}
+            <AppTile
+              style={[styles.signUpButton, { backgroundColor: colors.text, borderColor: colors.text }]}
               onPress={handleSignUp}
               disabled={loading}
             >
@@ -133,7 +162,7 @@ const SignUp = ({ navigation }) => {
               ) : (
                 <Text style={[styles.signUpButtonText, { color: colors.background }]}>CREATE ACCOUNT</Text>
               )}
-            </TouchableOpacity>
+            </AppTile>
 
             <View style={styles.footer}>
               <Text style={{ color: colors.secondaryText }}>ALREADY CHALLENGED? </Text>
@@ -189,23 +218,25 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 10,
   },
+  tileInputContainer: {
+    paddingHorizontal: 15,
+    paddingVertical: 5,
+  },
   input: {
     height: 45,
-    borderBottomWidth: 1,
     fontSize: 16,
     paddingVertical: 5,
   },
+  errorText: {
+    fontSize: 12,
+    marginTop: 5,
+    fontWeight: '600',
+  },
   signUpButton: {
     height: 55,
-    borderRadius: 0,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 3,
   },
   signUpButtonText: {
     fontSize: 16,
