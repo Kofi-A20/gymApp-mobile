@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform, ActionSheetIOS, Alert } from 'react-native';
 import Body from 'react-native-body-highlighter';
 
@@ -122,7 +122,7 @@ const RadarChart = ({ data = {}, maxValue = 10, colors, accentColor, size = 180 
   );
 };
 
-const Stats = ({ navigation }) => {
+const Stats = ({ navigation, route }) => {
   const { colors, isDarkMode, units, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useProfile();
@@ -140,6 +140,13 @@ const Stats = ({ navigation }) => {
   const [selectedDays, setSelectedDays] = useState(7);
   const scrollRef = useRef(null);
   const { lastCompletedAt } = useWorkout();
+
+  useEffect(() => {
+    if (route.params?.resetTimestamp) {
+      setViewMode('OVERVIEW');
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }
+  }, [route.params?.resetTimestamp]);
 
   // Cache: track when each tab last fetched. Only re-fetch if a workout
   // was completed after that timestamp, or if the period changed.

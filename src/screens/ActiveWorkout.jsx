@@ -10,15 +10,19 @@ import {
   KeyboardAvoidingView,
   Platform,
   BackHandler,
+  AppState,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { useWorkout } from '../context/WorkoutContext';
 import { useRepsAlert } from '../context/AlertContext';
-import { MaterialCommunityIcons, AntDesign, Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, AntDesign, Ionicons, Feather } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
 import AppTile from '../components/AppTile';
+import BottomSheet from '../components/BottomSheet';
+import YoutubeIframe from 'react-native-youtube-iframe';
+import { exerciseDBService } from '../services/exerciseDBService';
 
 const UI_STORAGE_KEY = '@reps_activeWorkout_ui';
 
@@ -44,6 +48,22 @@ const ActiveWorkout = ({ navigation }) => {
   // Session notes
   const [notes, setNotes] = useState('');
 
+  // Info Sheet
+  const [infoVisible, setInfoVisible] = useState(false);
+  const [infoData, setInfoData] = useState({ loading: false, details: null, video: null });
+  const [activeInfoExName, setActiveInfoExName] = useState('');
+
+  const openInfo = async (exercise) => {
+    setActiveInfoExName(exercise.name);
+    setInfoVisible(true);
+    setInfoData({ loading: true, details: null, video: null });
+
+    const details = await exerciseDBService.getExerciseDetails(exercise.name);
+    const video = await exerciseDBService.getYouTubeVideo(exercise.name, exercise.muscle_group);
+    
+    setInfoData({ loading: false, details, video });
+  };
+
   // Gate the persist effect — don't write state until restore has completed
   const hasRestored = useRef(false);
 
@@ -52,15 +72,40 @@ const ActiveWorkout = ({ navigation }) => {
 
   // Refs for reps inputs to allow auto-focus
   const repsInputsRefs = useRef({});
+  const restEndTime = useRef(0);
 
   // Session timer tick
   useEffect(() => {
-    const interval = setInterval(() => {
-      setSessionTimer(prev => prev + 1);
-      setRestRemaining(prev => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    if (!activeSession?.started_at) return;
+    const startMs = new Date(activeSession.started_at).getTime();
+
+    const updateTimers = () => {
+      const now = Date.now();
+      setSessionTimer(Math.floor((now - startMs) / 1000));
+      
+      if (restEndTime.current > 0) {
+        const remaining = Math.ceil((restEndTime.current - now) / 1000);
+        if (remaining > 0) {
+          setRestRemaining(remaining);
+        } else {
+          setRestRemaining(0);
+          restEndTime.current = 0;
+        }
+      }
+    };
+
+    updateTimers();
+    const interval = setInterval(updateTimers, 1000);
+
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active') updateTimers();
+    });
+
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
+  }, [activeSession?.started_at]);
 
   // Restore UI state from AsyncStorage when session loads
   useEffect(() => {
@@ -76,6 +121,13 @@ const ActiveWorkout = ({ navigation }) => {
             setCompletedSets(saved.completedSets || {});
             setNotes(saved.notes || '');
             setRestDuration(saved.restDuration || '90');
+            if (saved.restEndTime && saved.restEndTime > Date.now()) {
+              restEndTime.current = saved.restEndTime;
+              setRestRemaining(Math.ceil((saved.restEndTime - Date.now()) / 1000));
+            } else {
+              restEndTime.current = 0;
+              setRestRemaining(0);
+            }
           }
         }
       } catch (e) {
@@ -98,6 +150,7 @@ const ActiveWorkout = ({ navigation }) => {
           completedSets,
           notes,
           restDuration,
+          restEndTime: restEndTime.current,
         }));
       } catch (e) {
         // Fail silently
@@ -181,7 +234,9 @@ const ActiveWorkout = ({ navigation }) => {
     }
 
     setCompletedSets(prev => ({ ...prev, [key]: true }));
-    setRestRemaining(parseInt(restDuration) || 90);
+    const duration = parseInt(restDuration) || 90;
+    restEndTime.current = Date.now() + duration * 1000;
+    setRestRemaining(duration);
   };
 
   const isSetLocked = (exId, setIdx) => {
@@ -240,7 +295,7 @@ const ActiveWorkout = ({ navigation }) => {
       discardConfirmed.current = true;
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Tabs', params: { screen: 'Log' } }],
+        routes: [{ name: 'Tabs', params: { screen: 'Log', params: { resetTimestamp: Date.now() } } }],
       });
     } catch (e) {
       showAlert('ERROR', 'Failed to save session. Please try again.');
@@ -341,12 +396,17 @@ const ActiveWorkout = ({ navigation }) => {
               >
                 {/* Exercise name row */}
                 <View style={styles.exerciseNameRow}>
-                  {allDone && (
-                    <MaterialCommunityIcons name="check-circle" size={16} color={accentColor} style={{ marginRight: 8 }} />
-                  )}
-                  <Text style={[styles.exerciseName, { color: colors.text }]}>
-                    {exercise.name?.toUpperCase()}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    {allDone && (
+                      <MaterialCommunityIcons name="check-circle" size={16} color={accentColor} style={{ marginRight: 8 }} />
+                    )}
+                    <Text style={[styles.exerciseName, { color: colors.text, flexShrink: 1 }]} numberOfLines={1}>
+                      {exercise.name?.toUpperCase()}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => openInfo(exercise)} style={{ padding: 4 }}>
+                    <Feather name="info" size={18} color={colors.secondaryText} />
+                  </TouchableOpacity>
                 </View>
 
                 {/* Sets table header */}
@@ -444,6 +504,40 @@ const ActiveWorkout = ({ navigation }) => {
           <View style={{ height: 120 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <BottomSheet visible={infoVisible} onClose={() => setInfoVisible(false)} snapHeight="60%">
+        <ScrollView style={{ width: '100%', marginTop: 10 }} showsVerticalScrollIndicator={false}>
+          <Text style={[styles.mainTitle, { color: colors.text, fontSize: 24, marginBottom: 20 }]}>
+            {activeInfoExName?.toUpperCase()}
+          </Text>
+          {infoData.loading ? (
+            <ActivityIndicator color={colors.text} style={{ marginTop: 20 }} />
+          ) : (
+            <View style={{ paddingBottom: 40 }}>
+              {infoData.video && (
+                <View style={{ marginBottom: 20, borderRadius: 12, overflow: 'hidden' }}>
+                  <YoutubeIframe
+                    height={200}
+                    play={false}
+                    videoId={infoData.video.videoId}
+                  />
+                </View>
+              )}
+              {infoData.details?.instructions && infoData.details.instructions.length > 0 && (
+                <View>
+                  <Text style={{ color: colors.text, fontWeight: '900', fontSize: 16, marginBottom: 10, letterSpacing: 1 }}>INSTRUCTIONS</Text>
+                  {infoData.details.instructions.map((step, i) => (
+                    <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
+                      <Text style={{ color: accentColor, fontWeight: '900', marginRight: 8, fontSize: 14 }}>{i + 1}.</Text>
+                      <Text style={{ color: colors.secondaryText, flex: 1, lineHeight: 22, fontSize: 14 }}>{step}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </BottomSheet>
     </View>
   );
 };

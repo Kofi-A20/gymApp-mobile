@@ -152,27 +152,27 @@ const WorkoutDetail = ({ route, navigation }) => {
 
         {/* ── Exercise list ── */}
         <View style={{ paddingHorizontal: 24 }}>
-        {(currentWorkout.exercises || []).map((item, index) => {
-          const isExpanded = expandedExercises[index];
-          return (
-            <AppTile
-              key={item.exercise_id || item.id ? `ex-${item.exercise_id || item.id}` : `idx-${index}`}
-              onPress={() => toggleExpand(index)}
-              style={{ padding: 20, marginBottom: 12 }}
-            >
-              <View style={styles.exerciseHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.exerciseName, { color: colors.text }]}>{item.name?.toUpperCase()}</Text>
-                    <Text style={[styles.exerciseDetails, { color: colors.secondaryText }]}>
-                      {item.sets_target || 3} SETS × {item.reps_target || 10} REPS
-                    </Text>
+          {(currentWorkout.exercises || []).map((item, index) => {
+            const isExpanded = expandedExercises[index];
+            return (
+              <AppTile
+                key={item.exercise_id || item.id ? `ex-${item.exercise_id || item.id}` : `idx-${index}`}
+                onPress={() => toggleExpand(index)}
+                style={{ padding: 20, marginBottom: 12 }}
+              >
+                <View style={styles.exerciseHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.exerciseName, { color: colors.text }]}>{item.name?.toUpperCase()}</Text>
+                      <Text style={[styles.exerciseDetails, { color: colors.secondaryText }]}>
+                        {item.sets_target || 3} SETS × {item.reps_target || 10} REPS
+                      </Text>
+                    </View>
                   </View>
+                  <AntDesign name={isExpanded ? 'down' : 'right'} size={16} color={colors.text} />
                 </View>
-                <AntDesign name={isExpanded ? 'down' : 'right'} size={16} color={colors.text} />
-              </View>
 
-              {isExpanded && (() => {
+                {isExpanded && (() => {
                   const bodyData = [
                     ...(item.primary_muscles || []).map(m => ({ slug: mapMuscleSlug(m), intensity: 2 })),
                     ...(item.secondary_muscles || []).map(m => ({ slug: mapMuscleSlug(m), intensity: 1 })),
@@ -195,9 +195,9 @@ const WorkoutDetail = ({ route, navigation }) => {
                     </View>
                   );
                 })()}
-            </AppTile>
-          );
-        })}
+              </AppTile>
+            );
+          })}
         </View>
 
         {/* ── Footer ── */}
@@ -211,8 +211,8 @@ const WorkoutDetail = ({ route, navigation }) => {
             <Ionicons name="play" size={20} color="#000" />
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.logBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border }]} 
+          <TouchableOpacity
+            style={[styles.logBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border }]}
             onPress={handleDeleteWorkout}
           >
             <Text style={[styles.logBtnText, { color: '#FF3B30', fontSize: 14 }]}>DELETE ROUTINE</Text>
