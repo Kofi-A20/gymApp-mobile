@@ -474,6 +474,27 @@ const Calories = ({ navigation, route }) => {
                 </View>
               </AppTile>
 
+              <View style={styles.noteBox}>
+                <Ionicons name="information-circle-outline" size={18} color={colors.secondaryText} />
+                <Text style={styles.noteText}>{getNote()}</Text>
+              </View>
+            </View>
+          ) : (
+            <View>
+              {showProgress && (
+                <AppTile style={styles.card}>
+                  <Text style={[styles.cardHeader, { color: colors.secondaryText }]}>GOAL PROGRESS</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <View style={[styles.mBarBg, { flex: 1, backgroundColor: colors.border }]}>
+                      <View style={[styles.mBarFill, { width: `${progressPercent}%`, backgroundColor: accentColor }]} />
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 9, fontWeight: '800', color: colors.secondaryText, textAlign: 'right', marginTop: 4 }}>
+                    {toGoalDisplay} {units.toUpperCase()} TO GOAL
+                  </Text>
+                </AppTile>
+              )}
+
               <View
                 style={{ marginBottom: 20 }}
                 onLayout={(e) => setWeightSectionY(e.nativeEvent.layout.y)}
@@ -506,53 +527,6 @@ const Calories = ({ navigation, route }) => {
                   </View>
                 </AppTile>
               </View>
-
-              <View style={styles.noteBox}>
-                <Ionicons name="information-circle-outline" size={18} color={colors.secondaryText} />
-                <Text style={styles.noteText}>{getNote()}</Text>
-              </View>
-            </View>
-          ) : (
-            <View>
-              {showProgress && (
-                <AppTile style={styles.card}>
-                  <Text style={[styles.cardHeader, { color: colors.secondaryText }]}>GOAL PROGRESS</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <View style={[styles.mBarBg, { flex: 1, backgroundColor: colors.border }]}>
-                      <View style={[styles.mBarFill, { width: `${progressPercent}%`, backgroundColor: accentColor }]} />
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 9, fontWeight: '800', color: colors.secondaryText, textAlign: 'right', marginTop: 4 }}>
-                    {toGoalDisplay} {units.toUpperCase()} TO GOAL
-                  </Text>
-                </AppTile>
-              )}
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, marginTop: 10 }}>
-                <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>WEIGHT TREND</Text>
-                <TouchableOpacity
-                  onPress={handlePeriodSelect}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: colors.secondaryBackground,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 12,
-                  }}
-                >
-                  <Text style={{ color: colors.text, fontSize: 10, fontWeight: '700' }}>{periodLabels[selectedDays]}</Text>
-                  <MaterialCommunityIcons name="chevron-down" size={14} color={colors.text} style={{ marginLeft: 4 }} />
-                </TouchableOpacity>
-              </View>
-              
-              <AppTile style={{ paddingVertical: 20, marginBottom: 20 }}>
-                {logLoading && displayedLogs.length === 0 ? (
-                  <ActivityIndicator color={colors.text} style={{ marginVertical: 40 }} />
-                ) : (
-                  <WeightTrendChart logs={displayedLogs} units={units} accentColor={accentColor} colors={colors} width={SCREEN_WIDTH - 48} height={220} />
-                )}
-              </AppTile>
 
               <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 15 }]}>LOG HISTORY</Text>
               {logLoading && displayedLogsWithDeltas.length === 0 ? (
@@ -643,6 +617,32 @@ const Calories = ({ navigation, route }) => {
                   </ScrollView>
                 </AppTile>
               )}
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, marginTop: 10 }}>
+                <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>WEIGHT TREND</Text>
+                <TouchableOpacity
+                  onPress={handlePeriodSelect}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.secondaryBackground,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 12,
+                  }}
+                >
+                  <Text style={{ color: colors.text, fontSize: 10, fontWeight: '700' }}>{periodLabels[selectedDays]}</Text>
+                  <MaterialCommunityIcons name="chevron-down" size={14} color={colors.text} style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              </View>
+              
+              <AppTile style={{ paddingVertical: 20, marginBottom: 20 }}>
+                {logLoading && displayedLogs.length === 0 ? (
+                  <ActivityIndicator color={colors.text} style={{ marginVertical: 40 }} />
+                ) : (
+                  <WeightTrendChart logs={displayedLogs} units={units} accentColor={accentColor} colors={colors} width={SCREEN_WIDTH - 48} height={220} />
+                )}
+              </AppTile>
             </View>
           )}
 
