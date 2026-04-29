@@ -59,7 +59,7 @@ const ActiveWorkout = ({ navigation }) => {
     setInfoData({ loading: true, details: null, video: null });
 
     const details = await exerciseDBService.getExerciseDetails(exercise.name);
-    const video = await exerciseDBService.getYouTubeVideo(exercise.name, exercise.muscle_group);
+    const video = await exerciseDBService.getYouTubeVideo(exercise.name, exercise.category);
     
     setInfoData({ loading: false, details, video });
   };

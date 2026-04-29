@@ -1,5 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import YoutubeIframe from 'react-native-youtube-iframe';
+import { exerciseDBService } from '../services/exerciseDBService';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
@@ -34,6 +36,34 @@ const getViewsToShow = (data) => {
 
   if (!showFront && !showBack) return { showFront: true, showBack: true };
   return { showFront, showBack };
+};
+
+const ExerciseVideo = ({ name, category }) => {
+  const { colors, accentColor } = useTheme();
+  const [video, setVideo] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    exerciseDBService.getYouTubeVideo(name, category)
+      .then(v => {
+        setVideo(v);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [name, category]);
+
+  if (loading) return <ActivityIndicator color={accentColor} style={{ marginVertical: 20 }} />;
+  if (!video) return null;
+
+  return (
+    <View style={{ borderRadius: 12, overflow: 'hidden', marginVertical: 15, backgroundColor: '#000' }}>
+      <YoutubeIframe
+        height={180}
+        videoId={video.videoId}
+        play={false}
+      />
+    </View>
+  );
 };
 
 const WorkoutDetail = ({ route, navigation }) => {
@@ -192,6 +222,8 @@ const WorkoutDetail = ({ route, navigation }) => {
                           </View>
                         )}
                       </View>
+                      
+                      <ExerciseVideo name={item.name} category={item.category} />
                     </View>
                   );
                 })()}

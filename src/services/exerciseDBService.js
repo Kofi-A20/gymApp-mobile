@@ -17,8 +17,8 @@ const CATEGORY_CHANNELS = {
   Arms: ['UCe0TLA0EsQbE-MjuHXevPRg'],
   Legs: ['UCe0TLA0EsQbE-MjuHXevPRg'],
   Calves: ['UCe0TLA0EsQbE-MjuHXevPRg'],
-  Abs: ['UCXeOZFcZ9DFqxHqnHzgWKNA'],
-  Core: ['UCXeOZFcZ9DFqxHqnHzgWKNA'],
+  Core: ['UCZIIRX8rkNjVpP-oLMHpeDw'],
+  Abs: ['UCZIIRX8rkNjVpP-oLMHpeDw'],
   Cardio: ['UCu4SCLX5b5WfX1Y51M5FLCA']
 };
 
@@ -91,7 +91,7 @@ export const exerciseDBService = {
 
     const response = await fetch(url);
     const data = await response.json();
-    
+
     if (data.items && data.items.length > 0) {
       const item = data.items[0];
       return {
