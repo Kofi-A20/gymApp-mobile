@@ -104,8 +104,7 @@ const Calendar = ({ navigation }) => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancel', 'Edit Time', 'Delete'],
-          destructiveButtonIndex: 2,
+          options: ['Cancel', 'Edit Time'],
           cancelButtonIndex: 0,
         },
         (buttonIndex) => {
@@ -118,9 +117,6 @@ const Calendar = ({ navigation }) => {
             setTimeout(() => {
               setShowEditTimeModal(true);
             }, 300);
-          } else if (buttonIndex === 2) {
-            deletePlannedSession(item);
-            setSelectedDayData(prev => prev ? { ...prev, planned: prev.planned.filter(p => p.id !== item.id) } : null);
           }
         }
       );
@@ -140,12 +136,6 @@ const Calendar = ({ navigation }) => {
               setTimeout(() => {
                 setShowEditTimeModal(true);
               }, 300);
-            }
-          },
-          {
-            text: 'Delete', style: 'destructive', onPress: () => {
-              deletePlannedSession(item);
-              setSelectedDayData(prev => prev ? { ...prev, planned: prev.planned.filter(p => p.id !== item.id) } : null);
             }
           }
         ]
@@ -855,7 +845,7 @@ const Calendar = ({ navigation }) => {
                 <View style={{ marginBottom: 20 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <Text style={[styles.subLabel, { color: colors.secondaryText, marginBottom: 0 }]}>SCHEDULED</Text>
-                    {selectedDayData.planned.length >= 2 && (
+                    {(selectedDayData.planned.length >= 2 || sheetSelectionMode) && (
                       <TouchableOpacity onPress={handleSheetSelectAll}>
                         <Text style={{ color: accentColor, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>
                           {sheetSelectionMode ? 'CANCEL' : 'SELECT ALL'}
@@ -864,11 +854,17 @@ const Calendar = ({ navigation }) => {
                     )}
                   </View>
                   {selectedDayData.planned.map(item => (
-                    <TouchableOpacity
+                    <AppTile
                       key={item.id}
-                      style={[styles.pickerItem, { borderBottomColor: colors.border }]}
-                      onPress={() => sheetSelectionMode ? toggleSheetSelection(item.id) : null}
-                      activeOpacity={sheetSelectionMode ? 0.7 : 1}
+                      style={{ padding: 15, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                      onPress={() => sheetSelectionMode ? toggleSheetSelection(item.id) : handleSessionOptions(item)}
+                      onLongPress={() => {
+                        if (!sheetSelectionMode) {
+                          setSheetSelectionMode(true);
+                          toggleSheetSelection(item.id);
+                        }
+                      }}
+                      activeOpacity={0.7}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                         {sheetSelectionMode && (
@@ -894,7 +890,7 @@ const Calendar = ({ navigation }) => {
                           </TouchableOpacity>
                         )}
                       </View>
-                    </TouchableOpacity>
+                    </AppTile>
                   ))}
                 </View>
               )}
@@ -903,9 +899,9 @@ const Calendar = ({ navigation }) => {
                 <View style={{ marginBottom: 20 }}>
                   <Text style={[styles.subLabel, { color: colors.secondaryText, marginBottom: 10 }]}>COMPLETED</Text>
                   {selectedDayData.completed.map(item => (
-                    <TouchableOpacity
+                    <AppTile
                       key={item.id}
-                      style={[styles.pickerItem, { borderBottomColor: colors.border }]}
+                      style={{ padding: 15, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
                       onPress={() => { setSelectedDayData(null); navigation.navigate('SessionHistoryDetail', { session: item }); }}
                     >
                       <View>
@@ -915,7 +911,7 @@ const Calendar = ({ navigation }) => {
                         </Text>
                       </View>
                       <AntDesign name="right" size={16} color={colors.secondaryText} />
-                    </TouchableOpacity>
+                    </AppTile>
                   ))}
                 </View>
               )}
@@ -926,18 +922,18 @@ const Calendar = ({ navigation }) => {
             </ScrollView>
 
             {sheetSelectionMode && sheetSelectedSessions.length > 0 && (
-              <TouchableOpacity
-                style={[styles.addBtn, { backgroundColor: '#FF3B30', justifyContent: 'center', marginTop: 10, paddingVertical: 15 }]}
+              <AppTile
+                style={{ backgroundColor: '#FF3B30', justifyContent: 'center', alignItems: 'center', flexDirection: 'row', marginTop: 10, paddingVertical: 15, borderWidth: 0 }}
                 onPress={handleSheetBatchDelete}
               >
                 <Ionicons name="trash-outline" size={16} color="#FFF" />
-                <Text style={[styles.addBtnText, { fontSize: 12, color: '#FFF' }]}>DELETE SELECTED</Text>
-              </TouchableOpacity>
+                <Text style={{ fontSize: 12, fontWeight: '900', letterSpacing: 1, color: '#FFF', marginLeft: 8 }}>DELETE SELECTED</Text>
+              </AppTile>
             )}
 
             {selectedDayData?.isFutureOrToday && !sheetSelectionMode && (
-              <TouchableOpacity
-                style={[styles.addBtn, { backgroundColor: accentColor, justifyContent: 'center', marginTop: 20, paddingVertical: 15 }]}
+              <AppTile
+                style={{ backgroundColor: accentColor, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', marginTop: 20, paddingVertical: 15, borderWidth: 0 }}
                 onPress={() => {
                   const targetDate = selectedDayData.dateStr;
                   setSelectedDayData(null);
@@ -945,8 +941,8 @@ const Calendar = ({ navigation }) => {
                 }}
               >
                 <AntDesign name="plus" size={16} color="#000" />
-                <Text style={[styles.addBtnText, { fontSize: 12 }]}>SCHEDULE WORKOUT</Text>
-              </TouchableOpacity>
+                <Text style={{ fontSize: 12, fontWeight: '900', letterSpacing: 1, color: '#000', marginLeft: 8 }}>SCHEDULE WORKOUT</Text>
+              </AppTile>
             )}
       </BottomSheet>
     </View>

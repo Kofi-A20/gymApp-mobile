@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Modal, Animated, PanResponder, Dimensions, StyleSheet } from 'react-native';
+import { View, Animated, PanResponder, Dimensions, StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 
@@ -8,9 +8,10 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BottomSheet = ({ visible, onClose, children, snapHeight = '75%' }) => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const panY = useRef(new Animated.Value(0)).current;
-  const [isExpanded, setIsExpanded] = useState(false);
-  
+  const panY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+
   const parseHeight = (h) => {
     if (typeof h === 'number') return h;
     if (typeof h === 'string' && h.endsWith('%')) {
@@ -20,15 +21,29 @@ const BottomSheet = ({ visible, onClose, children, snapHeight = '75%' }) => {
   };
 
   const defaultHeightPx = parseHeight(snapHeight);
-  const expandedHeightPx = SCREEN_HEIGHT * 0.95;
-  const maxTravel = expandedHeightPx - defaultHeightPx;
 
   useEffect(() => {
     if (visible) {
-      setIsExpanded(false);
-      panY.setValue(0);
+      setIsAnimatingOut(false);
+      // Start from below the screen
+      panY.setValue(defaultHeightPx + 100);
+      Animated.parallel([
+        Animated.spring(panY, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }),
+        Animated.timing(opacity, { toValue: 1, duration: 250, useNativeDriver: true })
+      ]).start();
     }
   }, [visible]);
+
+  const handleDismiss = () => {
+    setIsAnimatingOut(true);
+    Animated.parallel([
+      Animated.timing(panY, { toValue: defaultHeightPx + 100, duration: 250, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0, duration: 250, useNativeDriver: true })
+    ]).start(() => {
+      setIsAnimatingOut(false);
+      onClose();
+    });
+  };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -36,49 +51,35 @@ const BottomSheet = ({ visible, onClose, children, snapHeight = '75%' }) => {
       onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 10,
       onPanResponderMove: (_, gestureState) => {
         let newY = gestureState.dy;
-        if (isExpanded) {
-          newY = -maxTravel + gestureState.dy;
-        }
-        // Add some resistance if dragging past expanded
-        if (newY < -maxTravel) {
-          newY = -maxTravel + (newY + maxTravel) * 0.2;
+        if (newY < 0) {
+          // Add resistance for dragging up (since swipe up is removed)
+          newY = newY * 0.2;
         }
         panY.setValue(newY);
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (isExpanded) {
-          if (gestureState.dy > 50 || gestureState.vy > 0.5) {
-            // Snap back to default
-            Animated.spring(panY, { toValue: 0, useNativeDriver: true }).start(() => {
-              setIsExpanded(false);
-            });
-          } else {
-            // Stay expanded
-            Animated.spring(panY, { toValue: -maxTravel, useNativeDriver: true }).start();
-          }
+        if (gestureState.dy > 80 || gestureState.vy > 0.5) {
+          handleDismiss();
         } else {
-          if (gestureState.dy > 80 || gestureState.vy > 0.5) {
-            // Dismiss
-            Animated.timing(panY, { toValue: defaultHeightPx + 50, duration: 300, useNativeDriver: true }).start(() => {
-              onClose();
-            });
-          } else if (gestureState.dy < -50 || gestureState.vy < -0.5) {
-            // Snap to expanded
-            Animated.spring(panY, { toValue: -maxTravel, useNativeDriver: true }).start(() => {
-              setIsExpanded(true);
-            });
-          } else {
-            // Stay default
-            Animated.spring(panY, { toValue: 0, useNativeDriver: true }).start();
-          }
+          // Snap back to default
+          Animated.spring(panY, { toValue: 0, useNativeDriver: true }).start();
         }
       },
     })
   ).current;
 
+  if (!visible && !isAnimatingOut) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={[styles.modalOverlay, { justifyContent: 'flex-end', padding: 0 }]}>
+    <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} pointerEvents="box-none">
+      <TouchableWithoutFeedback onPress={handleDismiss}>
+        <Animated.View 
+          style={[styles.modalOverlay, { opacity, padding: 0 }]} 
+          pointerEvents={visible ? "auto" : "none"}
+        />
+      </TouchableWithoutFeedback>
+      
+      <View style={{ flex: 1, justifyContent: 'flex-end' }} pointerEvents="box-none">
         <Animated.View style={[
           styles.modalContent,
           {
@@ -90,9 +91,8 @@ const BottomSheet = ({ visible, onClose, children, snapHeight = '75%' }) => {
             borderLeftWidth: 1,
             borderRightWidth: 1,
             borderBottomWidth: 0,
-            height: expandedHeightPx,
-            marginBottom: -maxTravel,
-            paddingBottom: maxTravel + (insets.bottom > 0 ? insets.bottom + 20 : 30),
+            height: defaultHeightPx,
+            paddingBottom: (insets.bottom > 0 ? insets.bottom : 20) + 100, // Extra padding to clear the Tab Bar
           },
           { transform: [{ translateY: panY }] }
         ]}>
@@ -102,7 +102,7 @@ const BottomSheet = ({ visible, onClose, children, snapHeight = '75%' }) => {
           {children}
         </Animated.View>
       </View>
-    </Modal>
+    </View>
   );
 };
 
