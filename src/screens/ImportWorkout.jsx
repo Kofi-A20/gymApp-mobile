@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { sharingService } from '../services/sharingService';
+import { splitsService } from '../services/splitsService';
 import { MaterialCommunityIcons, AntDesign, Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -28,9 +29,16 @@ const ImportWorkout = ({ navigation, route }) => {
   // Share state
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const [shareToken, setShareToken] = useState(null);
+  const [allSplits, setAllSplits] = useState([]);
 
   // Tab state
   const [viewMode, setViewMode] = useState('IMPORT'); // IMPORT | SHARE
+
+  useEffect(() => {
+    if (viewMode === 'SHARE') {
+      splitsService.getAllSplits().then(setAllSplits);
+    }
+  }, [viewMode]);
 
   const fetchWorkout = async (token) => {
     Keyboard.dismiss();
@@ -42,10 +50,32 @@ const ImportWorkout = ({ navigation, route }) => {
 
     try {
       setLoading(true);
-      const data = await sharingService.getSharedWorkout(cleanToken);
-      navigation.navigate('SharedWorkoutPreview', { token: cleanToken, workout: data });
+      // Try workout first
+      try {
+        const data = await sharingService.getSharedWorkout(cleanToken);
+        navigation.navigate('SharedWorkoutPreview', { token: cleanToken, workout: data });
+        return;
+      } catch (err) {
+        // If workout fails, try split
+        const splitRow = await sharingService.getSharedSplit(cleanToken);
+        navigation.navigate('ImportSplitScreen', { splitData: splitRow });
+      }
     } catch (error) {
-      showAlert('INVALID CODE', 'This code doesn\'t match any shared workout. Please check and try again.');
+      showAlert('INVALID CODE', 'This code doesn\'t match any shared workout or split. Please check and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShareSplit = async (split) => {
+    try {
+      setLoading(true);
+      const result = await sharingService.shareActiveSplit(split.id);
+      setShareToken(result.token);
+      setShareModalVisible(true);
+    } catch (error) {
+      console.error('[SHARE SPLIT] Error:', error);
+      showAlert('ERROR', 'Failed to generate split share link.');
     } finally {
       setLoading(false);
     }
@@ -274,6 +304,30 @@ const ImportWorkout = ({ navigation, route }) => {
                 <Text style={{ color: colors.secondaryText, fontSize: 12, fontWeight: '700' }}>NO WORKOUTS FOUND</Text>
               </View>
             )}
+
+            <View style={{ marginTop: 40 }}>
+              <Text style={{ fontSize: 12, fontWeight: '900', color: colors.secondaryText, letterSpacing: 2, marginBottom: 20 }}>SHARE SPLIT</Text>
+              {allSplits.length > 0 ? (
+                <View style={{ gap: 12 }}>
+                  {allSplits.map(s => (
+                    <AppTile key={s.id} style={{ padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }} onPress={() => handleShareSplit(s)}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 18, fontWeight: '900', color: colors.text }}>{s.name.toUpperCase()}</Text>
+                        <Text style={{ fontSize: 10, color: colors.secondaryText, marginTop: 5, fontWeight: '700', letterSpacing: 1 }}>{s.assignments?.length || 0} ASSIGNMENTS • EVERY {s.recurrenceWeeks} WEEK(S)</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.secondaryBackground, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 }}>
+                        <MaterialCommunityIcons name="share-variant" size={14} color={accentColor} style={{ marginRight: 6 }} />
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: accentColor, letterSpacing: 1 }}>SHARE</Text>
+                      </View>
+                    </AppTile>
+                  ))}
+                </View>
+              ) : (
+                <View style={{ padding: 40, alignItems: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border, borderRadius: 8 }}>
+                  <Text style={{ color: colors.secondaryText, fontSize: 12, fontWeight: '700' }}>NO SPLITS FOUND</Text>
+                </View>
+              )}
+            </View>
           </View>
         )}
 

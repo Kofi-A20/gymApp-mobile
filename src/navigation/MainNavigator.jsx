@@ -5,6 +5,7 @@ import SharedWorkoutPreview from '../screens/SharedWorkoutPreview';
 import ActiveWorkout from '../screens/ActiveWorkout';
 import SessionHistoryDetail from '../screens/SessionHistoryDetail';
 import ImportWorkout from '../screens/ImportWorkout';
+import ImportSplitScreen from '../screens/ImportSplitScreen';
 import SplitsScreen from '../screens/SplitsScreen';
 import EditSplitScreen from '../screens/EditSplitScreen';
 
@@ -16,6 +17,7 @@ const MainNavigator = () => {
       <Stack.Screen name="Tabs" component={TabNavigator} />
       <Stack.Screen name="SharedWorkoutPreview" component={SharedWorkoutPreview} />
       <Stack.Screen name="ImportWorkout" component={ImportWorkout} />
+      <Stack.Screen name="ImportSplitScreen" component={ImportSplitScreen} />
       <Stack.Screen name="SessionHistoryDetail" component={SessionHistoryDetail} />
       <Stack.Screen name="SplitsScreen" component={SplitsScreen} />
       <Stack.Screen name="EditSplitScreen" component={EditSplitScreen} />

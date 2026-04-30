@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import * as Linking from 'expo-linking';
+import { splitsService } from './splitsService';
 
 // Helper to generate a short random token
 const generateToken = (length = 6) => {
@@ -68,11 +69,7 @@ export const sharingService = {
       share_token: token
     });
 
-    console.log('[SHARING] RPC result - data:', JSON.stringify(data));
-    console.log('[SHARING] RPC result - error:', JSON.stringify(error));
-
     if (error) {
-      console.error('[SHARING] RPC error:', error.message);
       if (error.message?.includes('Invalid share code')) {
         throw new Error('No workout found for this code. Double-check the 6 characters.');
       }
@@ -136,5 +133,101 @@ export const sharingService = {
 
     console.log('[SHARING] Workout copy complete:', newWorkout.id);
     return newWorkout;
+  },
+
+  /**
+   * Share an entire split including all assigned workouts and their exercises.
+   */
+  async shareActiveSplit(splitId) {
+    console.log('[SHARING] shareActiveSplit called for splitId:', splitId);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const splits = await splitsService.getAllSplits();
+    const split = splits.find(s => s.id === splitId);
+    if (!split) throw new Error('Split not found in local library');
+
+    console.log('[SHARING] Found split:', split.name);
+
+    // Build the payload
+    const assignments = [];
+    for (const ass of split.assignments) {
+      // Fetch full workout data from Supabase
+      const { data: workout, error } = await supabase
+        .from('workouts')
+        .select(`
+          name,
+          workout_exercises (
+            sets_target,
+            reps_target,
+            exercises (name)
+          )
+        `)
+        .eq('id', ass.routineId)
+        .single();
+
+      if (error) {
+        console.warn(`[SHARING] Could not fetch workout ${ass.routineId}:`, error.message);
+        continue;
+      }
+
+      assignments.push({
+        dayOfWeek: ass.dayOfWeek,
+        hour: ass.hour,
+        minute: ass.minute,
+        routineName: workout.name,
+        exercises: (workout.workout_exercises || []).map(we => ({
+          name: we.exercises?.name || 'Unknown Exercise',
+          sets_target: we.sets_target,
+          reps_target: we.reps_target
+        }))
+      });
+    }
+
+    const payload = {
+      splitName: split.name || 'My Split',
+      recurrenceWeeks: split.recurrenceWeeks || 1,
+      assignments
+    };
+
+    const token = generateToken();
+    const { error: insertError } = await supabase
+      .from('shared_splits')
+      .insert({
+        shared_by: user.id,
+        token: token,
+        split_name: payload.splitName,
+        recurrence: String(payload.recurrenceWeeks),
+        split_payload: payload
+      });
+
+    if (insertError) throw insertError;
+
+    return {
+      token,
+      url: Linking.createURL(`share/${token}`)
+    };
+  },
+
+  /**
+   * Fetch a shared split payload by token.
+   */
+  async getSharedSplit(token) {
+    console.log('[SHARING] getSharedSplit called with token:', token);
+
+    const { data, error } = await supabase
+      .from('shared_splits')
+      .select('*')
+      .eq('token', token)
+      .eq('is_revoked', false)
+      .single();
+
+    if (error || !data) {
+      console.error('[SHARING] getSharedSplit error:', error);
+      throw new Error('This share code is invalid or has been revoked.');
+    }
+
+    return data;
   }
 };

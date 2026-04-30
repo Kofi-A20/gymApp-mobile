@@ -500,6 +500,17 @@ const ActiveWorkout = ({ navigation }) => {
             );
           })}
 
+          <View style={styles.notesSection}>
+            <Text style={[styles.subLabel, { color: colors.secondaryText }]}>SESSION NOTES</Text>
+            <TextInput
+              style={[styles.notesInput, { borderColor: colors.border, color: colors.text }]}
+              placeholder="How was the session? (Energy, focus, intensity...)"
+              placeholderTextColor={colors.secondaryText}
+              multiline
+              value={notes}
+              onChangeText={setNotes}
+            />
+          </View>
 
           <View style={{ height: 120 }} />
         </ScrollView>
@@ -688,6 +699,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     marginTop: 8,
+    borderRadius: 16,
   },
 });
 

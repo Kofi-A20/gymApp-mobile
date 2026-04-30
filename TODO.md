@@ -52,8 +52,7 @@
 ## 💡 SUGGESTIONS
 
 ### From Dev Classmate
-- [ ] Apple Health / Google Fit integration
-
+- [ ] Apple Health / Google Fit integration 
 
 ### From Heavy User
 - [ ] AI coaching chatbot
@@ -61,6 +60,4 @@
       - AI builds a tailored workout + diet + rest plan
       - Automatically schedules everything into the calendar
       - Could run on Claude API as the backend
-- [ ] Exercise video library
-      - YouTube or hosted videos showing proper form 
-        per exercise
+
