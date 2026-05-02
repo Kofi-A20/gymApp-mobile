@@ -213,5 +213,57 @@ export const splitsService = {
     } catch (e) {
       console.error('Failed to sync notifications:', e);
     }
+  },
+
+  async calculateConsistency() {
+    try {
+      const splits = await this.getAllSplits();
+      const activeSplit = splits.find(s => s.isActive);
+      
+      // If no active split, return 0 or default
+      if (!activeSplit || !activeSplit.assignments || activeSplit.assignments.length === 0) {
+        return 0;
+      }
+
+      // Expected workouts per week
+      const workoutsPerWeek = activeSplit.assignments.length;
+      
+      // We'll calculate over a 30 day window
+      const expectedIn30Days = (workoutsPerWeek / 7) * 30;
+
+      // Get completed sessions in last 30 days from sessionsService
+      // To avoid circular dependency, we can just use supabase here or import sessionsService dynamically
+      const { supabase } = require('../lib/supabase');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return 0;
+
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('id, started_at')
+        .eq('user_id', user.id)
+        .gte('started_at', thirtyDaysAgo.toISOString());
+
+      if (error) throw error;
+
+      // Filter unique days
+      const uniqueDays = new Set();
+      (data || []).forEach(s => {
+        const dateStr = new Date(s.started_at).toISOString().split('T')[0];
+        uniqueDays.add(dateStr);
+      });
+
+      const completedCount = uniqueDays.size;
+
+      if (expectedIn30Days === 0) return 100;
+      
+      let consistency = (completedCount / expectedIn30Days) * 100;
+      return Math.min(100, Math.round(consistency));
+    } catch (e) {
+      console.error('Failed to calculate consistency:', e);
+      return 0;
+    }
   }
 };

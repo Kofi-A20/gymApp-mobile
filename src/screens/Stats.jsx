@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
+import { useAuth } from '../context/AuthContext';
 import { sessionsService } from '../services/sessionsService';
 import { setsService } from '../services/setsService';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
@@ -13,13 +14,15 @@ import { useRepsAlert } from '../context/AlertContext';
 import { useWorkout } from '../context/WorkoutContext';
 import RepsHeader from '../components/RepsHeader';
 import AppTile from '../components/AppTile';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Polygon, Line, Text as SvgText } from 'react-native-svg';
+import { gamificationService } from '../services/gamificationService';
 import { mapMuscleSlug, intensityColors, getIntensityForPct, EXERCISE_FILTERS, exerciseMatchesFilter } from '../utils/muscleUtils';
 
 const LABELS = ['Core', 'Shoulders', 'Arms', 'Legs', 'Back', 'Chest'];
 const SIDES = LABELS.length;
-const RINGS = 5; // number of concentric hexagon rings
-const LABEL_CLEARANCE = 14; // dp clearance outside outermost ring
+const RINGS = 5;
+const LABEL_CLEARANCE = 14;
 
 const polarToCartesian = (cx, cy, radius, index) => {
   const angleRad = (Math.PI * 2 * index) / SIDES;
@@ -40,14 +43,14 @@ const hexagonPoints = (cx, cy, radius) =>
 const anchorForIndex = (index) => {
   const angle = (360 / SIDES) * index;
   const norm = ((angle % 360) + 360) % 360;
-  if (norm > 80 && norm < 100) return 'middle';   // bottom
-  if (norm > 260 && norm < 280) return 'middle';   // top
-  if (norm >= 100 && norm <= 260) return 'end';     // left half
-  return 'start';                                    // right half
+  if (norm > 80 && norm < 100) return 'middle';
+  if (norm > 260 && norm < 280) return 'middle';
+  if (norm >= 100 && norm <= 260) return 'end';
+  return 'start';
 };
 
 const RadarChart = ({ data = {}, maxValue = 10, colors, accentColor, size = 180 }) => {
-  const svgSize = size + LABEL_CLEARANCE * 2 + 100; // extra room for labels
+  const svgSize = size + LABEL_CLEARANCE * 2 + 100;
   const cx = svgSize / 2;
   const cy = svgSize / 2;
   const outerRadius = size / 2;
@@ -126,20 +129,27 @@ const Stats = ({ navigation, route }) => {
   const { colors, isDarkMode, units, accentColor } = useTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useProfile();
+  const { user } = useAuth();
   const { showAlert } = useRepsAlert();
+  const { lastCompletedAt } = useWorkout();
+
+  const [viewMode, setViewMode] = useState('OVERVIEW'); // OVERVIEW, ARCHIVE, PROGRESSION
+  const [loading, setLoading] = useState(false);
+  
   const [sessions, setSessions] = useState([]);
   const [progression, setProgression] = useState([]);
-  const [viewMode, setViewMode] = useState('OVERVIEW'); // OVERVIEW | ARCHIVE | PROGRESSION
+  
   const [overviewStats, setOverviewStats] = useState(null);
   const [activeHours, setActiveHours] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('ALL');
   const [selectedProgFilter, setSelectedProgFilter] = useState('ALL');
   const [selectedDays, setSelectedDays] = useState(7);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+
   const scrollRef = useRef(null);
-  const { lastCompletedAt } = useWorkout();
+  const lastFetched = useRef({ overview: 0, archive: 0, progression: 0 });
+  const lastOverviewDays = useRef(7);
 
   useEffect(() => {
     if (route.params?.resetTimestamp) {
@@ -147,11 +157,6 @@ const Stats = ({ navigation, route }) => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
     }
   }, [route.params?.resetTimestamp]);
-
-  // Cache: track when each tab last fetched. Only re-fetch if a workout
-  // was completed after that timestamp, or if the period changed.
-  const lastFetched = useRef({ overview: 0, archive: 0, progression: 0 });
-  const lastOverviewDays = useRef(7);
 
   const periodLabels = {
     7: 'Last Week',
@@ -184,9 +189,8 @@ const Stats = ({ navigation, route }) => {
   useFocusEffect(
     useCallback(() => {
       const needsRefresh = (tab) => {
-        // First load — no cached data yet
+        if (route.params?.refresh) return true; // Force refresh if param is present
         if (lastFetched.current[tab] === 0) return true;
-        // A workout was completed after our last fetch
         if (lastCompletedAt > lastFetched.current[tab]) return true;
         return false;
       };
@@ -205,7 +209,12 @@ const Stats = ({ navigation, route }) => {
           fetchProgression();
         }
       }
-    }, [viewMode, selectedDays, lastCompletedAt])
+
+      // Clear refresh param after use
+      if (route.params?.refresh) {
+        navigation.setParams({ refresh: undefined });
+      }
+    }, [viewMode, selectedDays, lastCompletedAt, route.params?.refresh])
   );
 
   const fetchOverview = async (days = 30) => {
@@ -213,10 +222,8 @@ const Stats = ({ navigation, route }) => {
     try {
       const stats = await sessionsService.getOverviewStats(days);
       setOverviewStats(stats);
-
       const trainingStats = await sessionsService.getTrainingStats(days);
       setActiveHours(trainingStats.activeHours);
-
       lastFetched.current.overview = Date.now();
       lastOverviewDays.current = days;
     } catch (error) {
@@ -284,7 +291,6 @@ const Stats = ({ navigation, route }) => {
               setSessions(prev => prev.filter(s => !selectedIds.includes(s.id)));
               setIsSelectionMode(false);
               setSelectedIds([]);
-              // Invalidate caches so overview/archive re-fetch after mutation
               lastFetched.current.overview = 0;
               lastFetched.current.archive = 0;
             } catch (error) {
@@ -350,6 +356,44 @@ const Stats = ({ navigation, route }) => {
     );
   };
 
+  const ProgressionCard = ({ item }) => {
+    const lastDateObj = new Date(item.lastDate);
+    const dateLabel = lastDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+
+    return (
+      <AppTile style={styles.progRow}>
+        <View style={styles.progMain}>
+          <Text style={[styles.progName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+            <Text style={[styles.progDate, { color: colors.secondaryText, marginTop: 0 }]}>LAST: {dateLabel}</Text>
+            {item.tier && item.tier !== 'unranked' && (
+              <View style={[styles.tierBadge, { borderColor: accentColor }]}>
+                <Text style={[styles.tierText, { color: accentColor }]}>{item.tier.toUpperCase()}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+        <View style={styles.progStats}>
+          <View style={styles.progStatItem}>
+            <Text style={[styles.progStatLabel, { color: colors.secondaryText }]}>BEST</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={[styles.progStatValue, { color: accentColor }]}>{item.bestWeight}</Text>
+              <Text style={[styles.progStatUnit, { color: accentColor }]}>{units.toUpperCase()}</Text>
+              <MaterialCommunityIcons name="trophy" size={14} color={accentColor} style={{ marginLeft: 4 }} />
+            </View>
+          </View>
+          <View style={styles.progStatItem}>
+            <Text style={[styles.progStatLabel, { color: colors.secondaryText }]}>LAST</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={[styles.progStatValue, { color: colors.text }]}>{item.lastWeight}</Text>
+              <Text style={[styles.progStatUnit, { color: colors.text }]}>{units.toUpperCase()}</Text>
+            </View>
+          </View>
+        </View>
+      </AppTile>
+    );
+  };
+
   const uniqueFilters = ["ALL", ...new Set(sessions.map(s => s.workout_name?.toUpperCase() || 'FREE SESSION'))];
   const displayedSessions = selectedFilter === "ALL"
     ? sessions
@@ -362,10 +406,7 @@ const Stats = ({ navigation, route }) => {
 
   const renderOverview = () => {
     if (!overviewStats) return null;
-
     const gender = profile?.gender === 'female' ? 'female' : 'male';
-
-    // ── Set distribution data ──
     const specificBreakdown = overviewStats.specificBreakdown || {};
     const sortedMuscles = Object.entries(specificBreakdown)
       .filter(([_, count]) => count > 0)
@@ -373,33 +414,17 @@ const Stats = ({ navigation, route }) => {
     const totalSpecificSets = sortedMuscles.reduce((acc, [_, c]) => acc + c, 0);
     const maxSpecificCount = sortedMuscles.length > 0 ? sortedMuscles[0][1] : 1;
 
-    // ── Heatmap: fixed percentage thresholds ──
     const bodyData = [];
     sortedMuscles.forEach(([muscle, count]) => {
       const pct = totalSpecificSets > 0 ? count / totalSpecificSets : 0;
       const intensity = getIntensityForPct(pct);
-
       const slug = mapMuscleSlug(muscle);
-      if (slug) {
-        bodyData.push({ slug, intensity });
-      }
+      if (slug) bodyData.push({ slug, intensity });
     });
 
     return (
       <View>
-        <TouchableOpacity
-          onPress={handlePeriodSelect}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            alignSelf: 'flex-start',
-            backgroundColor: colors.secondaryBackground,
-            paddingHorizontal: 20,
-            paddingVertical: 10,
-            borderRadius: 20,
-            marginBottom: 20,
-          }}
-        >
+        <TouchableOpacity onPress={handlePeriodSelect} style={styles.periodPill}>
           <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{periodLabels[selectedDays]}</Text>
           <MaterialCommunityIcons name="chevron-down" size={16} color={colors.text} style={{ marginLeft: 6 }} />
         </TouchableOpacity>
@@ -453,7 +478,6 @@ const Stats = ({ navigation, route }) => {
               {sortedMuscles.map(([muscle, count], idx) => {
                 const pctDecimal = totalSpecificSets > 0 ? count / totalSpecificSets : 0;
                 const intensity = getIntensityForPct(pctDecimal);
-
                 const pct = Math.round(pctDecimal * 100);
                 const barWidth = `${(count / maxSpecificCount) * 100}%`;
                 return (
@@ -473,36 +497,75 @@ const Stats = ({ navigation, route }) => {
     );
   };
 
-  const ProgressionCard = ({ item }) => {
-    const lastDateObj = new Date(item.lastDate);
-    const dateLabel = lastDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+  const renderArchive = () => (
+    <View>
+      {sessions.length > 0 && (
+        <View style={{ marginBottom: 20 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {uniqueFilters.map(filter => (
+              <TouchableOpacity
+                key={filter}
+                style={[styles.filterChip, { borderColor: colors.border }, selectedFilter === filter && { backgroundColor: accentColor, borderColor: accentColor }]}
+                onPress={() => setSelectedFilter(filter)}
+              >
+                <Text style={[styles.filterChipText, selectedFilter === filter ? { color: '#000' } : { color: colors.text }]}>{filter}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
-    return (
-      <AppTile style={styles.progRow}>
-        <View style={styles.progMain}>
-          <Text style={[styles.progName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
-          <Text style={[styles.progDate, { color: colors.secondaryText }]}>LAST: {dateLabel}</Text>
+      {displayedSessions.length > 0 ? (
+        <View style={{ maxHeight: 400, borderWidth: 1, borderColor: colors.border, borderRadius: 4, padding: 10, paddingRight: 5 }}>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true}>
+            {displayedSessions.map((session) => (
+              <SessionCard key={session.id} session={session} />
+            ))}
+            <View style={{ height: 20 }} />
+          </ScrollView>
         </View>
-        <View style={styles.progStats}>
-          <View style={styles.progStatItem}>
-            <Text style={[styles.progStatLabel, { color: colors.secondaryText }]}>BEST</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={[styles.progStatValue, { color: accentColor }]}>{item.bestWeight}</Text>
-              <Text style={[styles.progStatUnit, { color: accentColor }]}>{units.toUpperCase()}</Text>
-              <MaterialCommunityIcons name="trophy" size={14} color={accentColor} style={{ marginLeft: 4 }} />
-            </View>
-          </View>
-          <View style={styles.progStatItem}>
-            <Text style={[styles.progStatLabel, { color: colors.secondaryText }]}>LAST</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={[styles.progStatValue, { color: colors.text }]}>{item.lastWeight}</Text>
-              <Text style={[styles.progStatUnit, { color: colors.text }]}>{units.toUpperCase()}</Text>
-            </View>
-          </View>
+      ) : (
+        <View style={styles.emptyState}>
+          <Text style={{ color: colors.secondaryText }}>{sessions.length > 0 ? "NO SESSIONS MATCH FILTER" : "NO HISTORY COMMITTED"}</Text>
         </View>
-      </AppTile>
-    );
-  };
+      )}
+    </View>
+  );
+
+  const renderProgression = () => (
+    <View>
+      {progression.length > 0 && (
+        <View style={{ marginBottom: 20 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {uniqueProgFilters.map(filter => (
+              <TouchableOpacity
+                key={filter}
+                style={[styles.filterChip, { borderColor: colors.border }, selectedProgFilter === filter && { backgroundColor: accentColor, borderColor: accentColor }]}
+                onPress={() => setSelectedProgFilter(filter)}
+              >
+                <Text style={[styles.filterChipText, selectedProgFilter === filter ? { color: '#000' } : { color: colors.text }]}>{filter}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {displayedProgression.length > 0 ? (
+        <View style={{ maxHeight: 400, borderWidth: 1, borderColor: colors.border, borderRadius: 4, padding: 12, paddingRight: 5 }}>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true}>
+            {displayedProgression.map((item) => (
+              <ProgressionCard key={item.id} item={item} />
+            ))}
+            <View style={{ height: 20 }} />
+          </ScrollView>
+        </View>
+      ) : (
+        <View style={styles.emptyState}>
+          <Text style={{ color: colors.secondaryText }}>NO MATCHING PROGRESSION</Text>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -523,23 +586,14 @@ const Stats = ({ navigation, route }) => {
       >
         <View style={styles.content}>
           <View style={styles.viewToggle}>
-            <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'OVERVIEW' && { borderBottomColor: accentColor }]}
-              onPress={() => setViewMode('OVERVIEW')}
-            >
-              <Text style={[styles.toggleBtnText, { color: viewMode === 'OVERVIEW' ? colors.text : colors.secondaryText }]}>OVERVIEW</Text>
+            <TouchableOpacity style={[styles.tabBtn, viewMode === 'OVERVIEW' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('OVERVIEW')}>
+              <Text style={[styles.tabBtnText, { color: viewMode === 'OVERVIEW' ? colors.text : colors.secondaryText }]}>OVERVIEW</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'ARCHIVE' && { borderBottomColor: accentColor }]}
-              onPress={() => setViewMode('ARCHIVE')}
-            >
-              <Text style={[styles.toggleBtnText, { color: viewMode === 'ARCHIVE' ? colors.text : colors.secondaryText }]}>ARCHIVE</Text>
+            <TouchableOpacity style={[styles.tabBtn, viewMode === 'ARCHIVE' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('ARCHIVE')}>
+              <Text style={[styles.tabBtnText, { color: viewMode === 'ARCHIVE' ? colors.text : colors.secondaryText }]}>ARCHIVE</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'PROGRESSION' && { borderBottomColor: accentColor }]}
-              onPress={() => setViewMode('PROGRESSION')}
-            >
-              <Text style={[styles.toggleBtnText, { color: viewMode === 'PROGRESSION' ? colors.text : colors.secondaryText }]}>PROGRESSION</Text>
+            <TouchableOpacity style={[styles.tabBtn, viewMode === 'PROGRESSION' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('PROGRESSION')}>
+              <Text style={[styles.tabBtnText, { color: viewMode === 'PROGRESSION' ? colors.text : colors.secondaryText }]}>PROGRESSION</Text>
             </TouchableOpacity>
           </View>
 
@@ -551,87 +605,14 @@ const Stats = ({ navigation, route }) => {
           </Text>
 
           {loading && (viewMode === 'OVERVIEW' || viewMode === 'PROGRESSION' || (viewMode === 'ARCHIVE' && lastFetched.current.archive === 0)) ? (
-
             <ActivityIndicator color={colors.text} style={{ marginTop: 50 }} />
           ) : viewMode === 'OVERVIEW' ? (
             renderOverview()
           ) : viewMode === 'ARCHIVE' ? (
-            <View>
-              {sessions.length > 0 && (
-                <View style={{ marginBottom: 20 }}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {uniqueFilters.map(filter => (
-                      <TouchableOpacity
-                        key={filter}
-                        style={[styles.filterChip, { borderColor: colors.border }, selectedFilter === filter && { backgroundColor: accentColor, borderColor: accentColor }]}
-                        onPress={() => setSelectedFilter(filter)}
-                      >
-                        <Text style={[styles.filterChipText, selectedFilter === filter ? { color: '#000' } : { color: colors.text }]}>{filter}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-
-              {displayedSessions.length > 0 ? (
-                <View style={{ maxHeight: 400, borderWidth: 1, borderColor: colors.border, borderRadius: 4, padding: 10, paddingRight: 5 }}>
-                  <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true}>
-                    {displayedSessions.map((session) => (
-                      <SessionCard key={session.id} session={session} />
-                    ))}
-                    <View style={{ height: 20 }} />
-                  </ScrollView>
-                </View>
-              ) : (
-                <View style={styles.emptyState}>
-                  <Text style={{ color: colors.secondaryText }}>
-                    {sessions.length > 0 ? "NO SESSIONS MATCH FILTER" : "NO HISTORY COMMITTED"}
-                  </Text>
-                  {sessions.length === 0 && (
-                    <TouchableOpacity
-                      style={styles.startBtn}
-                      onPress={() => navigation.navigate('Workouts')}
-                    >
-                      <Text style={{ color: '#000', fontWeight: '900' }}>START FIRST SESSION</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-            </View>
-          ) : viewMode === 'PROGRESSION' ? (
-            <View>
-              {progression.length > 0 && (
-                <View style={{ marginBottom: 20 }}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {uniqueProgFilters.map(filter => (
-                      <TouchableOpacity
-                        key={filter}
-                        style={[styles.filterChip, { borderColor: colors.border }, selectedProgFilter === filter && { backgroundColor: accentColor, borderColor: accentColor }]}
-                        onPress={() => setSelectedProgFilter(filter)}
-                      >
-                        <Text style={[styles.filterChipText, selectedProgFilter === filter ? { color: '#000' } : { color: colors.text }]}>{filter}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-
-              {displayedProgression.length > 0 ? (
-                <View style={{ maxHeight: 400, borderWidth: 1, borderColor: colors.border, borderRadius: 4, padding: 12, paddingRight: 5 }}>
-                  <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true}>
-                    {displayedProgression.map((item) => (
-                      <ProgressionCard key={item.id} item={item} />
-                    ))}
-                    <View style={{ height: 20 }} />
-                  </ScrollView>
-                </View>
-              ) : (
-                <View style={styles.emptyState}>
-                  <Text style={{ color: colors.secondaryText }}>NO MATCHING PROGRESSION</Text>
-                </View>
-              )}
-            </View>
-          ) : null}
+            renderArchive()
+          ) : (
+            renderProgression()
+          )}
 
           <View style={{ height: 100 }} />
         </View>
@@ -641,301 +622,38 @@ const Stats = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    height: 60,
-  },
-  brandTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  avatarPlaceholder: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    backgroundColor: '#EEE',
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 24,
-    paddingTop: 40,
-  },
-  subLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  mainTitle: {
-    fontSize: 56,
-    fontWeight: '900',
-    marginTop: 10,
-    lineHeight: 52,
-    letterSpacing: -2,
-    marginBottom: 40,
-  },
-  viewToggle: {
-    flexDirection: 'row',
-    gap: 20,
-    marginBottom: 10,
-  },
-  toggleBtn: {
-    paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  toggleBtnText: {
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  filterChipText: {
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-
-  progRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    marginBottom: 12,
-  },
-  progMain: {
-    flex: 1,
-  },
-  progName: {
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-  },
-  progDate: {
-    fontSize: 10,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  progStats: {
-    flexDirection: 'row',
-    gap: 20,
-  },
-  progStatItem: {
-    alignItems: 'flex-end',
-  },
-  progStatLabel: {
-    fontSize: 8,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  progStatValue: {
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  progStatUnit: {
-    fontSize: 10,
-    fontWeight: '900',
-    marginLeft: 2,
-    marginTop: 4,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 40,
-    marginBottom: 60,
-  },
-  statBox: {
-    borderLeftWidth: 4,
-    paddingLeft: 15,
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '900',
-    marginTop: 6,
-  },
-  exerciseSection: {
-    marginBottom: 60,
-  },
-  groupLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  exerciseHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  exerciseTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    flex: 1,
-  },
-  addNoteBtn: {
-    backgroundColor: '#000',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  addNoteText: {
-    color: '#FFF',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    padding: 12,
-    marginBottom: 10,
-  },
-  tableLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 15,
-  },
-  rowText: {
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  previousText: {
-    fontSize: 16,
-    fontWeight: '600',
-    fontStyle: 'italic',
-  },
-  inputWrapper: {
-    paddingHorizontal: 5,
-  },
-  rowInput: {
-    height: 50,
-    borderWidth: 1,
-    borderRadius: 2,
-    textAlign: 'center',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  milestoneCard: {
-    padding: 30,
-    marginBottom: 12,
-    borderRadius: 0,
-  },
-  milestoneSub: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 15,
-  },
-  milestoneTitle: {
-    fontSize: 32,
-    fontWeight: '900',
-    lineHeight: 34,
-    marginBottom: 15,
-  },
-  milestoneDesc: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  intensityCard: {
-    padding: 60,
-    alignItems: 'center',
-    borderRadius: 4,
-    marginBottom: 40,
-  },
-  intensityLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    marginTop: 20,
-    letterSpacing: 2,
-  },
-  intensityValue: {
-    fontSize: 56,
-    fontWeight: '900',
-    fontStyle: 'italic',
-    letterSpacing: -1,
-  },
-  finishBtn: {
-    padding: 24,
-    alignItems: 'center',
-    borderRadius: 0,
-  },
-  finishBtnText: {
-    fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  sessionCard: {
-    padding: 16,
-    height: 85,
-    marginBottom: 16,
-    justifyContent: 'center',
-  },
-  sessionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  sessionTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-  },
-  sessionDate: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  statTile: {
-    flex: 1,
-    padding: 16,
-  },
-  statTileLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  statTileValue: {
-    fontSize: 26,
-    fontWeight: '600',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginTop: 20,
-    marginBottom: 8,
-  },
-
-  heatmapContainer: {
-    flexDirection: 'row',
-    padding: 20,
-    justifyContent: 'space-between',
-    height: 300,
-  },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
+  content: { paddingHorizontal: 24, paddingTop: 40 },
+  subLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  mainTitle: { fontSize: 56, fontWeight: '900', marginTop: 10, lineHeight: 52, letterSpacing: -2, marginBottom: 40 },
+  viewToggle: { flexDirection: 'row', marginBottom: 10 },
+  tabBtn: { paddingVertical: 12, marginRight: 20, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabBtnText: { fontSize: 11, fontWeight: '900', letterSpacing: 1 },
+  periodPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: 'rgba(150,150,150,0.1)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, marginBottom: 20 },
+  sectionTitle: { fontSize: 14, fontWeight: '900', letterSpacing: 1, marginTop: 20, marginBottom: 8 },
+  heatmapContainer: { flexDirection: 'row', padding: 20, justifyContent: 'space-between', height: 300 },
+  statTile: { flex: 1, padding: 16 },
+  statTileLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase' },
+  statTileValue: { fontSize: 26, fontWeight: '600' },
+  filterChip: { paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, borderRadius: 20, marginRight: 10 },
+  filterChipText: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  sessionCard: { padding: 16, height: 85, marginBottom: 16, justifyContent: 'center' },
+  sessionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  sessionTitle: { fontSize: 18, fontWeight: '900', letterSpacing: -0.5 },
+  sessionDate: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  progRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, marginBottom: 12 },
+  progMain: { flex: 1 },
+  progName: { fontSize: 18, fontWeight: '900', letterSpacing: -0.5 },
+  progDate: { fontSize: 10, fontWeight: '800', marginTop: 4 },
+  progStats: { flexDirection: 'row', gap: 20 },
+  progStatItem: { alignItems: 'flex-end' },
+  progStatLabel: { fontSize: 8, fontWeight: '800', marginBottom: 4 },
+  progStatValue: { fontSize: 18, fontWeight: '900' },
+  progStatUnit: { fontSize: 10, fontWeight: '900', marginLeft: 2, marginTop: 4 },
+  tierBadge: { borderWidth: 1, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 10 },
+  tierText: { fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
+  emptyState: { marginTop: 40, alignItems: 'center' },
 });
 
 export default Stats;

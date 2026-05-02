@@ -15,7 +15,7 @@ const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const ImportSplitScreen = ({ route, navigation }) => {
   const { splitData } = route.params;
   const payload = splitData.split_payload;
-  
+
   const { colors, accentColor, isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
   const { showAlert } = useRepsAlert();
@@ -23,7 +23,7 @@ const ImportSplitScreen = ({ route, navigation }) => {
   const [step, setStep] = useState(1); // 1: Preview, 2: Customize
   const [loading, setLoading] = useState(false);
   const [allExercises, setAllExercises] = useState([]);
-  
+
   // Customization state
   const [customAssignments, setCustomAssignments] = useState(
     payload.assignments.map((ass, idx) => ({
@@ -40,7 +40,7 @@ const ImportSplitScreen = ({ route, navigation }) => {
     setLoading(true);
     try {
       const newWorkoutIds = [];
-      
+
       // 1. Group assignments by routineName to avoid creating duplicate workouts
       const uniqueRoutines = {};
       finalAssignments.forEach(ass => {
@@ -64,7 +64,7 @@ const ImportSplitScreen = ({ route, navigation }) => {
             });
           }
         }
-        
+
         if (exercisesToCreate.length > 0) {
           const newWorkout = await workoutsService.createWorkout(name, 'Imported from split share', exercisesToCreate);
           routineMap[name] = newWorkout.id;
@@ -88,7 +88,7 @@ const ImportSplitScreen = ({ route, navigation }) => {
       };
 
       await splitsService.saveSplit(newSplit);
-      
+
       showAlert('SPLIT IMPORTED', 'Workouts added to your library. Activate the split from your Calendar to start scheduling.', [
         { text: 'OK', onPress: () => navigation.navigate('Tabs', { screen: 'Workouts', params: { screen: 'WorkoutsLibrary' } }) }
       ]);
@@ -110,7 +110,7 @@ const ImportSplitScreen = ({ route, navigation }) => {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         <RepsHeader onLeftPress={() => navigation.goBack()} title="PREVIEW SPLIT" />
-        
+
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.hero}>
             <Text style={[styles.title, { color: colors.text }]}>{payload.splitName.toUpperCase()}</Text>
@@ -146,18 +146,18 @@ const ImportSplitScreen = ({ route, navigation }) => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <RepsHeader onLeftPress={() => setStep(1)} title="CUSTOMISE SPLIT" />
-      
+
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.listContainer}>
           {customAssignments.map((ass, idx) => (
             <AppTile key={idx} style={styles.editTile}>
               <Text style={[styles.editRoutineName, { color: colors.text }]}>{ass.routineName.toUpperCase()}</Text>
-              
+
               <View style={styles.daySelector}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dayScroll}>
                   {DAYS.map((day, dIdx) => (
-                    <TouchableOpacity 
-                      key={day} 
+                    <TouchableOpacity
+                      key={day}
                       style={[styles.dayChip, { borderColor: colors.border }, ass.dayOfWeek === dIdx && { backgroundColor: accentColor, borderColor: accentColor }]}
                       onPress={() => updateAssignment(idx, 'dayOfWeek', dIdx)}
                     >
@@ -170,7 +170,7 @@ const ImportSplitScreen = ({ route, navigation }) => {
               <View style={styles.timeSelector}>
                 <View style={styles.timeInputGroup}>
                   <Text style={[styles.timeLabel, { color: colors.secondaryText }]}>HOUR</Text>
-                  <TextInput 
+                  <TextInput
                     style={[styles.timeInput, { color: colors.text, borderBottomColor: colors.border }]}
                     value={String(ass.hour)}
                     onChangeText={(val) => updateAssignment(idx, 'hour', parseInt(val.replace(/[^0-9]/g, '')) || 0)}
@@ -181,7 +181,7 @@ const ImportSplitScreen = ({ route, navigation }) => {
                 <Text style={[styles.timeDivider, { color: colors.text }]}>:</Text>
                 <View style={styles.timeInputGroup}>
                   <Text style={[styles.timeLabel, { color: colors.secondaryText }]}>MIN</Text>
-                  <TextInput 
+                  <TextInput
                     style={[styles.timeInput, { color: colors.text, borderBottomColor: colors.border }]}
                     value={String(ass.minute).padStart(2, '0')}
                     onChangeText={(val) => updateAssignment(idx, 'minute', parseInt(val.replace(/[^0-9]/g, '')) || 0)}
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   primaryBtnText: { fontSize: 14, fontWeight: '900', letterSpacing: 2 },
   secondaryBtn: { height: 60, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
   secondaryBtnText: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5 },
-  
+
   editTile: { padding: 20, marginBottom: 12 },
   editRoutineName: { fontSize: 16, fontWeight: '900', marginBottom: 15 },
   daySelector: { marginBottom: 20 },

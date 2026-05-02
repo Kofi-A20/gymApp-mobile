@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import { workoutsService } from '../services/workoutsService';
 
@@ -15,8 +16,9 @@ import QRCode from 'react-native-qrcode-svg';
 import RepsHeader from '../components/RepsHeader';
 import AppTile from '../components/AppTile';
 
-const WorkoutsLibrary = ({ navigation }) => {
+const WorkoutsLibrary = ({ navigation, route }) => {
   const { colors, isDarkMode, units, accentColor } = useTheme();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { profile } = useProfile();
   const { showAlert } = useRepsAlert();
@@ -27,20 +29,36 @@ const WorkoutsLibrary = ({ navigation }) => {
 
   const { width: windowWidth } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
+  const hasFetched = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
+      // Check if we should refresh based on navigation params
+      if (route.params?.refresh) {
+        hasFetched.current = false;
+      }
+
+      // Early return if already fetched
+      if (hasFetched.current) return;
+
       fetchWorkouts();
+
+      // Clear the refresh param
+      if (route.params?.refresh) {
+        navigation.setParams({ refresh: undefined });
+      }
+
       if (scrollViewRef.current) {
         scrollViewRef.current.scrollTo({ y: 0, animated: false });
       }
-    }, [])
+    }, [route.params?.refresh])
   );
 
   const fetchWorkouts = async () => {
     try {
       const data = await workoutsService.getUserWorkouts();
       setWorkouts(data);
+      hasFetched.current = true;
     } catch (error) {
       console.error('Failed to fetch workouts:', error);
     } finally {
@@ -77,6 +95,7 @@ const WorkoutsLibrary = ({ navigation }) => {
               setWorkouts(prev => prev.filter(w => !selectedIds.includes(w.id)));
               setIsSelectionMode(false);
               setSelectedIds([]);
+              hasFetched.current = false;
             } catch (error) {
               console.error(error);
               showAlert("Error", "Failed to delete workouts");

@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { sessionsService } from '../services/sessionsService';
 import { setsService } from '../services/setsService';
 import { workoutsService } from '../services/workoutsService';
+import { gamificationService } from '../services/gamificationService';
+import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = '@reps_activeWorkoutState';
@@ -104,7 +106,23 @@ export const WorkoutProvider = ({ children }) => {
         }
       }
       
-      await Promise.all(setPromises);
+      const loggedSets = await Promise.all(setPromises);
+
+      // Detect PRs for post-commit celebration
+      const prs = loggedSets
+        .filter(s => s.is_pr && !s.isFirstEver)
+        .map(s => {
+          const ex = (activeSession.exercises || []).find(e => (e.id || e.exercise_id) === s.exercise_id);
+          return {
+            name: ex?.name || 'Unknown Exercise',
+            weight: s.weight_kg,
+            reps: s.reps
+          };
+        });
+
+      if (prs.length > 0) {
+        await AsyncStorage.setItem('@reps_pending_prs', JSON.stringify(prs));
+      }
 
       // 3. Calculate total volume and complete the session
       const totalVolume = Object.values(completedSets).reduce((acc, s) => {
@@ -115,11 +133,34 @@ export const WorkoutProvider = ({ children }) => {
 
       await sessionsService.completeSession(dbSession.id, { total_volume_kg: totalVolume, notes });
 
+      let earnedBadges = [];
+
+      // Award XP for completing the session
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const result = await gamificationService.awardXP('session_complete', dbSession.id);
+          if (result.newBadges) earnedBadges = [...earnedBadges, ...result.newBadges];
+
+          // Phase 3 checks
+          await gamificationService.checkConsistencyAndPerfectWeek(user.id);
+          const volBadges = await gamificationService.checkVolumeMilestones(user.id);
+          if (volBadges) earnedBadges = [...earnedBadges, ...volBadges];
+
+          // Phase 4 checks
+          await gamificationService.updateChallenges(user.id, { sets: completedSets });
+        }
+      } catch (err) {
+        console.error('Failed to award session XP or run Phase 3 checks:', err);
+      }
+
       // 4. Clear local state
       setActiveSession(null);
       setIsLogging(false);
       setLastCompletedAt(Date.now());
       await AsyncStorage.removeItem(STORAGE_KEY);
+
+      return earnedBadges;
     } catch (error) {
       throw error;
     }

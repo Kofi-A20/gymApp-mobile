@@ -112,18 +112,13 @@ const SplitsScreen = ({ navigation }) => {
       {splits.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.secondaryText }]}>NO SPLITS CREATED</Text>
-          <TouchableOpacity 
-            style={[styles.createBtn, { backgroundColor: colors.accent }]}
-            onPress={() => navigation.navigate('EditSplitScreen')}
-          >
-            <Text style={[styles.createBtnText, { color: '#000' }]}>CREATE SPLIT</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={splits}
           keyExtractor={item => item.id}
           renderItem={renderItem}
+          style={{ backgroundColor: colors.background }}
           contentContainerStyle={styles.listContent}
         />
       )}

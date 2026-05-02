@@ -140,8 +140,8 @@ const CreateWorkout = ({ route, navigation }) => {
     >
       <RepsHeader
         leftIcon="close"
-        onLeftPress={() => navigation.goBack()}
-        rightActions={[{ text: 'CANCEL', onPress: () => navigation.goBack() }]}
+        onLeftPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('WorkoutsLibrary')}
+        rightActions={[{ text: 'CANCEL', onPress: () => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('WorkoutsLibrary') }]}
       />
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -269,7 +269,7 @@ const CreateWorkout = ({ route, navigation }) => {
             <Text style={[styles.saveBtnText, { color: '#000' }]}>NEXT — SET TARGETS →</Text>
           </AppTile>
 
-          <View style={{ height: 60 }} />
+          <View style={{ height: insets.bottom + 80 }} />
 
         </View>
       </ScrollView>

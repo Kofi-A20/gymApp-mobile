@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { WorkoutProvider } from './src/context/WorkoutContext';
 import { ProfileProvider } from './src/context/ProfileContext';
+import { GamificationProvider } from './src/context/GamificationContext';
 import { AlertProvider } from './src/context/AlertContext';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
@@ -41,15 +42,27 @@ const RootNavigator = () => {
 };
 
 const AppContent = ({ linking }) => {
-  const { settingsLoaded } = useTheme();
+  const { settingsLoaded, colors } = useTheme();
 
   if (!settingsLoaded) {
     return <View style={{ flex: 1, backgroundColor: '#000000' }} />;
   }
 
+  const theme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: colors.background,
+      card: colors.background,
+      text: colors.text,
+      border: colors.border,
+      primary: colors.text,
+    },
+  };
+
   return (
     <AlertProvider>
-      <NavigationContainer linking={linking} ref={navigationRef}>
+      <NavigationContainer linking={linking} ref={navigationRef} theme={theme}>
         <RootNavigator />
         <StatusBar style="auto" />
       </NavigationContainer>
@@ -92,11 +105,13 @@ export default function App() {
       <SafeAreaProvider>
         <AuthProvider>
           <ProfileProvider>
-            <WorkoutProvider>
-              <ThemeProvider>
-                <AppContent linking={linking} />
-              </ThemeProvider>
-            </WorkoutProvider>
+            <GamificationProvider>
+              <WorkoutProvider>
+                <ThemeProvider>
+                  <AppContent linking={linking} />
+                </ThemeProvider>
+              </WorkoutProvider>
+            </GamificationProvider>
           </ProfileProvider>
         </AuthProvider>
       </SafeAreaProvider>

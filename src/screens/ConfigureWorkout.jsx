@@ -98,7 +98,7 @@ const ConfigureWorkout = ({ route, navigation }) => {
     <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <RepsHeader
         leftIcon="arrow-back"
-        onLeftPress={() => navigation.goBack()}
+        onLeftPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('CreateWorkout')}
         title="REPS"
       />
 
@@ -273,7 +273,7 @@ const ConfigureWorkout = ({ route, navigation }) => {
             )}
           </AppTile>
 
-          <View style={{ height: 100 }} />
+          <View style={{ height: insets.bottom + 120 }} />
 
           <ColorPickerModal
             visible={showColorModal}
@@ -390,8 +390,8 @@ const styles = StyleSheet.create({
     marginVertical: 40,
   },
   routineColorLabel: {
-    fontSize: 10, 
-    fontWeight: '800', 
+    fontSize: 10,
+    fontWeight: '800',
     letterSpacing: 1.5,
   },
 

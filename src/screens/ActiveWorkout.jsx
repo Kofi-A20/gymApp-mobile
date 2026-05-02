@@ -73,6 +73,7 @@ const ActiveWorkout = ({ navigation }) => {
   // Refs for reps inputs to allow auto-focus
   const repsInputsRefs = useRef({});
   const restEndTime = useRef(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Session timer tick
   useEffect(() => {
@@ -235,6 +236,7 @@ const ActiveWorkout = ({ navigation }) => {
 
     setCompletedSets(prev => ({ ...prev, [key]: true }));
     const duration = parseInt(restDuration) || 90;
+
     restEndTime.current = Date.now() + duration * 1000;
     setRestRemaining(duration);
   };
@@ -258,6 +260,15 @@ const ActiveWorkout = ({ navigation }) => {
   };
 
   const handleFinish = () => {
+    const completedCount = Object.keys(completedSets).length;
+    if (completedCount === 0) {
+      showAlert(
+        'NO SETS COMPLETED',
+        'Tick at least one set as done before finishing your workout.'
+      );
+      return;
+    }
+
     if (!allSetsComplete()) {
       showAlert(
         'INCOMPLETE SESSION',
@@ -279,7 +290,26 @@ const ActiveWorkout = ({ navigation }) => {
     }
   };
 
+  const forceNavigate = useCallback((stats = {}) => {
+    if (discardConfirmed.current) return;
+    discardConfirmed.current = true;
+    navigation.getParent()?.setOptions({ tabBarStyle: { display: 'flex' } });
+    
+    navigation.reset({
+      index: 0,
+      routes: [{ 
+        name: 'WorkoutComplete', 
+        params: { 
+          setsCount: stats.setsCount || 0,
+          totalVolume: stats.totalVolume || 0,
+          durationSeconds: stats.durationSeconds || 0
+        } 
+      }],
+    });
+  }, [navigation]);
+
   const commitSession = async () => {
+    setIsSubmitting(true);
     try {
       await AsyncStorage.removeItem(UI_STORAGE_KEY);
       const setsToCommit = {};
@@ -291,13 +321,18 @@ const ActiveWorkout = ({ navigation }) => {
           };
         }
       });
-      await finishWorkout(setsToCommit, notes);
-      discardConfirmed.current = true;
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Tabs', params: { screen: 'Log', params: { resetTimestamp: Date.now() } } }],
-      });
+
+      // Calculate stats for celebration screen
+      const setsCount = Object.keys(setsToCommit).length;
+      const totalVolume = Object.values(setsToCommit).reduce((acc, s) => {
+        return acc + (parseFloat(s.weight) * parseInt(s.reps));
+      }, 0);
+
+      // FIRE AND FORGET - Navigate immediately
+      finishWorkout(setsToCommit, notes).catch(e => console.error('Background finishWorkout error:', e));
+      forceNavigate({ setsCount, totalVolume, durationSeconds: sessionTimer });
     } catch (e) {
+      setIsSubmitting(false);
       showAlert('ERROR', 'Failed to save session. Please try again.');
     }
   };
@@ -351,11 +386,11 @@ const ActiveWorkout = ({ navigation }) => {
       />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: colors.background }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
-          style={styles.scroll}
+          style={[styles.scroll, { backgroundColor: colors.background }]}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="interactive"

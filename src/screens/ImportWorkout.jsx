@@ -204,7 +204,8 @@ const ImportWorkout = ({ navigation, route }) => {
       <RepsHeader onLeftPress={() => navigation.goBack()} title="SHARE / IMPORT" />
 
       <ScrollView 
-        contentContainerStyle={styles.content}
+        style={{ backgroundColor: colors.background }}
+        contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 120 : 40 }]}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}

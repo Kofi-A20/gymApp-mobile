@@ -222,7 +222,7 @@ const WorkoutDetail = ({ route, navigation }) => {
                           </View>
                         )}
                       </View>
-                      
+
                       <ExerciseVideo name={item.name} category={item.category} />
                     </View>
                   );

@@ -5,8 +5,19 @@ export const workoutsService = {
    * Fetch all workout templates for the current user.
    * Now includes nested exercises for consistent display in cards.
    */
-  async getUserWorkouts() {
+  async getUserWorkouts(userId) {
     try {
+      let activeUserId = userId;
+
+      if (!activeUserId) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (!user) throw new Error('No authenticated user found');
+        activeUserId = user.id;
+      }
+
+      console.log('[workoutsService] Fetching workouts for user:', activeUserId);
+
       const { data, error } = await supabase
         .from('workouts')
         .select(`
@@ -16,12 +27,15 @@ export const workoutsService = {
             exercises (*)
           )
         `)
+        .eq('user_id', activeUserId)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('getUserWorkouts error:', error);
+        console.error('[workoutsService] getUserWorkouts DB error:', error);
         throw error;
       }
+
+      console.log('[workoutsService] Successfully fetched workouts:', data?.length || 0);
 
       // Map to flat exercises array as expected by UI
       return (data || []).map(workout => ({
@@ -37,7 +51,7 @@ export const workoutsService = {
           .sort((a, b) => a.order_index - b.order_index)
       }));
     } catch (err) {
-      console.error('getUserWorkouts caught exception:', err);
+      console.error('[workoutsService] getUserWorkouts caught exception:', err);
       throw err;
     }
   },

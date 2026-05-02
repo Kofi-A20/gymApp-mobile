@@ -9,6 +9,7 @@ import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import RepsHeader from '../components/RepsHeader';
 import { useRepsAlert } from '../context/AlertContext';
+import AppTile from '../components/AppTile';
 
 const SharedWorkoutPreview = ({ route, navigation }) => {
   const { token } = route.params;
@@ -70,12 +71,12 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
   };
 
   const handleQuickStart = () => {
-     if (!user) {
-        showAlert('AUTHENTICATION REQUIRED', 'Login to initiate workout protocols.');
-        return;
-     }
-     startWorkout(workout);
-     navigation.navigate('ActiveWorkout');
+    if (!user) {
+      showAlert('AUTHENTICATION REQUIRED', 'Login to initiate workout protocols.');
+      return;
+    }
+    startWorkout(workout);
+    navigation.navigate('ActiveWorkout');
   };
 
   if (loading) {
@@ -88,12 +89,16 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      <RepsHeader 
-        onLeftPress={() => navigation.goBack()} 
-        title="IMPORT PROTOCOL" 
+      <RepsHeader
+        onLeftPress={() => navigation.goBack()}
+        title="IMPORT PROTOCOL"
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ backgroundColor: colors.background }}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.hero}>
           <Text style={[styles.workoutName, { color: colors.text }]}>{workout?.name?.toUpperCase()}</Text>
           <Text style={[styles.muscles, { color: colors.secondaryText }]}>{workout?.target_muscles?.toUpperCase()}</Text>
@@ -102,21 +107,19 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
         <View style={styles.exerciseList}>
           {workout?.workout_exercises?.map((item, index) => (
             <View key={index} style={[styles.exerciseItem, { borderBottomColor: colors.border }]}>
-               <View style={styles.exHeader}>
-                  <Text style={[styles.exIndex, { color: accentColor }]}>{(index + 1).toString().padStart(2, '0')}</Text>
-                  <Text style={[styles.exName, { color: colors.text }]}>{item.exercises?.name?.toUpperCase()}</Text>
-               </View>
-               <Text style={[styles.exDetails, { color: colors.secondaryText }]}>
+              <View style={styles.exHeader}>
+                <Text style={[styles.exIndex, { color: accentColor }]}>{(index + 1).toString().padStart(2, '0')}</Text>
+                <Text style={[styles.exName, { color: colors.text }]}>{item.exercises?.name?.toUpperCase()}</Text>
+              </View>
+              <Text style={[styles.exDetails, { color: colors.secondaryText }]}>
                 {item.sets_target} SETS × {item.reps_target} REPS
-               </Text>
+              </Text>
             </View>
           ))}
         </View>
-      </ScrollView>
 
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        <TouchableOpacity 
-          style={[styles.saveButton, { backgroundColor: accentColor }]}
+        <AppTile
+          style={[styles.saveButton, { backgroundColor: accentColor, marginTop: 40 }]}
           onPress={handleSave}
           disabled={saving}
         >
@@ -125,8 +128,8 @@ const SharedWorkoutPreview = ({ route, navigation }) => {
           ) : (
             <Text style={[styles.saveText, { color: '#000' }]}>INTEGRATE TO LIBRARY</Text>
           )}
-        </TouchableOpacity>
-      </View>
+        </AppTile>
+      </ScrollView>
     </View>
   );
 };
@@ -157,12 +160,12 @@ const styles = StyleSheet.create({
   exName: { fontSize: 18, fontWeight: '900', flex: 1 },
   exDetails: { fontSize: 11, fontWeight: '700', letterSpacing: 1, marginLeft: 32 },
   quickStartBtn: {
-     marginTop: 40,
-     padding: 20,
-     borderWidth: 1.5,
-     alignItems: 'center',
-     flexDirection: 'row',
-     justifyContent: 'center',
+    marginTop: 40,
+    padding: 20,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   quickStartText: { fontSize: 12, fontWeight: '900', letterSpacing: 2 },
   footer: {

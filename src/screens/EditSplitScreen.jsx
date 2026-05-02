@@ -178,7 +178,7 @@ const EditSplitScreen = ({ navigation, route }) => {
         rightActions={[{ text: 'SAVE', onPress: handleSave, color: accentColor }]}
       />
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView style={[styles.content, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.inputGroup}>
           <Text style={[styles.label, { color: colors.secondaryText }]}>SPLIT NAME</Text>
           <AppTile style={styles.inputWrapper}>

@@ -25,10 +25,21 @@
 - Toggle between This Week and All Time
 - Each user picks a flex stat displayed next to their rank — volume, PR count, or consistency score
 
+### 🔴 URGENT: DB FIXES
+- [x] ~~**Update `delete_user` RPC**: Done.~~
+- [x] **Fix Signup Trigger**: Two conflicting triggers on `auth.users` resolved. Combined fix script at `src/scripts/gamification_fixes.sql`.
+
 ## Motivational daily reminder notification
 - Fires if no workout logged by a user-set time
 - Tone slider in Settings (under Alerts) ranging from friendly to brutal with randomised copy per tier so it doesn't repeat
 - Time picker in Settings to set when the notification triggers
+
+
+# REMOVE RENDERING OF YOTUUBE VIDEOS IN WORKOUT DETAIL FOR ALL WORKOUTS REMOVE THIS 
+RENDERING OF YOUTUBE VIDEO SHOULD ONLY BE POSSIBLE IN THE BOTTOM SHEET WHEN RENDERIED BYU TAPPING THE I I CON OF AN EXERCISE IN THE ACTIVE WORKOUT 
+
+
+
 
 ## 🟠 UI / UX
 - [ ] Nav pill glassmorphism effect

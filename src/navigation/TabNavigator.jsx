@@ -17,6 +17,18 @@ import Stats from '../screens/Stats';
 import Calories from '../screens/Calories';
 import Settings from '../screens/Settings';
 import Profile from '../screens/Profile';
+import Challenges from '../screens/Challenges';
+import Social from '../screens/Social';
+import AddFriend from '../screens/AddFriend';
+import FriendProfile from '../screens/FriendProfile';
+import ImportWorkout from '../screens/ImportWorkout';
+import SplitsScreen from '../screens/SplitsScreen';
+import EditSplitScreen from '../screens/EditSplitScreen';
+import SharedWorkoutPreview from '../screens/SharedWorkoutPreview';
+import ActiveWorkout from '../screens/ActiveWorkout';
+import WorkoutComplete from '../screens/WorkoutComplete';
+import ImportSplitScreen from '../screens/ImportSplitScreen';
+import SessionHistoryDetail from '../screens/SessionHistoryDetail';
 
 import { useTheme } from '../context/ThemeContext';
 
@@ -25,21 +37,59 @@ const Stack = createNativeStackNavigator();
 
 // ─── Nested Stacks ────────────────────────────────────────────────────────────
 
-const WorkoutStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
-    <Stack.Screen name="WorkoutsLibrary" component={WorkoutsLibrary} />
-    <Stack.Screen name="WorkoutDetail" component={WorkoutDetail} />
-    <Stack.Screen name="CreateWorkout" component={CreateWorkout} options={{ animation: 'slide_from_right' }} />
-    <Stack.Screen name="ConfigureWorkout" component={ConfigureWorkout} options={{ animation: 'slide_from_right' }} />
-  </Stack.Navigator>
-);
+const WorkoutStack = () => {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: colors.background } }}>
+      <Stack.Screen name="WorkoutsLibrary" component={WorkoutsLibrary} />
+      <Stack.Screen name="WorkoutDetail" component={WorkoutDetail} />
+      <Stack.Screen name="CreateWorkout" component={CreateWorkout} />
+      <Stack.Screen name="ConfigureWorkout" component={ConfigureWorkout} />
+      <Stack.Screen name="ImportWorkout" component={ImportWorkout} />
+      <Stack.Screen name="SplitsScreen" component={SplitsScreen} />
+      <Stack.Screen name="EditSplitScreen" component={EditSplitScreen} />
+      <Stack.Screen name="SharedWorkoutPreview" component={SharedWorkoutPreview} />
+      <Stack.Screen name="ActiveWorkout" component={ActiveWorkout} options={{ gestureEnabled: false }} />
+      <Stack.Screen name="WorkoutComplete" component={WorkoutComplete} options={{ gestureEnabled: false }} />
+      <Stack.Screen name="ImportSplitScreen" component={ImportSplitScreen} />
+    </Stack.Navigator>
+  );
+};
 
-const ProfileStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
-    <Stack.Screen name="ProfileMain" component={Profile} />
-    <Stack.Screen name="Settings" component={Settings} />
-  </Stack.Navigator>
-);
+const LogStack = () => {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: colors.background } }}>
+      <Stack.Screen name="LogMain" component={Stats} />
+      <Stack.Screen name="SessionHistoryDetail" component={SessionHistoryDetail} />
+    </Stack.Navigator>
+  );
+};
+
+const CalendarStack = () => {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: colors.background } }}>
+      <Stack.Screen name="CalendarMain" component={Calendar} />
+      <Stack.Screen name="SplitsScreen" component={SplitsScreen} />
+      <Stack.Screen name="EditSplitScreen" component={EditSplitScreen} />
+    </Stack.Navigator>
+  );
+};
+
+const ProfileStack = () => {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: colors.background } }}>
+      <Stack.Screen name="ProfileMain" component={Profile} />
+      <Stack.Screen name="Settings" component={Settings} />
+      <Stack.Screen name="Challenges" component={Challenges} />
+      <Stack.Screen name="Social" component={Social} />
+      <Stack.Screen name="AddFriend" component={AddFriend} />
+      <Stack.Screen name="FriendProfile" component={FriendProfile} />
+    </Stack.Navigator>
+  );
+};
 
 // ─── Tab Icon Map ─────────────────────────────────────────────────────────────
 
@@ -232,17 +282,21 @@ const styles = StyleSheet.create({
 
 // ─── Tab Navigator ────────────────────────────────────────────────────────────
 
-const TabNavigator = () => (
-  <Tab.Navigator
-    tabBar={(props) => <CustomTabBar {...props} />}
-    screenOptions={{ headerShown: false, lazy: true, unmountOnBlur: false }}
-  >
-    <Tab.Screen name="Workouts" component={WorkoutStack} />
-    <Tab.Screen name="Calendar" component={Calendar} />
-    <Tab.Screen name="Log" component={Stats} />
-    <Tab.Screen name="Calories" component={Calories} />
-    <Tab.Screen name="Profile" component={ProfileStack} />
-  </Tab.Navigator>
-);
+const TabNavigator = () => {
+  const { colors } = useTheme();
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false, lazy: true, unmountOnBlur: false }}
+      sceneContainerStyle={{ backgroundColor: colors.background }}
+    >
+      <Tab.Screen name="Workouts" component={WorkoutStack} />
+      <Tab.Screen name="Calendar" component={CalendarStack} />
+      <Tab.Screen name="Log" component={LogStack} />
+      <Tab.Screen name="Calories" component={Calories} />
+      <Tab.Screen name="Profile" component={ProfileStack} />
+    </Tab.Navigator>
+  );
+};
 
 export default TabNavigator;

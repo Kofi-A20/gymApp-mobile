@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { sessionsService } from '../services/sessionsService';
 import { workoutsService } from '../services/workoutsService';
 import { splitsService } from '../services/splitsService';
@@ -35,6 +36,7 @@ const PLANNED_STORAGE_KEY = '@reps_plannedSessions';
 
 const Calendar = ({ navigation }) => {
   const { colors, isDarkMode, accentColor } = useTheme();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [sessionsByDate, setSessionsByDate] = useState({});
@@ -148,18 +150,16 @@ const Calendar = ({ navigation }) => {
   const [availableWorkouts, setAvailableWorkouts] = useState([]);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
 
-  // Custom Planning Modal State
-  const [showPlanModal, setShowPlanModal] = useState(false);
-  const [schedulingDate, setSchedulingDate] = useState(null); // The date selected from calendar
-  const [planHour, setPlanHour] = useState(new Date().getHours());
-  const [planMinute, setPlanMinute] = useState(0);
-  const [planDateIndex, setPlanDateIndex] = useState(0); // For manual selection if needed
-
-  // Edit Time Modal State
   const [showEditTimeModal, setShowEditTimeModal] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
   const [editHour, setEditHour] = useState(8);
   const [editMinute, setEditMinute] = useState(0);
+
+  // New native scheduling state
+  const [showPlanTimePicker, setShowPlanTimePicker] = useState(false);
+  const [schedulingDate, setSchedulingDate] = useState(null);
+  const [planHour, setPlanHour] = useState(new Date().getHours());
+  const [planMinute, setPlanMinute] = useState(0);
 
   const planDateVal = new Date();
   planDateVal.setHours(planHour, planMinute, 0, 0);
@@ -168,28 +168,40 @@ const Calendar = ({ navigation }) => {
   editDateVal.setHours(editHour, editMinute, 0, 0);
 
   const onPlanTimeChange = (event, selectedDate) => {
+    if (Platform.OS === 'android') setShowPlanTimePicker(false);
     if (selectedDate) {
       setPlanHour(selectedDate.getHours());
       setPlanMinute(selectedDate.getMinutes());
+      if (Platform.OS === 'android') {
+        // On Android, we can save immediately after the dialog closes
+        handleConfirmPlan(selectedDate.getHours(), selectedDate.getMinutes());
+      }
     }
   };
 
   const onEditTimeChange = (event, selectedDate) => {
+    if (Platform.OS === 'android') setShowEditTimeModal(false);
     if (selectedDate) {
       setEditHour(selectedDate.getHours());
       setEditMinute(selectedDate.getMinutes());
+      if (Platform.OS === 'android') {
+        handleConfirmEditTime(selectedDate.getHours(), selectedDate.getMinutes());
+      }
     }
   };
 
-  const handleConfirmEditTime = async () => {
+  const handleConfirmEditTime = async (h, m) => {
     if (!editingSession) return;
     try {
       if (editingSession.notificationId) {
         await Notifications.cancelScheduledNotificationAsync(editingSession.notificationId).catch(() => { });
       }
 
+      const hour = h !== undefined ? h : editHour;
+      const minute = m !== undefined ? m : editMinute;
+
       const newDate = new Date(editingSession.dateTime);
-      newDate.setHours(editHour, editMinute, 0, 0);
+      newDate.setHours(hour, minute, 0, 0);
 
       if (newDate < new Date()) {
         Alert.alert('INVALID TIME', 'CANNOT PLAN A SESSION IN THE PAST.');
@@ -457,13 +469,16 @@ const Calendar = ({ navigation }) => {
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
 
-  const handleConfirmPlan = () => {
+  const handleConfirmPlan = (h, m) => {
     if (!selectedWorkout) return;
 
-    // Use schedulingDate from calendar tap OR fallback to the 30-day picker index
-    const dateToUse = schedulingDate ? new Date(schedulingDate + 'T00:00:00') : next30Days.current[planDateIndex].date;
+    const hour = h !== undefined ? h : planHour;
+    const minute = m !== undefined ? m : planMinute;
+
+    // Use schedulingDate from calendar tap OR fallback to today
+    const dateToUse = schedulingDate ? new Date(schedulingDate + 'T00:00:00') : new Date();
     const finalDate = new Date(dateToUse);
-    finalDate.setHours(planHour, planMinute, 0, 0);
+    finalDate.setHours(hour, minute, 0, 0);
 
     // Validation: Not in the past
     if (finalDate < new Date()) {
@@ -472,7 +487,7 @@ const Calendar = ({ navigation }) => {
     }
 
     savePlannedSession(selectedWorkout, finalDate);
-    setShowPlanModal(false);
+    setShowPlanTimePicker(false);
     setSchedulingDate(null);
   };
 
@@ -541,19 +556,42 @@ const Calendar = ({ navigation }) => {
 
   const openAddPlanned = async (targetDateStr = null) => {
     try {
+      console.log('[CALENDAR] Opening Schedule Workout modal. Current User ID:', user?.id);
       const data = await workoutsService.getUserWorkouts();
+      console.log('[CALENDAR] Routines loaded successfully:', data?.length || 0);
+      
+      if (!data || data.length === 0) {
+        Alert.alert('No Routines', 'You need to create a workout routine first.');
+        return;
+      }
+
       setAvailableWorkouts(data);
       setSchedulingDate(targetDateStr);
 
-      // If we have a target date from the calendar, we'll use it.
-      // If not (legacy button press), we'll default to today in the list.
-      if (!targetDateStr) {
-        setPlanDateIndex(0);
+      if (Platform.OS === 'ios') {
+        const options = data.map(w => w.name);
+        options.push('Cancel');
+        
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options,
+            cancelButtonIndex: options.length - 1,
+            title: 'Select Routine',
+          },
+          (buttonIndex) => {
+            if (buttonIndex !== options.length - 1) {
+              const workout = data[buttonIndex];
+              setSelectedWorkout(workout);
+              setShowPlanTimePicker(true);
+            }
+          }
+        );
+      } else {
+        setShowAddModal(true);
       }
-
-      setShowAddModal(true);
     } catch (e) {
-      Alert.alert('ERROR', 'FAILED TO LOAD ROUTINES');
+      console.error('[CALENDAR] Failed to load routines. Error:', e);
+      Alert.alert('Error', `Failed to load routines: ${e.message || 'Unknown Error'}`);
     }
   };
 
@@ -706,26 +744,31 @@ const Calendar = ({ navigation }) => {
         </View>
       </ScrollView>
 
-      {/* Select Workout Modal */}
+      {/* Routine Selection Modal (Matches EditSplitScreen) */}
       <Modal visible={showAddModal} transparent animationType="slide" onRequestClose={() => setShowAddModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>PICK ROUTINE</Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}><AntDesign name="close" size={20} color={colors.text} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <AntDesign name="close" size={20} color={colors.text} />
+              </TouchableOpacity>
             </View>
             <FlatList
               data={availableWorkouts}
               keyExtractor={item => item.id}
+              showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
-                <TouchableOpacity style={[styles.pickerItem, { borderBottomColor: colors.border }]}
+                <TouchableOpacity 
+                  style={[styles.pickerItem, { borderBottomColor: colors.border }]}
                   onPress={() => {
                     setSelectedWorkout(item);
                     setShowAddModal(false);
-                    setShowPlanModal(true);
-                  }}>
+                    setShowPlanTimePicker(true);
+                  }}
+                >
                   <Text style={[styles.pickerName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
-                  <AntDesign name="plus" size={16} color={accentColor} />
+                  <AntDesign name="right" size={16} color={accentColor} />
                 </TouchableOpacity>
               )}
             />
@@ -733,217 +776,212 @@ const Calendar = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* PLAN DETAILS MODAL (Custom Date/Time) */}
-      <Modal visible={showPlanModal} transparent animationType="fade" onRequestClose={() => setShowPlanModal(false)}>
+      {/* NATIVE TIME PICKER FOR PLANNING (Android) */}
+      {showPlanTimePicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={planDateVal}
+          mode="time"
+          display="spinner"
+          is24Hour={true}
+          onChange={onPlanTimeChange}
+        />
+      )}
+
+      {/* Time Picker Modal (Centered Card for iOS) */}
+      <Modal visible={showPlanTimePicker} transparent animationType="fade" onRequestClose={() => setShowPlanTimePicker(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.planBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text, textAlign: 'center', marginBottom: 20 }]}>PLAN YOUR SESSION</Text>
-
-            <Text style={[styles.pLabel, { color: colors.secondaryText }]}>DAY</Text>
-            {schedulingDate ? (
-              <View style={[styles.dateChip, { backgroundColor: accentColor, borderColor: accentColor, alignSelf: 'flex-start', marginBottom: 10 }]}>
-                <Text style={[styles.dateChipText, { color: '#000' }]}>
-                  {new Date(schedulingDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()}
-                </Text>
-              </View>
-            ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
-                {next30Days.current.map((d, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => setPlanDateIndex(index)}
-                    style={[
-                      styles.dateChip,
-                      { borderColor: colors.border },
-                      planDateIndex === index && { backgroundColor: accentColor, borderColor: accentColor }
-                    ]}
-                  >
-                    <Text style={[styles.dateChipText, { color: planDateIndex === index ? '#000' : colors.text }]}>{d.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-
-            <Text style={[styles.pLabel, { color: colors.secondaryText, marginTop: 20 }]}>TIME</Text>
-            <View style={{ alignItems: 'center', marginVertical: 10 }}>
+          <AppTile style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>PICK TIME</Text>
+              <TouchableOpacity onPress={() => handleConfirmPlan()}>
+                <Text style={{ color: accentColor, fontWeight: '900' }}>DONE</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ height: 200, justifyContent: 'center' }}>
               <DateTimePicker
                 value={planDateVal}
                 mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="spinner"
+                themeVariant={isDarkMode ? 'dark' : 'light'}
                 onChange={onPlanTimeChange}
-                textColor={colors.text}
+                style={{ width: '100%' }}
               />
             </View>
-
-            <View style={styles.pActionRow}>
-              <TouchableOpacity style={[styles.pBtn, { flex: 1 }]} onPress={() => setShowPlanModal(false)}>
-                <Text style={[styles.pBtnText, { color: colors.secondaryText }]}>CANCEL</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.pBtn, { flex: 2, backgroundColor: accentColor }]}
-                onPress={handleConfirmPlan}
-              >
-                <Text style={[styles.pBtnText, { color: '#000' }]}>CONFIRM</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+            <TouchableOpacity 
+              style={{ 
+                marginTop: 20, 
+                backgroundColor: accentColor, 
+                padding: 18, 
+                borderRadius: 16, 
+                alignItems: 'center' 
+              }}
+              onPress={() => handleConfirmPlan()}
+            >
+              <Text style={{ color: '#000', fontWeight: '900', letterSpacing: 1 }}>CONFIRM TIME</Text>
+            </TouchableOpacity>
+          </AppTile>
         </View>
       </Modal>
 
-      {/* EDIT TIME MODAL */}
-      <Modal visible={showEditTimeModal} transparent animationType="fade" onRequestClose={() => setShowEditTimeModal(false)}>
+      {/* Edit Time Modal (Matches Planning Flow exactly) */}
+      <Modal visible={showEditTimeModal && Platform.OS === 'ios'} transparent animationType="fade" onRequestClose={() => setShowEditTimeModal(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.planBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text, textAlign: 'center', marginBottom: 20 }]}>EDIT TIME</Text>
-
-            {editingSession && (
-              <View style={{ alignItems: 'center', marginBottom: 20 }}>
-                <Text style={{ fontSize: 16, fontWeight: '900', color: colors.text, marginBottom: 4 }}>
-                  {editingSession.workoutName.toUpperCase()}
-                </Text>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.secondaryText }}>
-                  {new Date(editingSession.dateTime).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}
-                </Text>
-              </View>
-            )}
-
-            <View style={{ alignItems: 'center', marginVertical: 10 }}>
+          <AppTile style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>EDIT TIME</Text>
+              <TouchableOpacity onPress={() => handleConfirmEditTime()}>
+                <Text style={{ color: accentColor, fontWeight: '900' }}>DONE</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ height: 200, justifyContent: 'center' }}>
               <DateTimePicker
                 value={editDateVal}
                 mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="spinner"
+                themeVariant={isDarkMode ? 'dark' : 'light'}
                 onChange={onEditTimeChange}
-                textColor={colors.text}
+                style={{ width: '100%' }}
               />
             </View>
-
-            <View style={styles.pActionRow}>
-              <TouchableOpacity style={[styles.pBtn, { flex: 1 }]} onPress={() => setShowEditTimeModal(false)}>
-                <Text style={[styles.pBtnText, { color: colors.secondaryText }]}>CANCEL</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.pBtn, { flex: 2, backgroundColor: accentColor }]}
-                onPress={handleConfirmEditTime}
-              >
-                <Text style={[styles.pBtnText, { color: '#000' }]}>CONFIRM</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+            <TouchableOpacity 
+              style={{ 
+                marginTop: 20, 
+                backgroundColor: accentColor, 
+                padding: 18, 
+                borderRadius: 16, 
+                alignItems: 'center' 
+              }}
+              onPress={() => handleConfirmEditTime()}
+            >
+              <Text style={{ color: '#000', fontWeight: '900', letterSpacing: 1 }}>CONFIRM TIME</Text>
+            </TouchableOpacity>
+          </AppTile>
         </View>
       </Modal>
 
+      {/* NATIVE TIME PICKER FOR EDITING (Android) */}
+      {showEditTimeModal && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={editDateVal}
+          mode="time"
+          display="spinner"
+          is24Hour={true}
+          onChange={onEditTimeChange}
+        />
+      )}
+
       {/* Day Sheet Modal */}
       <BottomSheet visible={!!selectedDayData} onClose={() => setSelectedDayData(null)} snapHeight="75%">
-            <View style={[styles.modalHeader, { justifyContent: 'flex-start' }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {selectedDayData ? new Date(selectedDayData.dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase() : ''}
-              </Text>
-            </View>
+        <View style={[styles.modalHeader, { justifyContent: 'flex-start' }]}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>
+            {selectedDayData ? new Date(selectedDayData.dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase() : ''}
+          </Text>
+        </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {selectedDayData?.planned?.length > 0 && (
-                <View style={{ marginBottom: 20 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <Text style={[styles.subLabel, { color: colors.secondaryText, marginBottom: 0 }]}>SCHEDULED</Text>
-                    {(selectedDayData.planned.length >= 2 || sheetSelectionMode) && (
-                      <TouchableOpacity onPress={handleSheetSelectAll}>
-                        <Text style={{ color: accentColor, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>
-                          {sheetSelectionMode ? 'CANCEL' : 'SELECT ALL'}
-                        </Text>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {selectedDayData?.planned?.length > 0 && (
+            <View style={{ marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={[styles.subLabel, { color: colors.secondaryText, marginBottom: 0 }]}>SCHEDULED</Text>
+                {(selectedDayData.planned.length >= 2 || sheetSelectionMode) && (
+                  <TouchableOpacity onPress={handleSheetSelectAll}>
+                    <Text style={{ color: accentColor, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>
+                      {sheetSelectionMode ? 'CANCEL' : 'SELECT ALL'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {selectedDayData.planned.map(item => (
+                <AppTile
+                  key={item.id}
+                  style={{ padding: 15, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                  onPress={() => sheetSelectionMode ? toggleSheetSelection(item.id) : handleSessionOptions(item)}
+                  onLongPress={() => {
+                    if (!sheetSelectionMode) {
+                      setSheetSelectionMode(true);
+                      toggleSheetSelection(item.id);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    {sheetSelectionMode && (
+                      <MaterialCommunityIcons
+                        name={sheetSelectedSessions.includes(item.id) ? "checkbox-marked" : "checkbox-blank-outline"}
+                        size={20}
+                        color={sheetSelectedSessions.includes(item.id) ? accentColor : colors.border}
+                        style={{ marginRight: 10 }}
+                      />
+                    )}
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.workoutColor || accentColor, marginRight: 10 }} />
+                    <View>
+                      <Text style={[styles.pickerName, { color: colors.text }]}>{item.workoutName.toUpperCase()}</Text>
+                      <Text style={{ color: colors.secondaryText, fontSize: 10, fontWeight: '700', marginTop: 2 }}>
+                        {new Date(item.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 15, alignItems: 'center' }}>
+                    {!sheetSelectionMode && (
+                      <TouchableOpacity onPress={() => handleSessionOptions(item)} style={{ padding: 5 }}>
+                        <Feather name="more-horizontal" size={20} color={colors.text} />
                       </TouchableOpacity>
                     )}
                   </View>
-                  {selectedDayData.planned.map(item => (
-                    <AppTile
-                      key={item.id}
-                      style={{ padding: 15, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-                      onPress={() => sheetSelectionMode ? toggleSheetSelection(item.id) : handleSessionOptions(item)}
-                      onLongPress={() => {
-                        if (!sheetSelectionMode) {
-                          setSheetSelectionMode(true);
-                          toggleSheetSelection(item.id);
-                        }
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                        {sheetSelectionMode && (
-                          <MaterialCommunityIcons
-                            name={sheetSelectedSessions.includes(item.id) ? "checkbox-marked" : "checkbox-blank-outline"}
-                            size={20}
-                            color={sheetSelectedSessions.includes(item.id) ? accentColor : colors.border}
-                            style={{ marginRight: 10 }}
-                          />
-                        )}
-                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.workoutColor || accentColor, marginRight: 10 }} />
-                        <View>
-                          <Text style={[styles.pickerName, { color: colors.text }]}>{item.workoutName.toUpperCase()}</Text>
-                          <Text style={{ color: colors.secondaryText, fontSize: 10, fontWeight: '700', marginTop: 2 }}>
-                            {new Date(item.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={{ flexDirection: 'row', gap: 15, alignItems: 'center' }}>
-                        {!sheetSelectionMode && (
-                          <TouchableOpacity onPress={() => handleSessionOptions(item)} style={{ padding: 5 }}>
-                            <Feather name="more-horizontal" size={20} color={colors.text} />
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    </AppTile>
-                  ))}
-                </View>
-              )}
+                </AppTile>
+              ))}
+            </View>
+          )}
 
-              {selectedDayData?.completed?.length > 0 && (
-                <View style={{ marginBottom: 20 }}>
-                  <Text style={[styles.subLabel, { color: colors.secondaryText, marginBottom: 10 }]}>COMPLETED</Text>
-                  {selectedDayData.completed.map(item => (
-                    <AppTile
-                      key={item.id}
-                      style={{ padding: 15, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-                      onPress={() => { setSelectedDayData(null); navigation.navigate('SessionHistoryDetail', { session: item }); }}
-                    >
-                      <View>
-                        <Text style={[styles.pickerName, { color: colors.text }]}>{item.workout_name.toUpperCase()}</Text>
-                        <Text style={{ color: colors.secondaryText, fontSize: 10, fontWeight: '700', marginTop: 2 }}>
-                          {new Date(item.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-                      </View>
-                      <AntDesign name="right" size={16} color={colors.secondaryText} />
-                    </AppTile>
-                  ))}
-                </View>
-              )}
+          {selectedDayData?.completed?.length > 0 && (
+            <View style={{ marginBottom: 20 }}>
+              <Text style={[styles.subLabel, { color: colors.secondaryText, marginBottom: 10 }]}>COMPLETED</Text>
+              {selectedDayData.completed.map(item => (
+                <AppTile
+                  key={item.id}
+                  style={{ padding: 15, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                  onPress={() => { setSelectedDayData(null); navigation.navigate('Log', { screen: 'SessionHistoryDetail', params: { session: item } }); }}
+                >
+                  <View>
+                    <Text style={[styles.pickerName, { color: colors.text }]}>{item.workout_name.toUpperCase()}</Text>
+                    <Text style={{ color: colors.secondaryText, fontSize: 10, fontWeight: '700', marginTop: 2 }}>
+                      {new Date(item.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+                  <AntDesign name="right" size={16} color={colors.secondaryText} />
+                </AppTile>
+              ))}
+            </View>
+          )}
 
-              {(!selectedDayData?.planned?.length && !selectedDayData?.completed?.length) && (
-                <Text style={{ color: colors.secondaryText, textAlign: 'center', marginVertical: 30, fontSize: 12 }}>NO SESSIONS FOR THIS DAY</Text>
-              )}
-            </ScrollView>
+          {(!selectedDayData?.planned?.length && !selectedDayData?.completed?.length) && (
+            <Text style={{ color: colors.secondaryText, textAlign: 'center', marginVertical: 30, fontSize: 12 }}>NO SESSIONS FOR THIS DAY</Text>
+          )}
+        </ScrollView>
 
-            {sheetSelectionMode && sheetSelectedSessions.length > 0 && (
-              <AppTile
-                style={{ backgroundColor: '#FF3B30', justifyContent: 'center', alignItems: 'center', flexDirection: 'row', marginTop: 10, paddingVertical: 15, borderWidth: 0 }}
-                onPress={handleSheetBatchDelete}
-              >
-                <Ionicons name="trash-outline" size={16} color="#FFF" />
-                <Text style={{ fontSize: 12, fontWeight: '900', letterSpacing: 1, color: '#FFF', marginLeft: 8 }}>DELETE SELECTED</Text>
-              </AppTile>
-            )}
+        {sheetSelectionMode && sheetSelectedSessions.length > 0 && (
+          <AppTile
+            style={{ backgroundColor: '#FF3B30', justifyContent: 'center', alignItems: 'center', flexDirection: 'row', marginTop: 10, paddingVertical: 15, borderWidth: 0 }}
+            onPress={handleSheetBatchDelete}
+          >
+            <Ionicons name="trash-outline" size={16} color="#FFF" />
+            <Text style={{ fontSize: 12, fontWeight: '900', letterSpacing: 1, color: '#FFF', marginLeft: 8 }}>DELETE SELECTED</Text>
+          </AppTile>
+        )}
 
-            {selectedDayData?.isFutureOrToday && !sheetSelectionMode && (
-              <AppTile
-                style={{ backgroundColor: accentColor, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', marginTop: 20, paddingVertical: 15, borderWidth: 0 }}
-                onPress={() => {
-                  const targetDate = selectedDayData.dateStr;
-                  setSelectedDayData(null);
-                  openAddPlanned(targetDate);
-                }}
-              >
-                <AntDesign name="plus" size={16} color="#000" />
-                <Text style={{ fontSize: 12, fontWeight: '900', letterSpacing: 1, color: '#000', marginLeft: 8 }}>SCHEDULE WORKOUT</Text>
-              </AppTile>
-            )}
+        {selectedDayData?.isFutureOrToday && !sheetSelectionMode && (
+          <AppTile
+            style={{ backgroundColor: accentColor, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', marginTop: 20, paddingVertical: 15, borderWidth: 0 }}
+            onPress={() => {
+              const targetDate = selectedDayData.dateStr;
+              setSelectedDayData(null);
+              openAddPlanned(targetDate);
+            }}
+          >
+            <AntDesign name="plus" size={16} color="#000" />
+            <Text style={{ fontSize: 12, fontWeight: '900', letterSpacing: 1, color: '#000', marginLeft: 8 }}>SCHEDULE WORKOUT</Text>
+          </AppTile>
+        )}
       </BottomSheet>
     </View>
   );
