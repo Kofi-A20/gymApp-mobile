@@ -29,27 +29,17 @@ const WorkoutsLibrary = ({ navigation, route }) => {
 
   const { width: windowWidth } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
-  const hasFetched = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
-      // Check if we should refresh based on navigation params
-      if (route.params?.refresh) {
-        hasFetched.current = false;
-      }
-
-      // Early return if already fetched
-      if (hasFetched.current) return;
-
       fetchWorkouts();
 
-      // Clear the refresh param
+      // Clear the refresh param and scroll to top if requested
       if (route.params?.refresh) {
         navigation.setParams({ refresh: undefined });
-      }
-
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({ y: 0, animated: false });
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollTo({ y: 0, animated: false });
+        }
       }
     }, [route.params?.refresh])
   );
@@ -58,7 +48,6 @@ const WorkoutsLibrary = ({ navigation, route }) => {
     try {
       const data = await workoutsService.getUserWorkouts();
       setWorkouts(data);
-      hasFetched.current = true;
     } catch (error) {
       console.error('Failed to fetch workouts:', error);
     } finally {
@@ -95,7 +84,6 @@ const WorkoutsLibrary = ({ navigation, route }) => {
               setWorkouts(prev => prev.filter(w => !selectedIds.includes(w.id)));
               setIsSelectionMode(false);
               setSelectedIds([]);
-              hasFetched.current = false;
             } catch (error) {
               console.error(error);
               showAlert("Error", "Failed to delete workouts");

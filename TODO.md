@@ -32,6 +32,31 @@
 - Active Workout
 - Calorie Command
 - Calendar
+---
+## 🗂️ Sticky Tab Headers
+
+**Root cause:** Screens with multiple tabs (Stats, Calorie Command, Profile) render tabs inside the
+scrollable content area, forcing users to scroll back to the top to switch tabs.
+
+**Rule:** On any screen with tabs, the tab bar must be anchored below the screen header and remain
+fixed while only the tab content scrolls beneath it.
+
+### Screens affected
+- **Stats** — Overview / Archive / Progression tabs
+- **Calorie Command** — Dashboard / Analytics tabs
+- **Profile** — Profile / Rank / Social / Leaderboard tabs
+
+### Screens not affected (no tabs)
+- Active Workout, Calendar, Workout Library, Session History, Leaderboard (standalone),
+  Settings, Create Workout, Configure Sets, Progression (if standalone)
+
+### Implementation notes
+- Tab bar sits between the screen header and the scrollable content area — not inside a ScrollView
+- Only the content beneath the tab bar scrolls; header + tab bar stay fixed
+- Tab bar styling should be consistent across all three screens (same height, font size,
+  indicator style) — extract from whichever screen currently looks best and apply uniformly
+- Do not change tab bar appearance on Calorie Command — it is a benchmark screen
+---
 ### 🏋️ Workout Detail
 - **Remove video from exercise expansion** — Expanding an exercise row shows both a muscle diagram and a video. Remove video entirely from this view. Video playback is only for active workout sessions.
 ---
