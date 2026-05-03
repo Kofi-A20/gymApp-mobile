@@ -106,8 +106,6 @@ const Profile = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
-  const [selectedTitle, setSelectedTitle] = useState('');
-  const [titleModalVisible, setTitleModalVisible] = useState(false);
   const [phone, setPhone] = useState('');
   const [dob, setDob] = useState(null);
   const [height, setHeight] = useState('');
@@ -183,7 +181,6 @@ const Profile = ({ navigation }) => {
 
     if (gamification) {
       setUsername(gamification.username || '');
-      setSelectedTitle(gamification.selected_title || '');
       const currentStat = gamification.flex_stat;
       setFlexStat(VALID_FLEX_STATS.includes(currentStat) ? currentStat : null);
     }
@@ -418,7 +415,6 @@ const Profile = ({ navigation }) => {
         }),
         updateGamification({
           username,
-          selected_title: selectedTitle,
           flex_stat: flexStat,
           // Sync names to gamification table for social features
           first_name: firstName,
@@ -492,9 +488,7 @@ const Profile = ({ navigation }) => {
           <View style={[styles.editBtn, { backgroundColor: colors.background, borderColor: colors.border }]}><Feather name="camera" size={14} color={colors.text} /></View>
         </TouchableOpacity>
         <View style={styles.identityText}>
-          <Text style={[styles.identityLabel, { color: colors.secondaryText }]}>USER IDENTIFICATION</Text>
           <Text style={[styles.userName, { color: colors.text }]}>{firstName.toUpperCase()} {lastName.toUpperCase()}</Text>
-          <Text style={[styles.titleLabel, { color: accentColor }]}>{selectedTitle?.toUpperCase() || 'NEW MEMBER'}</Text>
         </View>
       </View>
       <View style={styles.sectionTitleRow}><Text style={[styles.sectionTitle, { color: colors.text }]}>BIOMETRICS</Text></View>
@@ -506,7 +500,6 @@ const Profile = ({ navigation }) => {
       <InputField label="First Name" value={firstName} onChangeText={markDirty(setFirstName)} colors={colors} accentColor={accentColor} />
       <InputField label="Last Name" value={lastName} onChangeText={markDirty(setLastName)} colors={colors} accentColor={accentColor} />
       <InputField label="Username" value={username} onChangeText={handleUsernameChange} autoCapitalize="none" colors={colors} accentColor={accentColor} />
-      <TouchableOpacity onPress={() => setTitleModalVisible(true)}><InputField label="Selected Title" value={selectedTitle?.toUpperCase() || 'NONE'} editable={false} colors={colors} accentColor={accentColor} rightIcon="chevron-down" /></TouchableOpacity>
       <InputField label="Email Address" value={profile?.email || ''} editable={false} colors={colors} accentColor={accentColor} />
       <InputField label="Mobile Phone" value={phone} onChangeText={markDirty(setPhone)} keyboardType="phone-pad" colors={colors} accentColor={accentColor} />
       <View style={[styles.sectionTitleRow, { marginTop: 60 }]}><Text style={[styles.sectionTitle, { color: colors.text }]}>PHYSICAL METRICS</Text></View>
@@ -554,7 +547,6 @@ const Profile = ({ navigation }) => {
             first_name: profile?.first_name,
             last_name: profile?.last_name,
             avatar_color: profile?.avatar_color,
-            selected_title: selectedTitle,
             level: level,
             total_xp: xp,
             consistencyScore,
@@ -707,13 +699,21 @@ const Profile = ({ navigation }) => {
           <TouchableOpacity style={[styles.toggleBtn, viewMode === 'RANK' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('RANK')}><Text style={[styles.toggleBtnText, { color: viewMode === 'RANK' ? colors.text : colors.secondaryText }]}>RANK</Text></TouchableOpacity>
           <TouchableOpacity style={[styles.toggleBtn, viewMode === 'SOCIAL' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('SOCIAL')}><Text style={[styles.toggleBtnText, { color: viewMode === 'SOCIAL' ? colors.text : colors.secondaryText }]}>SOCIAL</Text></TouchableOpacity>
           <TouchableOpacity style={[styles.toggleBtn, viewMode === 'LEADERBOARD' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('LEADERBOARD')}><Text style={[styles.toggleBtnText, { color: viewMode === 'LEADERBOARD' ? colors.text : colors.secondaryText }]}>LEADERBOARD</Text></TouchableOpacity>
-        </ScrollView>
+      </ScrollView>
         <View style={{ marginTop: 30 }}>
           {viewMode === 'PROFILE' ? renderProfileTab() : viewMode === 'RANK' ? renderRankTab() : viewMode === 'SOCIAL' ? renderSocialTab() : renderLeaderboardTab()}
         </View>
       </ScrollView>
-      <Modal visible={titleModalVisible} animationType="slide" transparent><View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.8)' }]}><View style={[styles.modalContent, { backgroundColor: colors.background }]}><View style={styles.modalHeader}><Text style={[styles.modalTitle, { color: colors.text }]}>EARNED TITLES</Text><TouchableOpacity onPress={() => setTitleModalVisible(false)}><MaterialCommunityIcons name="close" size={24} color={colors.text} /></TouchableOpacity></View><ScrollView>{badges.filter(b => b.badge_definitions.grants_title).map(b => (<TouchableOpacity key={b.id} style={[styles.titleOption, { borderBottomColor: colors.border }, selectedTitle === b.badge_definitions.grants_title && { backgroundColor: colors.secondaryBackground }]} onPress={() => { setSelectedTitle(b.badge_definitions.grants_title); setTitleModalVisible(false); setIsDirty(true); }}><Text style={[styles.titleOptionText, { color: colors.text }]}>{b.badge_definitions.grants_title.toUpperCase()}</Text><Text style={[styles.titleOptionSub, { color: colors.secondaryText }]}>EARNED FROM: {b.badge_definitions.name.toUpperCase()}</Text></TouchableOpacity>))}</ScrollView></View></View></Modal>
-      {showDatePicker && (<DateTimePicker value={dob || new Date(1995, 0, 1)} mode="date" maximumDate={new Date()} onChange={(_, date) => { setShowDatePicker(false); if (date) { setDob(date); setIsDirty(true); } }} />)}
+      <Modal visible={showDatePicker} animationType="slide" transparent onRequestClose={() => setShowDatePicker(false)}>
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.8)' }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <DateTimePicker value={dob || new Date(1995, 0, 1)} mode="date" display="spinner" maximumDate={new Date()} onChange={(_, date) => { if (date) { setDob(date); setIsDirty(true); } }} style={{ width: '100%' }} textColor={colors.text} />
+            <AppTile onPress={() => setShowDatePicker(false)} style={{ marginTop: 10, alignItems: 'center', padding: 16, backgroundColor: accentColor }}>
+              <Text style={{ fontWeight: '900', color: '#000', fontSize: 16, letterSpacing: 1 }}>DONE</Text>
+            </AppTile>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -730,9 +730,7 @@ const styles = StyleSheet.create({
   mainAvatar: { width: '100%', height: '100%', borderRadius: 50 },
   editBtn: { position: 'absolute', bottom: 0, right: 0, width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
   identityText: { marginTop: 10 },
-  identityLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   userName: { fontSize: 24, fontWeight: '900', letterSpacing: 0, marginVertical: 4 },
-  titleLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: 4 },
   sectionTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 30 },
   sectionTitle: { fontSize: 24, fontWeight: '900', letterSpacing: 0.5 },
   bioGrid: { gap: 12 },
@@ -752,11 +750,11 @@ const styles = StyleSheet.create({
   selectorChipText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
   saveBtn: { marginTop: 60, padding: 24, alignItems: 'center' },
   saveBtnText: { fontSize: 20, fontWeight: '900', letterSpacing: 1 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalBox: { borderTopWidth: 1, paddingBottom: 40 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(150,150,150,0.2)' },
+  modalContent: { width: '100%', maxHeight: '60%', borderWidth: 1, padding: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 14, fontWeight: '900', letterSpacing: 2 },
-  modalContent: { borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, paddingBottom: 60 },
   rankCard: { padding: 20, marginTop: 10 },
   rankHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   levelBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },

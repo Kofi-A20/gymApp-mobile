@@ -1,74 +1,86 @@
 # REPS — MASTER TODO
 
-## Gamification
+---
 
-### XP system — earned from completing sessions, hitting PRs, crossing volume milestones, completing personal challenges, reaching exercise mastery tiers, and perfect weeks
-- Level system tied to XP — Untrained → Novice → Intermediate → Advanced → Elite → Legend
-- Badges — first session, 10/100 sessions, first PR, volume milestones (10k/50k/100k kg lifetime), perfect week, personal challenge completed, exercise mastery tiers
-- Consistency score — weekly percentage based on how many assigned split days you completed vs planned
-- Exercise mastery — tracks how many times you've logged an exercise and whether you've PRd, shown on Progression tab with a subtle visual tier indicator
-- PR celebrations — active session screen reacts in the moment when you log a PR
-- Personal challenges — self-set time-bound goals with a progress bar, awards XP and a badge on completion
-- Volume milestones — lifetime total crossed thresholds award one-time XP and badges
+## 🐛 Bugs & UI Fixes
 
-### Social
-- User accounts and friends system — add friends via username or existing code mechanic
-- Friend activity — lightweight, just a line showing what they logged and when
-- Public profile — shows level, title, badges, consistency score, top PRs
-- Customisable profile — avatar color tied to existing app color system
-- Titles — earned through achievements, displayed under name
-- Split sharing — share full weekly split including recurrence via existing code mechanic
+### 🏋️ Workout Detail
+- **Remove video from exercise expansion** — Expanding an exercise row shows both a muscle diagram and a video. Remove video entirely from this view. Video playback is only for active workout sessions.
 
-### Leaderboard
-- Friends-only leaderboard in Stats tab
-- Ranked by XP
-- Toggle between This Week and All Time
-- Each user picks a flex stat displayed next to their rank — volume, PR count, or consistency score
+### 💪 Active Workout
+- **Video trigger button redesign** — Replace the eye icon with a small pill labelled "VIDEO" so its purpose is immediately clear.
+- **Light mode — exercise completion highlight** — Completion tick/highlight is a washed-out pale green in light mode. Should be visible and consistent with the theme accent color.
 
-### 🔴 URGENT: DB FIXES
-- [x] ~~**Update `delete_user` RPC**: Done.~~
-- [x] **Fix Signup Trigger**: Two conflicting triggers on `auth.users` resolved. Combined fix script at `src/scripts/gamification_fixes.sql`.
+### ➕ Create Workout (Light Mode)
+- **Filter pills go black when selected** — Should use theme accent color instead.
+- **"Next / Configure Workout" button is black** — Should use theme accent color with appropriate contrast text.
+- **"Create Workout Routine" button in Configure Workout is black** — Same fix, use theme accent color.
+- **Exercise selection state doesn't use accent color** — Selected exercises should highlight using theme accent color.
 
-## Motivational daily reminder notification
-- Fires if no workout logged by a user-set time
-- Tone slider in Settings (under Alerts) ranging from friendly to brutal with randomised copy per tier so it doesn't repeat
-- Time picker in Settings to set when the notification triggers
+### 📅 Calendar (Light Mode)
+- **Overall palette too pale/washed out** — General light mode appearance needs contrast improvement.
+- **Completed workout day fill color** — Uses the same washed-out color as the active workout exercise tick. Needs to be distinct and clearly communicate a completed day.
 
+### 👤 Profile
+- **Date of birth does not persist after app restart** — Saving DOB appears to succeed but value is lost on next launch. Investigate Supabase write.
+- **Activity Level selector pill doesn't hold selected state** — Currently selected activity level is not visually highlighted. Should match how Gender pills behave, using accent color.
+- **Biometrics Activity tile is pitch black in light mode** — Height, Weight, and Age tiles are white in light mode but Activity renders as solid black with white text. Should be consistent with the other tiles.
 
-# REMOVE RENDERING OF YOTUUBE VIDEOS IN WORKOUT DETAIL FOR ALL WORKOUTS REMOVE THIS 
-RENDERING OF YOUTUBE VIDEO SHOULD ONLY BE POSSIBLE IN THE BOTTOM SHEET WHEN RENDERIED BYU TAPPING THE I I CON OF AN EXERCISE IN THE ACTIVE WORKOUT 
+### 📊 Analytics
+- **Weight log input placeholder text too large** — Placeholder inside the "Log this week" weight input is oversized and gets cut off. Reduce font size so full hint text is readable.
 
-
-
-
-## 🟠 UI / UX
-- [ ] Nav pill glassmorphism effect
-
-## 🔵 AUTH & SECURITY
-- [ ] Security audit and checks
-- [ ] Improve login screen
-- [ ] Google, Apple, and third-party OAuth integration
-
-
-## 🚀 ONBOARDING
-- [ ] First-time onboarding flow after account creation
-      - Walk user through core app sections
-
-## 💰 MONETISATION
-- [ ] Define which features go behind paywall
-- [ ] Implement premium gate
+### ⚙️ Settings
+- **Workout Reminders toggle bleeds outside tile on iPhone 14** — Layout bug, needs constraint fix.
 
 ---
 
-## 💡 SUGGESTIONS
+## 🔒 Security (Parked)
+- **Security audit** — `calendarService`, `setsService`, `exercisesService`, `sessionsService` missing `user_id` filters. RLS is the current guard but explicit filters should be added.
+
+---
+
+## 🚧 Incomplete Features
+
+### 👥 Social
+- **Friend adding via QR code / 6-character code** — Not yet implemented.
+- **Friends list not persisting after app restart** — Friend relationships may only exist in local state and not be written to Supabase on add.
+- **Push notifications for friend requests** — When a friend request is sent, the recipient gets no notification. Requires:
+  1. Expo push token stored per user in Supabase
+  2. `sendFriendRequest` triggers Supabase Edge Function or direct Expo Push API call
+  3. Notification payload: `"USERNAME sent you a friend request"`
+
+### 🔔 Motivational Daily Reminder Notification
+- Fires if no workout is logged by a user-set time
+- Tone slider in Settings (under Alerts) — ranges from friendly to brutal, with randomised copy per tier so messages don't repeat
+- Time picker in Settings to control when the notification fires
+
+### 👤 Auth & Onboarding
+- **Username not collected during signup** — Must be set afterwards in Profile. Should be part of onboarding.
+- **First-time onboarding flow** — Walk new users through core app sections after account creation.
+- **Improve login screen**
+- **Google, Apple, and third-party OAuth integration**
+
+---
+
+## 🎨 UI / UX
+- **Nav pill glassmorphism effect**
+
+---
+
+## 💰 Monetisation
+- Define which features go behind paywall
+- Implement premium gate
+
+---
+
+## 💡 Suggestions
 
 ### From Dev Classmate
-- [ ] Apple Health / Google Fit integration 
+- Apple Health / Google Fit integration
 
 ### From Heavy User
-- [ ] AI coaching chatbot
-      - User sets a goal ("bench 100kg in 6 months")
-      - AI builds a tailored workout + diet + rest plan
-      - Automatically schedules everything into the calendar
-      - Could run on Claude API as the backend
-
+- AI coaching chatbot
+  - User sets a goal (e.g. "bench 100kg in 6 months")
+  - AI builds a tailored workout, diet, and rest plan
+  - Automatically schedules everything into the calendar
+  - Backend powered by Claude API

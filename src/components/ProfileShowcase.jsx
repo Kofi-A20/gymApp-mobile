@@ -18,9 +18,6 @@ const ProfileShowcase = ({ profile, flexStat, isOwnProfile, onFlexStatPress }) =
         <Text style={[styles.name, { color: colors.text }]}>
           {(profile.first_name || '').toUpperCase()} {(profile.last_name || '').toUpperCase()}
         </Text>
-        <Text style={[styles.title, { color: accentColor }]}>
-          {(profile.selected_title || 'NEW MEMBER').toUpperCase()}
-        </Text>
         
         <View style={[styles.levelBadge, { backgroundColor: accentColor }]}>
           <Text style={[styles.levelText, { color: colors.background }]}>
@@ -151,7 +148,6 @@ const styles = StyleSheet.create({
   hero: { alignItems: 'center', marginBottom: 40 },
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 20 },
   name: { fontSize: 28, fontWeight: '900', letterSpacing: -1 },
-  title: { fontSize: 12, fontWeight: '800', letterSpacing: 2, marginTop: 4 },
   levelBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4, marginTop: 15 },
   levelText: { fontSize: 10, fontWeight: '900' },
   statsGrid: { gap: 12 },
