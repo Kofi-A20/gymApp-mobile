@@ -131,7 +131,7 @@ const Profile = ({ navigation }) => {
 
   // Leaderboard state
   const [leaderboard, setLeaderboard] = useState([]);
-  const [lbPeriod, setLbPeriod] = useState('this_week');
+  const [lbPeriod, setLbPeriod] = useState('last_week');
   const [lbLoading, setLbLoading] = useState(false);
 
   // Weight Log Integration
@@ -195,7 +195,15 @@ const Profile = ({ navigation }) => {
 
   useEffect(() => {
     AsyncStorage.getItem('leaderboard_period').then(p => {
-      if (p) setLbPeriod(p);
+      if (p === 'this_week') {
+        setLbPeriod('last_week');
+        AsyncStorage.setItem('leaderboard_period', 'last_week');
+      } else if (p === 'all_time') {
+        setLbPeriod('last_month');
+        AsyncStorage.setItem('leaderboard_period', 'last_month');
+      } else if (p) {
+        setLbPeriod(p);
+      }
     });
   }, []);
 
@@ -261,7 +269,7 @@ const Profile = ({ navigation }) => {
       ]);
       setConsistencyScore(score?.score || 0);
       setTopPrs((prData || []).sort((a, b) => b.bestWeight - a.bestWeight).slice(0, 3));
-      
+
       // Update the picker state to match DB
       if (gProfile?.flex_stat) setFlexStat(gProfile.flex_stat);
 
@@ -273,7 +281,7 @@ const Profile = ({ navigation }) => {
         else if (currentFlexStatType === 'muscle_focus') result = await gamificationService.getMuscleFocus(user.id);
         else if (currentFlexStatType === 'training_vibe') result = await gamificationService.getTrainingVibe(user.id);
         else if (currentFlexStatType === 'iron_longevity') result = await gamificationService.getIronLongevity(user.id);
-        
+
         if (result) {
           setComputedFlexStat({ ...result, type: currentFlexStatType });
         } else {
@@ -292,14 +300,14 @@ const Profile = ({ navigation }) => {
     try {
       // 1. Save selection immediately to Supabase
       await gamificationService.updateGamificationProfile({ flex_stat: flexStat });
-      
+
       // 2. Re-compute value for the tile
       let result = null;
       if (flexStat === 'favorite_move') result = await gamificationService.getFavoriteMove(user.id);
       else if (flexStat === 'muscle_focus') result = await gamificationService.getMuscleFocus(user.id);
       else if (flexStat === 'training_vibe') result = await gamificationService.getTrainingVibe(user.id);
       else if (flexStat === 'iron_longevity') result = await gamificationService.getIronLongevity(user.id);
-      
+
       setComputedFlexStat(result ? { ...result, type: flexStat } : null);
       setIsFlexModalVisible(false);
       refreshGamification(); // Refresh context
@@ -518,14 +526,14 @@ const Profile = ({ navigation }) => {
     const currentXp = xp || 0;
     let currentLevelMin = 0;
     let nextLevelMin = 500; // Default first threshold
-    
+
     for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
       if (currentXp >= LEVEL_THRESHOLDS[i].minXp) {
         currentLevelMin = LEVEL_THRESHOLDS[i].minXp;
         nextLevelMin = i + 1 < LEVEL_THRESHOLDS.length ? LEVEL_THRESHOLDS[i + 1].minXp : LEVEL_THRESHOLDS[i].minXp;
       }
     }
-    
+
     const xpDiff = nextLevelMin - currentLevelMin;
     const progressTowardNext = xpDiff > 0 ? ((currentXp - currentLevelMin) / xpDiff) * 100 : 100;
     const finalProgress = Math.max(0, Math.min(100, progressTowardNext));
@@ -533,13 +541,13 @@ const Profile = ({ navigation }) => {
     return (
       <View>
         <View style={styles.sectionTitleRow}><Text style={[styles.sectionTitle, { color: colors.text }]}>STATS & RANK</Text></View>
-        
-        <ProfileShowcase 
+
+        <ProfileShowcase
           isOwnProfile={true}
-          flexStat={(computedFlexStat && computedFlexStat.type === gamification?.flex_stat && VALID_FLEX_STATS.includes(gamification.flex_stat)) 
-            ? computedFlexStat 
+          flexStat={(computedFlexStat && computedFlexStat.type === gamification?.flex_stat && VALID_FLEX_STATS.includes(gamification.flex_stat))
+            ? computedFlexStat
             : (gamification?.flex_stat && VALID_FLEX_STATS.includes(gamification.flex_stat)
-              ? { label: gamification.flex_stat.replace('_', ' ').toUpperCase(), value: 'COMPUTING...' } 
+              ? { label: gamification.flex_stat.replace('_', ' ').toUpperCase(), value: 'COMPUTING...' }
               : null)}
           onFlexStatPress={() => setIsFlexModalVisible(true)}
           profile={{
@@ -553,51 +561,66 @@ const Profile = ({ navigation }) => {
             badges,
             topPrs,
             progressPercentage: finalProgress
-        }}
-      />
+          }}
+        />
 
-      <Modal visible={isFlexModalVisible} transparent animationType="fade" onRequestClose={() => setIsFlexModalVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 20 }}>
-          <AppTile style={{ padding: 24 }}>
-            <Text style={{ fontSize: 18, fontWeight: '900', color: colors.text, marginBottom: 8, textAlign: 'center' }}>YOUR FLEX STAT</Text>
-            <Text style={{ fontSize: 12, color: colors.secondaryText, marginBottom: 24, textAlign: 'center', letterSpacing: 1 }}>CHOOSE HOW YOU EXPRESS YOURSELF</Text>
-            
-            <SelectorField 
-              label="SELECT STAT" 
-              options={FLEX_STAT_OPTIONS} 
-              value={flexStat} 
-              onChange={(val) => { 
-                setFlexStat(val); 
-                setIsDirty(true); 
-              }} 
-            />
+        <Modal visible={isFlexModalVisible} transparent animationType="fade" onRequestClose={() => setIsFlexModalVisible(false)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 20 }}>
+            <AppTile style={{ padding: 24 }}>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: colors.text, marginBottom: 8, textAlign: 'center' }}>YOUR FLEX STAT</Text>
+              <Text style={{ fontSize: 12, color: colors.secondaryText, marginBottom: 24, textAlign: 'center', letterSpacing: 1 }}>CHOOSE HOW YOU EXPRESS YOURSELF</Text>
 
-            <TouchableOpacity 
-              onPress={handleFlexStatDone} 
-              disabled={!flexStat}
-              style={{ marginTop: 30, backgroundColor: accentColor, padding: 15, borderRadius: 8, alignItems: 'center', opacity: !flexStat ? 0.5 : 1 }}
-            >
-              <Text style={{ color: colors.background, fontWeight: '900', letterSpacing: 1 }}>DONE</Text>
-            </TouchableOpacity>
-          </AppTile>
-        </View>
-      </Modal>
+              <SelectorField
+                label="SELECT STAT"
+                options={FLEX_STAT_OPTIONS}
+                value={flexStat}
+                onChange={(val) => {
+                  setFlexStat(val);
+                  setIsDirty(true);
+                }}
+              />
 
-      <View style={{ height: 100 }} />
-    </View>
-  );
-};
+              <TouchableOpacity
+                onPress={handleFlexStatDone}
+                disabled={!flexStat}
+                style={{ marginTop: 30, backgroundColor: accentColor, padding: 15, borderRadius: 8, alignItems: 'center', opacity: !flexStat ? 0.5 : 1 }}
+              >
+                <Text style={{ color: colors.background, fontWeight: '900', letterSpacing: 1 }}>DONE</Text>
+              </TouchableOpacity>
+            </AppTile>
+          </View>
+        </Modal>
+
+        <View style={{ height: 100 }} />
+      </View>
+    );
+  };
 
   const renderSocialTab = () => (
     <View>
       <Text style={[styles.sectionLabel, { color: colors.secondaryText, marginBottom: 15 }]}>FRIEND ACTIVITY</Text>
       <AppTile style={{ padding: 10 }}>
-        {activityFeed.length > 0 ? (activityFeed.slice(0, 3).map((item, i) => (
-          <View key={item.id} style={styles.feedItem}>
-            <View style={[styles.feedDot, { backgroundColor: item.user?.avatar_color || accentColor }]} />
-            <Text style={[styles.feedText, { color: colors.text }]} numberOfLines={1}><Text style={{ fontWeight: '900' }}>{item.user?.first_name?.toUpperCase()}</Text> LOGGED {item.workout_name?.toUpperCase()}</Text>
-          </View>
-        ))) : (<Text style={{ color: colors.secondaryText, fontSize: 11, padding: 10 }}>NO RECENT ACTIVITY.</Text>)}
+        {activityFeed.length > 0 ? (activityFeed.slice(0, 3).map((item, i) => {
+          const firstName = item.user?.first_name?.toUpperCase() || 'FRIEND';
+          let feedText = null;
+          switch (item.type) {
+            case 'pr':
+              feedText = <Text style={[styles.feedText, { color: colors.text }]} numberOfLines={1}><Text style={{ fontWeight: '900' }}>{firstName}</Text> HIT A NEW PR — {item.exerciseName?.toUpperCase()} {item.weight}KG</Text>;
+              break;
+            case 'badge':
+              feedText = <Text style={[styles.feedText, { color: colors.text }]} numberOfLines={1}><Text style={{ fontWeight: '900' }}>{firstName}</Text> EARNED THE {item.badgeName?.toUpperCase()} BADGE</Text>;
+              break;
+            case 'level_up':
+              feedText = <Text style={[styles.feedText, { color: colors.text }]} numberOfLines={1}><Text style={{ fontWeight: '900' }}>{firstName}</Text> JUST LEVELED UP</Text>;
+              break;
+          }
+          return (
+            <View key={item.id || i} style={styles.feedItem}>
+              <View style={[styles.feedDot, { backgroundColor: item.user?.avatar_color || accentColor }]} />
+              {feedText}
+            </View>
+          );
+        })) : (<Text style={{ color: colors.secondaryText, fontSize: 11, padding: 10 }}>NO RECENT ACTIVITY.</Text>)}
         <TouchableOpacity onPress={() => navigation.navigate('Social')}><Text style={[styles.viewAll, { color: accentColor }]}>VIEW FULL FEED</Text></TouchableOpacity>
       </AppTile>
       <View style={[styles.sectionTitleRow, { marginTop: 30 }]}><Text style={[styles.sectionTitle, { color: colors.text }]}>FRIENDS</Text><TouchableOpacity onPress={() => navigation.navigate('AddFriend')}><AntDesign name="plus" size={20} color={accentColor} /></TouchableOpacity></View>
@@ -616,20 +639,35 @@ const Profile = ({ navigation }) => {
           <Text style={[styles.lbTitle, { color: colors.text }]}>LEADERBOARD.</Text>
         </View>
         <View style={[styles.lbToggle, { backgroundColor: colors.secondaryBackground, marginTop: 15, alignSelf: 'flex-start' }]}>
-          <TouchableOpacity style={[styles.lbToggleBtn, lbPeriod === 'this_week' && { backgroundColor: accentColor }]} onPress={() => handleLbPeriodToggle('this_week')}><Text style={[styles.lbToggleText, { color: lbPeriod === 'this_week' ? '#000' : colors.secondaryText }]}>WEEK</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.lbToggleBtn, lbPeriod === 'all_time' && { backgroundColor: accentColor }]} onPress={() => handleLbPeriodToggle('all_time')}><Text style={[styles.lbToggleText, { color: lbPeriod === 'all_time' ? '#000' : colors.secondaryText }]}>ALL</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.lbToggleBtn, lbPeriod === 'last_week' && { backgroundColor: accentColor }]} onPress={() => handleLbPeriodToggle('last_week')}><Text style={[styles.lbToggleText, { color: lbPeriod === 'last_week' ? '#000' : colors.secondaryText }]}>LAST WEEK</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.lbToggleBtn, lbPeriod === 'last_month' && { backgroundColor: accentColor }]} onPress={() => handleLbPeriodToggle('last_month')}><Text style={[styles.lbToggleText, { color: lbPeriod === 'last_month' ? '#000' : colors.secondaryText }]}>LAST MONTH</Text></TouchableOpacity>
         </View>
       </View>
       {lbLoading && leaderboard.length === 0 ? (<ActivityIndicator color={accentColor} style={{ marginTop: 40 }} />) : (
         leaderboard.map((item, index) => {
           const isMe = item.user_id === user?.id;
           return (
-            <AppTile key={item.user_id} style={[styles.lbRow, isMe && { borderColor: accentColor, borderWidth: 1 }]} onPress={() => navigation.navigate('FriendProfile', { userId: item.user_id })}>
-              <View style={styles.lbRank}><Text style={[styles.lbRankText, { color: colors.secondaryText }]}>#{index + 1}</Text></View>
+            <AppTile
+              key={item.user_id}
+              style={[styles.lbRow, isMe && { borderColor: accentColor, borderWidth: 1 }]}
+              onPress={isMe ? null : () => navigation.navigate('FriendProfile', { userId: item.user_id })}
+            >
+              <View style={styles.lbRank}>
+                <Text style={[styles.lbRankText, { color: colors.secondaryText }]}>#{index + 1}</Text>
+                {item.rankMovement > 0 && (
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#4CAF50', marginTop: 2 }}>▲{item.rankMovement}</Text>
+                )}
+                {item.rankMovement < 0 && (
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#FF5252', marginTop: 2 }}>▼{Math.abs(item.rankMovement)}</Text>
+                )}
+                {item.rankMovement === 0 && (
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: colors.secondaryText, marginTop: 2 }}>—</Text>
+                )}
+              </View>
               <View style={[styles.lbAvatar, { backgroundColor: item.avatar_color || accentColor, overflow: 'hidden' }]}>
                 {item.avatarUrl && <Image source={{ uri: item.avatarUrl }} style={{ width: '100%', height: '100%' }} />}
               </View>
-              <View style={styles.lbInfo}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={[styles.lbName, { color: colors.text }]} numberOfLines={1}>{item.first_name?.toUpperCase()}</Text><View style={[styles.lbLevelBadge, { backgroundColor: colors.border }]}><Text style={[styles.lbLevelText, { color: colors.text }]}>{item.level?.toUpperCase()}</Text></View></View><Text style={[styles.lbXP, { color: accentColor }]}>{item.displayXP.toLocaleString()} XP</Text></View>
+              <View style={styles.lbInfo}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={[styles.lbName, { color: colors.text }]} numberOfLines={1}>{item.first_name?.toUpperCase()}</Text><View style={[styles.lbLevelBadge, { backgroundColor: colors.border }]}><Text style={[styles.lbLevelText, { color: colors.text }]}>{item.level?.toUpperCase()}</Text></View></View><Text style={[styles.lbXP, { color: accentColor }]}>{item.displayXP}/100 SCORE</Text></View>
               <View style={styles.lbFlex}><Text style={[styles.lbFlexVal, { color: colors.text }]}>{item.flex_stat === 'volume' ? `${(item.flexValue / 1000).toFixed(1)}k` : item.flexValue}</Text><Text style={[styles.lbFlexLabel, { color: colors.secondaryText }]}>{item.flex_stat?.replace('_', ' ')?.toUpperCase() || 'VOLUME'}</Text></View>
             </AppTile>
           );
@@ -644,35 +682,35 @@ const Profile = ({ navigation }) => {
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      <RepsHeader 
-        title="REPS" 
-        rightActions={[{ icon: 'settings-outline', library: 'Ionicons', onPress: () => navigation.navigate('Settings') }]} 
+      <RepsHeader
+        title="REPS"
+        rightActions={[{ icon: 'settings-outline', library: 'Ionicons', onPress: () => navigation.navigate('Settings') }]}
       />
       {showLevelUp && (
-        <LevelUpCelebration 
-          newLevel={level} 
-          onDismiss={() => setShowLevelUp(false)} 
+        <LevelUpCelebration
+          newLevel={level}
+          onDismiss={() => setShowLevelUp(false)}
         />
       )}
-      <ScrollView 
-        style={styles.container} 
+      <ScrollView
+        style={styles.container}
         contentContainerStyle={[styles.content, { paddingTop: 20 }]}
         showsVerticalScrollIndicator={false}
       >
         <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.viewToggle}
-            contentContainerStyle={{ paddingRight: 24 }}
-          >
-            <TouchableOpacity style={[styles.toggleBtn, viewMode === 'PROFILE' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('PROFILE')}><Text style={[styles.toggleBtnText, { color: viewMode === 'PROFILE' ? colors.text : colors.secondaryText }]}>PROFILE</Text></TouchableOpacity>
-            <TouchableOpacity style={[styles.toggleBtn, viewMode === 'RANK' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('RANK')}><Text style={[styles.toggleBtnText, { color: viewMode === 'RANK' ? colors.text : colors.secondaryText }]}>RANK</Text></TouchableOpacity>
-            <TouchableOpacity style={[styles.toggleBtn, viewMode === 'SOCIAL' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('SOCIAL')}><Text style={[styles.toggleBtnText, { color: viewMode === 'SOCIAL' ? colors.text : colors.secondaryText }]}>SOCIAL</Text></TouchableOpacity>
-            <TouchableOpacity style={[styles.toggleBtn, viewMode === 'LEADERBOARD' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('LEADERBOARD')}><Text style={[styles.toggleBtnText, { color: viewMode === 'LEADERBOARD' ? colors.text : colors.secondaryText }]}>LEADERBOARD</Text></TouchableOpacity>
-          </ScrollView>
-          <View style={{ marginTop: 30 }}>
-            {viewMode === 'PROFILE' ? renderProfileTab() : viewMode === 'RANK' ? renderRankTab() : viewMode === 'SOCIAL' ? renderSocialTab() : renderLeaderboardTab()}
-          </View>
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.viewToggle}
+          contentContainerStyle={{ paddingRight: 24 }}
+        >
+          <TouchableOpacity style={[styles.toggleBtn, viewMode === 'PROFILE' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('PROFILE')}><Text style={[styles.toggleBtnText, { color: viewMode === 'PROFILE' ? colors.text : colors.secondaryText }]}>PROFILE</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.toggleBtn, viewMode === 'RANK' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('RANK')}><Text style={[styles.toggleBtnText, { color: viewMode === 'RANK' ? colors.text : colors.secondaryText }]}>RANK</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.toggleBtn, viewMode === 'SOCIAL' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('SOCIAL')}><Text style={[styles.toggleBtnText, { color: viewMode === 'SOCIAL' ? colors.text : colors.secondaryText }]}>SOCIAL</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.toggleBtn, viewMode === 'LEADERBOARD' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('LEADERBOARD')}><Text style={[styles.toggleBtnText, { color: viewMode === 'LEADERBOARD' ? colors.text : colors.secondaryText }]}>LEADERBOARD</Text></TouchableOpacity>
+        </ScrollView>
+        <View style={{ marginTop: 30 }}>
+          {viewMode === 'PROFILE' ? renderProfileTab() : viewMode === 'RANK' ? renderRankTab() : viewMode === 'SOCIAL' ? renderSocialTab() : renderLeaderboardTab()}
+        </View>
       </ScrollView>
       <Modal visible={titleModalVisible} animationType="slide" transparent><View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.8)' }]}><View style={[styles.modalContent, { backgroundColor: colors.background }]}><View style={styles.modalHeader}><Text style={[styles.modalTitle, { color: colors.text }]}>EARNED TITLES</Text><TouchableOpacity onPress={() => setTitleModalVisible(false)}><MaterialCommunityIcons name="close" size={24} color={colors.text} /></TouchableOpacity></View><ScrollView>{badges.filter(b => b.badge_definitions.grants_title).map(b => (<TouchableOpacity key={b.id} style={[styles.titleOption, { borderBottomColor: colors.border }, selectedTitle === b.badge_definitions.grants_title && { backgroundColor: colors.secondaryBackground }]} onPress={() => { setSelectedTitle(b.badge_definitions.grants_title); setTitleModalVisible(false); setIsDirty(true); }}><Text style={[styles.titleOptionText, { color: colors.text }]}>{b.badge_definitions.grants_title.toUpperCase()}</Text><Text style={[styles.titleOptionSub, { color: colors.secondaryText }]}>EARNED FROM: {b.badge_definitions.name.toUpperCase()}</Text></TouchableOpacity>))}</ScrollView></View></View></Modal>
       {showDatePicker && (<DateTimePicker value={dob || new Date(1995, 0, 1)} mode="date" maximumDate={new Date()} onChange={(_, date) => { setShowDatePicker(false); if (date) { setDob(date); setIsDirty(true); } }} />)}
