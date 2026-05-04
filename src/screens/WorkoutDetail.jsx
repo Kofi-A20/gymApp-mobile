@@ -14,6 +14,7 @@ import Body from 'react-native-body-highlighter';
 import { workoutsService } from '../services/workoutsService';
 import { useRepsAlert } from '../context/AlertContext';
 import { mapMuscleSlug } from '../utils/muscleUtils';
+import { TYPOGRAPHY } from '../theme/typography';
 
 const frontSlugs = new Set(['chest', 'biceps', 'abs', 'obliques', 'quadriceps', 'tibialis', 'knees', 'front-deltoids']);
 const backSlugs = new Set(['upper-back', 'triceps', 'lower-back', 'gluteal', 'hamstring', 'calves', 'rear-deltoids']);
@@ -170,7 +171,7 @@ const WorkoutDetail = ({ route, navigation }) => {
 
           <View style={styles.statsRow}>
             <View style={[styles.statItem, { borderLeftColor: colors.text }]}>
-              <Text style={[styles.statLabel, { color: colors.secondaryText }]}>MOVEMENTS</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryText }]}>EXERCISES</Text>
               <Text style={[styles.statValue, { color: colors.text }]}>{currentWorkout.exercises?.length || 0}</Text>
             </View>
             <View style={styles.statItem}>
@@ -289,9 +290,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   workoutTitle: {
-    fontSize: 56,
-    fontWeight: '900',
-    letterSpacing: -1,
+    ...TYPOGRAPHY.heroTitle,
     marginTop: 5,
   },
   statsRow: {
@@ -362,9 +361,9 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   exerciseName: {
-    fontSize: 22,
+    fontSize: 16,
     fontWeight: '900',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   exerciseDetails: {
     fontSize: 10,

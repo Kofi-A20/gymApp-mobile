@@ -19,6 +19,7 @@ import { supabase } from '../lib/supabase';
 import { MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
 import AppTile from '../components/AppTile';
+import { TYPOGRAPHY } from '../theme/typography';
 
 const Social = ({ navigation }) => {
   const { colors, accentColor, isDarkMode } = useTheme();
@@ -243,13 +244,13 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   container: { flex: 1 },
   content: { paddingHorizontal: 24, paddingTop: 30 },
-  sectionLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 2, marginBottom: 15 },
+  sectionLabel: { ...TYPOGRAPHY.sectionHeader, marginBottom: 15 },
   activityCard: { padding: 5 },
   activityItem: { flexDirection: 'row', alignItems: 'center', padding: 15 },
   avatarDot: { width: 8, height: 8, borderRadius: 4, marginRight: 15 },
   activityText: { flex: 1 },
   activityMain: { fontSize: 13, fontWeight: '600' },
-  activityTime: { fontSize: 10, fontWeight: '800', marginTop: 4 },
+  activityTime: { ...TYPOGRAPHY.micro, marginTop: 4 },
   divider: { height: 1, marginHorizontal: 15 },
   requestItem: { flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 10 },
   requestName: { fontSize: 14, fontWeight: '900' },
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
   friendItem: { flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 10 },
   friendAvatar: { width: 40, height: 40, borderRadius: 20 },
   friendName: { fontSize: 16, fontWeight: '900' },
-  friendLevel: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  friendLevel: { ...TYPOGRAPHY.micro },
   emptyFriends: { alignItems: 'center', marginTop: 40 },
 });
 

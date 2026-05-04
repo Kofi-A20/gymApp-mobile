@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import AppTile from './AppTile';
 import { LEVEL_THRESHOLDS } from '../services/gamificationService';
+import { TYPOGRAPHY } from '../theme/typography';
 
 const ProfileShowcase = ({ profile, flexStat, isOwnProfile, onFlexStatPress }) => {
   const { colors, accentColor } = useTheme();
@@ -152,17 +153,17 @@ const styles = StyleSheet.create({
   levelText: { fontSize: 10, fontWeight: '900' },
   statsGrid: { gap: 12 },
   statsRow: { flexDirection: 'row', gap: 12 },
-  statBox: { flex: 1, padding: 20, alignItems: 'center' },
-  flexBox: { width: '100%', padding: 20, alignItems: 'center' },
+  statBox: { flex: 1, padding: 16, alignItems: 'center' },
+  flexBox: { width: '100%', padding: 16, alignItems: 'center' },
   flexValue: { fontSize: 20, fontWeight: '900', marginTop: 4, textAlign: 'center' },
-  flexPrompt: { fontSize: 12, fontWeight: '900', letterSpacing: 1, opacity: 0.5 },
-  statLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginBottom: 8 },
+  flexPrompt: { ...TYPOGRAPHY.tabLabel, opacity: 0.5 },
+  statLabel: { ...TYPOGRAPHY.cardHeader, marginBottom: 8 },
   statValue: { fontSize: 24, fontWeight: '900' },
   xpBarContainer: { marginTop: 20 },
   xpBar: { height: 6, borderRadius: 3, overflow: 'hidden' },
   xpFill: { height: '100%', borderRadius: 3 },
-  sectionLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 2, marginBottom: 15 },
-  prItem: { flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 10 },
+  sectionLabel: { ...TYPOGRAPHY.sectionHeader, marginBottom: 15 },
+  prItem: { flexDirection: 'row', alignItems: 'center', padding: 16, marginBottom: 10 },
   prName: { fontSize: 14, fontWeight: '900' },
   prWeight: { fontSize: 16, fontWeight: '900' },
   badgeScroll: { flexDirection: 'row' },

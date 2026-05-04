@@ -6,12 +6,12 @@ import { useTheme } from '../context/ThemeContext';
  * AppTile — A universal tile component used throughout the app.
  * Features soft rounded corners and unified styling.
  */
-const AppTile = ({ style, children, onPress, onLongPress, activeOpacity = 0.85, ...rest }) => {
+const AppTile = ({ style, children, onPress, onLongPress, activeOpacity = 0.85, transparent = false, ...rest }) => {
   const { colors } = useTheme();
 
   const containerStyle = [
     styles.base,
-    { backgroundColor: colors.secondaryBackground, borderColor: colors.border },
+    { backgroundColor: transparent ? 'transparent' : colors.secondaryBackground, borderColor: colors.border },
     style,
   ];
 

@@ -12,6 +12,7 @@ import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../lib/supabase';
 import { ColorPickerModal } from '../components/ColorPickerModal';
+import { TYPOGRAPHY } from '../theme/typography';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const EXPO_WEEKDAYS = {
@@ -205,7 +206,7 @@ const Settings = ({ navigation }) => {
           <AppTile 
             onPress={() => setThemeMode('system')}
             style={[
-              { padding: 20, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+              { padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
               { backgroundColor: colors.secondaryBackground, borderColor: themeMode === 'system' ? accentColor : colors.border, borderWidth: themeMode === 'system' ? 2 : 1 }
             ]}
           >
@@ -390,31 +391,31 @@ const styles = StyleSheet.create({
   },
   brandTitle: { fontSize: 22, fontWeight: '900', letterSpacing: 2 },
   content: { paddingHorizontal: 24, paddingTop: 30 },
-  topLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 1, marginBottom: 8 },
-  mainTitle: { fontSize: 48, fontWeight: '900', marginBottom: 10, letterSpacing: -1 },
+  topLabel: { ...TYPOGRAPHY.eyebrow, marginBottom: 8 },
+  mainTitle: { ...TYPOGRAPHY.heroTitle, marginBottom: 10 },
   sectionHeaderContainer: {
     flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 20,
   },
-  sectionHeader: { fontSize: 18, fontWeight: '700', fontStyle: 'italic', marginRight: 10 },
+  sectionHeader: { ...TYPOGRAPHY.sectionHeader, fontStyle: 'italic', marginRight: 10 },
   headerLine: { flex: 1, height: 1, opacity: 0.3 },
   interfaceGrid: { flexDirection: 'row', justifyContent: 'space-between' },
   themeCard: {
-    width: '48%', padding: 20, aspectRatio: 1,
+    width: '48%', padding: 16, aspectRatio: 1,
     justifyContent: 'center', alignItems: 'flex-start',
   },
   themeNameBlack: { color: '#000', fontSize: 20, fontWeight: '900', marginTop: 15 },
   themeSubBlack: { color: '#000', fontSize: 10, fontWeight: '700', marginTop: 5, opacity: 0.6 },
   themeNameWhite: { color: '#FFF', fontSize: 20, fontWeight: '900', marginTop: 15 },
   themeSubWhite: { color: '#FFF', fontSize: 10, fontWeight: '700', marginTop: 5, opacity: 0.6 },
-  toggleCard: { padding: 20 },
+  toggleCard: { padding: 16 },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  toggleLabel: { fontSize: 16, fontWeight: '700' },
-  toggleSub: { fontSize: 10, fontWeight: '600', marginTop: 5 },
+  toggleLabel: { ...TYPOGRAPHY.cardHeader },
+  toggleSub: { ...TYPOGRAPHY.micro, marginTop: 5 },
   unitToggle: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 4 },
   unitToggleText: { fontWeight: '900', fontSize: 14 },
-  logoutBtn: { marginTop: 50, padding: 20, alignItems: 'center' },
-  deleteBtn: { marginTop: 15, padding: 20, alignItems: 'center' },
-  logoutText: { fontSize: 16, fontWeight: '900', letterSpacing: 1 },
+  logoutBtn: { marginTop: 50, padding: 16, alignItems: 'center' },
+  deleteBtn: { marginTop: 15, padding: 16, alignItems: 'center' },
+  logoutText: { ...TYPOGRAPHY.tabLabel },
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end',
   },

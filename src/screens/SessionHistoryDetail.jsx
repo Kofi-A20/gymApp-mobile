@@ -7,6 +7,7 @@ import RepsHeader from '../components/RepsHeader';
 import { sessionsService } from '../services/sessionsService';
 import { setsService } from '../services/setsService';
 import { useRepsAlert } from '../context/AlertContext';
+import { TYPOGRAPHY } from '../theme/typography';
 
 const SessionHistoryDetail = ({ route, navigation }) => {
   const { session } = route.params; // use only for id, title, date while sets load
@@ -244,15 +245,11 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   subLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
+    ...TYPOGRAPHY.eyebrow,
   },
   mainTitle: {
-    fontSize: 36,
-    fontWeight: '900',
+    ...TYPOGRAPHY.heroTitle,
     marginTop: 5,
-    letterSpacing: -1,
   },
   statsRow: {
     flexDirection: 'row',
@@ -266,9 +263,7 @@ const styles = StyleSheet.create({
     paddingLeft: 15,
   },
   statLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
+    ...TYPOGRAPHY.cardHeader,
   },
   statValue: {
     fontSize: 24,
@@ -287,8 +282,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(150,150,150,0.2)'
   },
   exerciseTitle: {
-    fontSize: 18,
-    fontWeight: '900',
+    ...TYPOGRAPHY.cardHeader,
   },
   setsContainer: {
     padding: 15,
@@ -298,9 +292,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   setHeaderLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1,
+    ...TYPOGRAPHY.micro,
   },
   setRow: {
     flexDirection: 'row',
@@ -337,13 +329,12 @@ const styles = StyleSheet.create({
   },
   notesBlock: {
     marginTop: 20,
-    padding: 20,
+    padding: 16,
     backgroundColor: 'rgba(150,150,150,0.1)',
     borderRadius: 4,
   },
   notesText: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...TYPOGRAPHY.body,
     lineHeight: 22,
   },
   deleteBtn: {

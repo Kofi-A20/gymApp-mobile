@@ -18,6 +18,7 @@ import { supabase } from '../lib/supabase';
 import { MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import RepsHeader from '../components/RepsHeader';
 import AppTile from '../components/AppTile';
+import { TYPOGRAPHY } from '../theme/typography';
 
 const UNIT_OPTIONS = [
   { label: 'SESSIONS', value: 'sessions' },
@@ -219,14 +220,14 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 24, paddingTop: 40, paddingBottom: 100 },
-  subLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 2 },
+  subLabel: { ...TYPOGRAPHY.eyebrow },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40 },
-  mainTitle: { fontSize: 56, fontWeight: '900', lineHeight: 52, letterSpacing: -2 },
+  mainTitle: { ...TYPOGRAPHY.heroTitle },
   addBtn: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  card: { padding: 20, marginBottom: 16 },
+  card: { padding: 16, marginBottom: 16 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   cardTitle: { fontSize: 18, fontWeight: '900', letterSpacing: -0.5 },
-  cardSub: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  cardSub: { ...TYPOGRAPHY.micro },
   progressContainer: { marginTop: 10 },
   progressBar: { height: 6, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
@@ -238,12 +239,12 @@ const styles = StyleSheet.create({
   modalContent: { borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, paddingBottom: 60 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
   modalTitle: { fontSize: 20, fontWeight: '900', letterSpacing: 1 },
-  inputLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginTop: 20, marginBottom: 8 },
+  inputLabel: { ...TYPOGRAPHY.fieldLabel, marginTop: 20, marginBottom: 8 },
   inputWrapper: { height: 60, justifyContent: 'center', paddingHorizontal: 15 },
   input: { fontSize: 18, fontWeight: '700' },
   unitRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   unitChip: { paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderRadius: 20 },
-  unitChipText: { fontSize: 10, fontWeight: '900' },
+  unitChipText: { ...TYPOGRAPHY.micro },
   createBtn: { marginTop: 40, padding: 20, borderRadius: 15, alignItems: 'center' },
   createBtnText: { fontSize: 16, fontWeight: '900', letterSpacing: 1, color: '#000' },
 });

@@ -8,6 +8,7 @@ import RepsHeader from '../components/RepsHeader';
 import { useRepsAlert } from '../context/AlertContext';
 import { EXERCISE_FILTERS, exerciseMatchesFilter } from '../utils/muscleUtils';
 import AppTile from '../components/AppTile';
+import { TYPOGRAPHY } from '../theme/typography';
 
 // ─── Memoised exercise row to avoid full-list re-renders ─────────────────────
 const ExerciseRow = React.memo(({ ex, index, isSelected, onPress, colors, isDarkMode }) => (
@@ -147,8 +148,11 @@ const CreateWorkout = ({ route, navigation }) => {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
 
-          <Text style={[styles.mainTitle, { color: colors.text, fontSize: editWorkout ? 48 : 56 }]}>
-            {editWorkout ? "EDIT\nWORKOUT" : "CREATE\nWORKOUT"}
+          <Text style={[TYPOGRAPHY.eyebrow, { color: colors.secondaryText, marginBottom: 5 }]}>
+            CRAFT YOUR ROUTINE
+          </Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>
+            {editWorkout ? "EDIT\nWORKOUT." : "CREATE\nWORKOUT."}
           </Text>
 
           {/* Workout Name Input */}
@@ -217,7 +221,7 @@ const CreateWorkout = ({ route, navigation }) => {
           </View>
 
           {/* Exercise Selection List */}
-          <AppTile style={styles.selectionCard}>
+          <AppTile transparent style={styles.selectionCard}>
             <View style={styles.selectionHeader}>
               <Text style={[styles.selectionTitle, { color: colors.text }]}>EXERCISE{"\n"}SELECTION</Text>
               <Text style={[styles.selectionCount, { color: colors.secondaryText }]}>
@@ -303,39 +307,33 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 24,
-    paddingTop: 10,
+    paddingTop: 36,
   },
   mainTitle: {
-    fontSize: 56,
-    fontWeight: '900',
+    ...TYPOGRAPHY.heroTitle,
     marginTop: 10,
-    letterSpacing: -2,
-    lineHeight: 52,
   },
   inputGroup: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     marginTop: 10,
   },
   inputLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1,
+    ...TYPOGRAPHY.fieldLabel,
     marginBottom: 10,
   },
   mainInput: {
-    fontSize: 32,
+    fontSize: 18,
     fontWeight: '900',
-    letterSpacing: -1,
-    paddingVertical: 5,
+    letterSpacing: -0.5,
+    paddingVertical: 4,
   },
   searchBox: {
     marginTop: 20,
-    padding: 20,
+    padding: 16,
   },
   searchLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1,
+    ...TYPOGRAPHY.fieldLabel,
     marginBottom: 15,
   },
   searchRow: {
@@ -352,9 +350,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   filterLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
+    ...TYPOGRAPHY.sectionHeader,
     marginBottom: 15,
   },
   filterScroll: {
@@ -375,7 +371,7 @@ const styles = StyleSheet.create({
   selectionCard: {
     marginTop: 20,
     marginBottom: 20,
-    padding: 24,
+    padding: 16,
   },
   selectionHeader: {
     flexDirection: 'row',
@@ -384,13 +380,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   selectionTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: 1,
+    ...TYPOGRAPHY.cardHeader,
   },
   selectionCount: {
-    fontSize: 9,
-    fontWeight: '700',
+    ...TYPOGRAPHY.micro,
     textAlign: 'right',
   },
   selectedList: {

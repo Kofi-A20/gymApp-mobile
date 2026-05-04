@@ -32,6 +32,7 @@ import ProfileShowcase from '../components/ProfileShowcase';
 import LevelUpCelebration from '../components/LevelUpCelebration';
 import { weightLogsService } from '../services/weightLogsService';
 import { setsService } from '../services/setsService';
+import { TYPOGRAPHY } from '../theme/typography';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -126,6 +127,7 @@ const Profile = ({ navigation }) => {
   const [socialLoading, setSocialLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [friendSearch, setFriendSearch] = useState('');
 
   // Leaderboard state
   const [leaderboard, setLeaderboard] = useState([]);
@@ -480,6 +482,13 @@ const Profile = ({ navigation }) => {
 
   const renderProfileTab = () => (
     <View>
+      <Text style={[{ color: colors.secondaryText, marginBottom: 5 }, TYPOGRAPHY.eyebrow]}>
+        ATHLETE PROFILE
+      </Text>
+      <Text style={[{ color: colors.text, marginBottom: 40 }, TYPOGRAPHY.heroTitle]}>
+        YOUR{"\n"}BUILD.
+      </Text>
+
       <View style={styles.profileHero}>
         <TouchableOpacity activeOpacity={0.8} onPress={handlePickAvatar} style={styles.avatarWrapper}>
           <View style={[styles.mainAvatar, { backgroundColor: accentColor, justifyContent: 'center', alignItems: 'center' }]}>
@@ -496,20 +505,20 @@ const Profile = ({ navigation }) => {
         <View style={styles.bioGridRow}><BiometricTile label="Height" value={height || '--'} unit="cm" /><BiometricTile label="Weight" value={weight || '--'} unit={units} /></View>
         <View style={styles.bioGridRow}><BiometricTile label="Age" value={age !== null ? age : '--'} unit="yrs" /><BiometricTile label="Activity" value={actLabel} isDark /></View>
       </View>
-      <View style={[styles.sectionTitleRow, { marginTop: 60 }]}><Text style={[styles.sectionTitle, { color: colors.text }]}>ACCOUNT DETAILS</Text></View>
+      <View style={[styles.sectionTitleRow, { marginTop: 32 }]}><Text style={[styles.sectionTitle, { color: colors.text }]}>ACCOUNT DETAILS</Text></View>
       <InputField label="First Name" value={firstName} onChangeText={markDirty(setFirstName)} colors={colors} accentColor={accentColor} />
       <InputField label="Last Name" value={lastName} onChangeText={markDirty(setLastName)} colors={colors} accentColor={accentColor} />
       <InputField label="Username" value={username} onChangeText={handleUsernameChange} autoCapitalize="none" colors={colors} accentColor={accentColor} />
       <InputField label="Email Address" value={profile?.email || ''} editable={false} colors={colors} accentColor={accentColor} />
       <InputField label="Mobile Phone" value={phone} onChangeText={markDirty(setPhone)} keyboardType="phone-pad" colors={colors} accentColor={accentColor} />
-      <View style={[styles.sectionTitleRow, { marginTop: 60 }]}><Text style={[styles.sectionTitle, { color: colors.text }]}>PHYSICAL METRICS</Text></View>
+      <View style={[styles.sectionTitleRow, { marginTop: 32 }]}><Text style={[styles.sectionTitle, { color: colors.text }]}>PHYSICAL METRICS</Text></View>
       <View style={styles.inputContainer}><Text style={[styles.fieldLabel, { color: colors.secondaryText }]}>DATE OF BIRTH</Text><AppTile onPress={() => setShowDatePicker(true)} style={styles.textInputWrapper}><Text style={{ color: dob ? colors.text : colors.secondaryText, fontSize: 18, fontWeight: '700' }}>{dob ? dob.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : 'SELECT DATE OF BIRTH'}</Text></AppTile></View>
       <InputField label="Height (cm)" value={height} onChangeText={markDirty(setHeight)} keyboardType="numeric" colors={colors} accentColor={accentColor} />
       <InputField label={`Weight (${units})`} value={weight} onChangeText={markDirty(setWeight)} keyboardType="numeric" colors={colors} accentColor={accentColor} />
       <InputField label={`Goal Weight (${units})`} value={goalWeight} onChangeText={markDirty(setGoalWeight)} keyboardType="numeric" colors={colors} accentColor={accentColor} />
       <SelectorField label="Gender" options={GENDER_OPTIONS} value={gender} onChange={(val) => { setGender(val); setIsDirty(true); }} />
       <SelectorField label="Activity Level" options={ACTIVITY_OPTIONS} value={activity} onChange={(val) => { setActivity(val); setIsDirty(true); }} />
-      <AppTile style={[styles.saveBtn, { backgroundColor: isDirty ? accentColor : colors.secondaryBackground }]} onPress={handleSave} disabled={saving}>{saving ? <ActivityIndicator color="#000" /> : <Text style={[styles.saveBtnText, { color: isDirty ? '#000' : colors.secondaryText }]}>SAVE CHANGES</Text>}</AppTile>
+      <AppTile style={[styles.saveBtn, { backgroundColor: isDirty ? accentColor : colors.secondaryBackground, marginTop: 32 }]} onPress={handleSave} disabled={saving}>{saving ? <ActivityIndicator color="#000" /> : <Text style={[styles.saveBtnText, { color: isDirty ? '#000' : colors.secondaryText }]}>SAVE CHANGES</Text>}</AppTile>
       <View style={{ height: 100 }} />
     </View>
   );
@@ -533,7 +542,12 @@ const Profile = ({ navigation }) => {
 
     return (
       <View>
-        <View style={styles.sectionTitleRow}><Text style={[styles.sectionTitle, { color: colors.text }]}>STATS & RANK</Text></View>
+        <Text style={[{ color: colors.secondaryText, marginBottom: 5 }, TYPOGRAPHY.eyebrow]}>
+          YOUR ACHIEVEMENTS
+        </Text>
+        <Text style={[{ color: colors.text, marginBottom: 40 }, TYPOGRAPHY.heroTitle]}>
+          SERVICE{"\n"}RECORD.
+        </Text>
 
         <ProfileShowcase
           isOwnProfile={true}
@@ -588,47 +602,100 @@ const Profile = ({ navigation }) => {
     );
   };
 
-  const renderSocialTab = () => (
-    <View>
-      <Text style={[styles.sectionLabel, { color: colors.secondaryText, marginBottom: 15 }]}>FRIEND ACTIVITY</Text>
-      <AppTile style={{ padding: 10 }}>
-        {activityFeed.length > 0 ? (activityFeed.slice(0, 3).map((item, i) => {
-          const firstName = item.user?.first_name?.toUpperCase() || 'FRIEND';
-          let feedText = null;
-          switch (item.type) {
-            case 'pr':
-              feedText = <Text style={[styles.feedText, { color: colors.text }]} numberOfLines={1}><Text style={{ fontWeight: '900' }}>{firstName}</Text> HIT A NEW PR — {item.exerciseName?.toUpperCase()} {item.weight}KG</Text>;
-              break;
-            case 'badge':
-              feedText = <Text style={[styles.feedText, { color: colors.text }]} numberOfLines={1}><Text style={{ fontWeight: '900' }}>{firstName}</Text> EARNED THE {item.badgeName?.toUpperCase()} BADGE</Text>;
-              break;
-            case 'level_up':
-              feedText = <Text style={[styles.feedText, { color: colors.text }]} numberOfLines={1}><Text style={{ fontWeight: '900' }}>{firstName}</Text> JUST LEVELED UP</Text>;
-              break;
-          }
-          return (
-            <View key={item.id || i} style={styles.feedItem}>
-              <View style={[styles.feedDot, { backgroundColor: item.user?.avatar_color || accentColor }]} />
-              {feedText}
-            </View>
-          );
-        })) : (<Text style={{ color: colors.secondaryText, fontSize: 11, padding: 10 }}>NO RECENT ACTIVITY.</Text>)}
-        <TouchableOpacity onPress={() => navigation.navigate('Social')}><Text style={[styles.viewAll, { color: accentColor }]}>VIEW FULL FEED</Text></TouchableOpacity>
-      </AppTile>
-      <View style={[styles.sectionTitleRow, { marginTop: 30 }]}><Text style={[styles.sectionTitle, { color: colors.text }]}>FRIENDS</Text><TouchableOpacity onPress={() => navigation.navigate('AddFriend')}><AntDesign name="plus" size={20} color={accentColor} /></TouchableOpacity></View>
-      {requests.length > 0 && (<TouchableOpacity onPress={() => navigation.navigate('Social')} style={styles.pendingBanner}><Text style={styles.pendingText}>{requests.length} PENDING REQUESTS</Text><Ionicons name="chevron-forward" size={14} color="#000" /></TouchableOpacity>)}
-      {friends.slice(0, 5).map(f => (<AppTile key={f.user_id} style={styles.miniFriend} onPress={() => navigation.navigate('FriendProfile', { userId: f.user_id })}><View style={[styles.miniAvatar, { backgroundColor: f.avatar_color || accentColor }]} /><Text style={[styles.miniName, { color: colors.text }]}>{f.first_name?.toUpperCase()}</Text><Text style={[styles.miniLevel, { color: colors.secondaryText }]}>{f.level?.toUpperCase()}</Text></AppTile>))}
-      <TouchableOpacity onPress={() => navigation.navigate('Social')} style={styles.socialLink}><Text style={[styles.socialLinkText, { color: colors.secondaryText }]}>VIEW ALL FRIENDS</Text></TouchableOpacity>
-      <View style={{ height: 100 }} />
-    </View>
-  );
+  const renderSocialTab = () => {
+    const filteredFriends = friends.filter(f =>
+      f.first_name?.toLowerCase().includes(friendSearch.toLowerCase())
+    );
+
+    return (
+      <View>
+        <Text style={[{ color: colors.secondaryText, marginBottom: 5 }, TYPOGRAPHY.eyebrow]}>
+          YOUR CIRCLE
+        </Text>
+        <Text style={[{ color: colors.text, marginBottom: 40 }, TYPOGRAPHY.heroTitle]}>
+          THE{"\n"}PACK.
+        </Text>
+
+        <View style={styles.sectionTitleRow}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>FRIENDS</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('AddFriend')}>
+            <AntDesign name="plus" size={20} color={accentColor} />
+          </TouchableOpacity>
+        </View>
+
+        <AppTile style={{ padding: 12, marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="search" size={16} color={colors.secondaryText} style={{ marginRight: 8 }} />
+            <TextInput
+              style={{ flex: 1, color: colors.text, fontSize: 14, fontWeight: '700' }}
+              placeholder="SEARCH FRIENDS..."
+              placeholderTextColor={colors.secondaryText}
+              value={friendSearch}
+              onChangeText={setFriendSearch}
+            />
+          </View>
+        </AppTile>
+
+        <View style={{ maxHeight: 260, marginBottom: 32 }}>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+            {filteredFriends.length > 0 ? (
+              filteredFriends.map(f => (
+                <AppTile
+                  key={f.user_id}
+                  style={styles.miniFriend}
+                  onPress={() => navigation.navigate('FriendProfile', { userId: f.user_id })}
+                >
+                  <View style={[styles.miniAvatar, { backgroundColor: f.avatar_color || accentColor }]} />
+                  <Text style={[styles.miniName, { color: colors.text }]}>{f.first_name?.toUpperCase()}</Text>
+                  <Text style={[styles.miniLevel, { color: colors.secondaryText }]}>{f.level?.toUpperCase()}</Text>
+                </AppTile>
+              ))
+            ) : (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <Text style={{ color: colors.secondaryText, fontWeight: '800', fontSize: 12 }}>
+                  {friendSearch ? 'NO MATCHES FOUND' : 'NO FRIENDS YET'}
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+
+        <Text style={[styles.sectionLabel, { color: colors.secondaryText, marginBottom: 15 }]}>FRIEND ACTIVITY</Text>
+        <AppTile style={{ padding: 10 }}>
+          {activityFeed.length > 0 ? (activityFeed.slice(0, 3).map((item, i) => {
+            const firstName = item.user?.first_name?.toUpperCase() || 'FRIEND';
+            let feedText = null;
+            switch (item.type) {
+              case 'pr':
+                feedText = <Text style={[styles.feedText, { color: colors.text }]} numberOfLines={1}><Text style={{ fontWeight: '900' }}>{firstName}</Text> HIT A NEW PR — {item.exerciseName?.toUpperCase()} {item.weight}KG</Text>;
+                break;
+              case 'badge':
+                feedText = <Text style={[styles.feedText, { color: colors.text }]} numberOfLines={1}><Text style={{ fontWeight: '900' }}>{firstName}</Text> EARNED THE {item.badgeName?.toUpperCase()} BADGE</Text>;
+                break;
+              case 'level_up':
+                feedText = <Text style={[styles.feedText, { color: colors.text }]} numberOfLines={1}><Text style={{ fontWeight: '900' }}>{firstName}</Text> JUST LEVELED UP</Text>;
+                break;
+            }
+            return (
+              <View key={item.id || i} style={styles.feedItem}>
+                <View style={[styles.feedDot, { backgroundColor: item.user?.avatar_color || accentColor }]} />
+                {feedText}
+              </View>
+            );
+          })) : (<Text style={{ color: colors.secondaryText, fontSize: 11, padding: 10 }}>NO RECENT ACTIVITY.</Text>)}
+          <TouchableOpacity onPress={() => navigation.navigate('Social')}><Text style={[styles.viewAll, { color: accentColor }]}>VIEW FULL FEED</Text></TouchableOpacity>
+        </AppTile>
+        <View style={{ height: 100 }} />
+      </View>
+    );
+  };
 
   const renderLeaderboardTab = () => (
     <View style={{ paddingBottom: 100 }}>
       <View style={styles.lbHeader}>
         <View>
-          <Text style={[styles.lbSub, { color: colors.secondaryText }]}>GLOBAL RANKINGS</Text>
-          <Text style={[styles.lbTitle, { color: colors.text }]}>LEADERBOARD.</Text>
+          <Text style={[styles.lbSub, { color: colors.secondaryText, marginBottom: 5 }]}>FRIENDS LEADERBOARD</Text>
+          <Text style={[styles.lbTitle, { color: colors.text }]}>THE{"\n"}STANDINGS.</Text>
         </View>
         <View style={[styles.lbToggle, { backgroundColor: colors.secondaryBackground, marginTop: 15, alignSelf: 'flex-start' }]}>
           <TouchableOpacity style={[styles.lbToggleBtn, lbPeriod === 'last_week' && { backgroundColor: accentColor }]} onPress={() => handleLbPeriodToggle('last_week')}><Text style={[styles.lbToggleText, { color: lbPeriod === 'last_week' ? '#000' : colors.secondaryText }]}>LAST WEEK</Text></TouchableOpacity>
@@ -636,34 +703,36 @@ const Profile = ({ navigation }) => {
         </View>
       </View>
       {lbLoading && leaderboard.length === 0 ? (<ActivityIndicator color={accentColor} style={{ marginTop: 40 }} />) : (
-        leaderboard.map((item, index) => {
-          const isMe = item.user_id === user?.id;
-          return (
-            <AppTile
-              key={item.user_id}
-              style={[styles.lbRow, isMe && { borderColor: accentColor, borderWidth: 1 }]}
-              onPress={isMe ? null : () => navigation.navigate('FriendProfile', { userId: item.user_id })}
-            >
-              <View style={styles.lbRank}>
-                <Text style={[styles.lbRankText, { color: colors.secondaryText }]}>#{index + 1}</Text>
-                {item.rankMovement > 0 && (
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#4CAF50', marginTop: 2 }}>▲{item.rankMovement}</Text>
-                )}
-                {item.rankMovement < 0 && (
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#FF5252', marginTop: 2 }}>▼{Math.abs(item.rankMovement)}</Text>
-                )}
-                {item.rankMovement === 0 && (
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: colors.secondaryText, marginTop: 2 }}>—</Text>
-                )}
-              </View>
-              <View style={[styles.lbAvatar, { backgroundColor: item.avatar_color || accentColor, overflow: 'hidden' }]}>
-                {item.avatarUrl && <Image source={{ uri: item.avatarUrl }} style={{ width: '100%', height: '100%' }} />}
-              </View>
-              <View style={styles.lbInfo}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={[styles.lbName, { color: colors.text }]} numberOfLines={1}>{item.first_name?.toUpperCase()}</Text><View style={[styles.lbLevelBadge, { backgroundColor: colors.border }]}><Text style={[styles.lbLevelText, { color: colors.text }]}>{item.level?.toUpperCase()}</Text></View></View><Text style={[styles.lbXP, { color: accentColor }]}>{item.displayXP}/100 SCORE</Text></View>
-              <View style={styles.lbFlex}><Text style={[styles.lbFlexVal, { color: colors.text }]}>{item.flex_stat === 'volume' ? `${(item.flexValue / 1000).toFixed(1)}k` : item.flexValue}</Text><Text style={[styles.lbFlexLabel, { color: colors.secondaryText }]}>{item.flex_stat?.replace('_', ' ')?.toUpperCase() || 'VOLUME'}</Text></View>
-            </AppTile>
-          );
-        })
+        <AppTile transparent style={{ marginTop: 10, padding: 8 }}>
+          {leaderboard.map((item, index) => {
+            const isMe = item.user_id === user?.id;
+            return (
+              <AppTile
+                key={item.user_id}
+                style={[styles.lbRow, isMe && { borderColor: accentColor, borderWidth: 1 }]}
+                onPress={isMe ? null : () => navigation.navigate('FriendProfile', { userId: item.user_id })}
+              >
+                <View style={styles.lbRank}>
+                  <Text style={[styles.lbRankText, { color: colors.secondaryText }]}>#{index + 1}</Text>
+                  {item.rankMovement > 0 && (
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#4CAF50', marginTop: 2 }}>▲{item.rankMovement}</Text>
+                  )}
+                  {item.rankMovement < 0 && (
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#FF5252', marginTop: 2 }}>▼{Math.abs(item.rankMovement)}</Text>
+                  )}
+                  {item.rankMovement === 0 && (
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: colors.secondaryText, marginTop: 2 }}>—</Text>
+                  )}
+                </View>
+                <View style={[styles.lbAvatar, { backgroundColor: item.avatar_color || accentColor, overflow: 'hidden' }]}>
+                  {item.avatarUrl && <Image source={{ uri: item.avatarUrl }} style={{ width: '100%', height: '100%' }} />}
+                </View>
+                <View style={styles.lbInfo}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={[styles.lbName, { color: colors.text }]} numberOfLines={1}>{item.first_name?.toUpperCase()}</Text><View style={[styles.lbLevelBadge, { backgroundColor: colors.border }]}><Text style={[styles.lbLevelText, { color: colors.text }]}>{item.level?.toUpperCase()}</Text></View></View><Text style={[styles.lbXP, { color: accentColor }]}>{item.displayXP}/100 SCORE</Text></View>
+                <View style={styles.lbFlex}><Text style={[styles.lbFlexVal, { color: colors.text }]}>{item.flex_stat === 'volume' ? `${(item.flexValue / 1000).toFixed(1)}k` : item.flexValue}</Text><Text style={[styles.lbFlexLabel, { color: colors.secondaryText }]}>{item.flex_stat?.replace('_', ' ')?.toUpperCase() || 'VOLUME'}</Text></View>
+              </AppTile>
+            );
+          })}
+        </AppTile>
       )}
     </View>
   );
@@ -685,21 +754,21 @@ const Profile = ({ navigation }) => {
         />
       )}
       <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.viewToggle}
+        contentContainerStyle={{ paddingLeft: 24, paddingRight: 24 }}
+      >
+        <TouchableOpacity style={[styles.toggleBtn, viewMode === 'PROFILE' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('PROFILE')}><Text style={[styles.toggleBtnText, { color: viewMode === 'PROFILE' ? colors.text : colors.secondaryText }]}>PROFILE</Text></TouchableOpacity>
+        <TouchableOpacity style={[styles.toggleBtn, viewMode === 'RANK' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('RANK')}><Text style={[styles.toggleBtnText, { color: viewMode === 'RANK' ? colors.text : colors.secondaryText }]}>RANK</Text></TouchableOpacity>
+        <TouchableOpacity style={[styles.toggleBtn, viewMode === 'SOCIAL' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('SOCIAL')}><Text style={[styles.toggleBtnText, { color: viewMode === 'SOCIAL' ? colors.text : colors.secondaryText }]}>SOCIAL</Text></TouchableOpacity>
+        <TouchableOpacity style={[styles.toggleBtn, viewMode === 'LEADERBOARD' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('LEADERBOARD')}><Text style={[styles.toggleBtnText, { color: viewMode === 'LEADERBOARD' ? colors.text : colors.secondaryText }]}>LEADERBOARD</Text></TouchableOpacity>
+      </ScrollView>
+      <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingTop: 20 }]}
+        contentContainerStyle={[styles.content, { paddingTop: 0 }]}
         showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.viewToggle}
-          contentContainerStyle={{ paddingRight: 24 }}
-        >
-          <TouchableOpacity style={[styles.toggleBtn, viewMode === 'PROFILE' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('PROFILE')}><Text style={[styles.toggleBtnText, { color: viewMode === 'PROFILE' ? colors.text : colors.secondaryText }]}>PROFILE</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.toggleBtn, viewMode === 'RANK' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('RANK')}><Text style={[styles.toggleBtnText, { color: viewMode === 'RANK' ? colors.text : colors.secondaryText }]}>RANK</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.toggleBtn, viewMode === 'SOCIAL' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('SOCIAL')}><Text style={[styles.toggleBtnText, { color: viewMode === 'SOCIAL' ? colors.text : colors.secondaryText }]}>SOCIAL</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.toggleBtn, viewMode === 'LEADERBOARD' && { borderBottomColor: accentColor }]} onPress={() => setViewMode('LEADERBOARD')}><Text style={[styles.toggleBtnText, { color: viewMode === 'LEADERBOARD' ? colors.text : colors.secondaryText }]}>LEADERBOARD</Text></TouchableOpacity>
-      </ScrollView>
         <View style={{ marginTop: 30 }}>
           {viewMode === 'PROFILE' ? renderProfileTab() : viewMode === 'RANK' ? renderRankTab() : viewMode === 'SOCIAL' ? renderSocialTab() : renderLeaderboardTab()}
         </View>
@@ -724,24 +793,24 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 24, paddingTop: 30 },
   viewToggle: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: 'rgba(150,150,150,0.1)', maxHeight: 50 },
   toggleBtn: { paddingVertical: 12, marginRight: 25, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  toggleBtnText: { fontSize: 12, fontWeight: '900', letterSpacing: 1 },
+  toggleBtnText: { ...TYPOGRAPHY.tabLabel },
   profileHero: { marginBottom: 60 },
   avatarWrapper: { width: 100, height: 100, marginBottom: 30 },
   mainAvatar: { width: '100%', height: '100%', borderRadius: 50 },
   editBtn: { position: 'absolute', bottom: 0, right: 0, width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
   identityText: { marginTop: 10 },
   userName: { fontSize: 24, fontWeight: '900', letterSpacing: 0, marginVertical: 4 },
-  sectionTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 30 },
-  sectionTitle: { fontSize: 24, fontWeight: '900', letterSpacing: 0.5 },
+  sectionTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: '900', letterSpacing: 1.5 },
   bioGrid: { gap: 12 },
   bioGridRow: { flexDirection: 'row', gap: 12 },
-  bioTile: { flex: 1, aspectRatio: 1, padding: 20, justifyContent: 'center' },
-  bioLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginBottom: 25 },
+  bioTile: { flex: 1, aspectRatio: 1, padding: 16, justifyContent: 'center' },
+  bioLabel: { ...TYPOGRAPHY.cardHeader, marginBottom: 25 },
   bioValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
   bioValue: { fontSize: 32, fontWeight: '900' },
   bioUnit: { fontSize: 10, fontWeight: '800' },
   inputContainer: { marginBottom: 25 },
-  fieldLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginBottom: 8 },
+  fieldLabel: { ...TYPOGRAPHY.fieldLabel, marginBottom: 8 },
   fieldHint: { fontSize: 10, fontWeight: '600', marginTop: 8, opacity: 0.8 },
   textInputWrapper: { height: 60, justifyContent: 'center', paddingHorizontal: 15 },
   textInput: { fontSize: 18, fontWeight: '700' },
@@ -755,7 +824,7 @@ const styles = StyleSheet.create({
   modalContent: { width: '100%', maxHeight: '60%', borderWidth: 1, padding: 20 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 14, fontWeight: '900', letterSpacing: 2 },
-  rankCard: { padding: 20, marginTop: 10 },
+  rankCard: { padding: 16, marginTop: 10 },
   rankHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   levelBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
   levelText: { fontSize: 10, fontWeight: '900', color: '#000' },
@@ -767,12 +836,12 @@ const styles = StyleSheet.create({
   miniBadge: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   moreBadges: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   moreBadgesText: { fontSize: 10, fontWeight: '800' },
-  challengesTile: { padding: 20, borderWidth: 1 },
+  challengesTile: { padding: 16, borderWidth: 1 },
   challengesContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   challengesText: { gap: 4 },
   challengesLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   challengesTitle: { fontSize: 18, fontWeight: '900', letterSpacing: -0.5 },
-  sectionLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 2 },
+  sectionLabel: { ...TYPOGRAPHY.sectionHeader },
   feedItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   feedDot: { width: 6, height: 6, borderRadius: 3, marginRight: 10 },
   feedText: { fontSize: 11, fontWeight: '600', flex: 1 },
@@ -788,9 +857,9 @@ const styles = StyleSheet.create({
   titleOption: { padding: 20, borderBottomWidth: 1 },
   titleOptionText: { fontSize: 16, fontWeight: '900' },
   titleOptionSub: { fontSize: 10, fontWeight: '800', marginTop: 4 },
-  lbHeader: { marginBottom: 30, marginTop: 10 },
-  lbSub: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
-  lbTitle: { fontSize: 42, fontWeight: '900', letterSpacing: -2, lineHeight: 46 },
+  lbHeader: { marginBottom: 0, marginTop: 0 },
+  lbSub: { ...TYPOGRAPHY.eyebrow },
+  lbTitle: { ...TYPOGRAPHY.heroTitle },
   lbToggle: { flexDirection: 'row', padding: 4, borderRadius: 20 },
   lbToggleBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   lbToggleText: { fontSize: 9, fontWeight: '900' },

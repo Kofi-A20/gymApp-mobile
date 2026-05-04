@@ -71,7 +71,7 @@ const WeightTrendChart = ({ logs, units, accentColor, colors, width = 300, heigh
   const minVal = Math.min(...data.map(d => d.val));
   const maxVal = Math.max(...data.map(d => d.val));
   const valRange = maxVal - minVal || 1;
-  
+
   const yMin = minVal - valRange * 0.2;
   const yMax = maxVal + valRange * 0.2;
   const yRange = yMax - yMin;
@@ -378,6 +378,21 @@ const Calories = ({ navigation, route }) => {
         onSelectAll={handleSelectAllLogs}
       />
 
+      <View style={[styles.viewToggle, { paddingHorizontal: 24 }]}>
+        <TouchableOpacity
+          style={[styles.toggleBtn, viewMode === 'DASHBOARD' && { borderBottomColor: accentColor }]}
+          onPress={() => setViewMode('DASHBOARD')}
+        >
+          <Text style={[styles.toggleBtnText, { color: viewMode === 'DASHBOARD' ? colors.text : colors.secondaryText }]}>DASHBOARD</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.toggleBtn, viewMode === 'ANALYTICS' && { borderBottomColor: accentColor }]}
+          onPress={() => setViewMode('ANALYTICS')}
+        >
+          <Text style={[styles.toggleBtnText, { color: viewMode === 'ANALYTICS' ? colors.text : colors.secondaryText }]}>ANALYTICS</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         ref={scrollViewRef}
         style={styles.container}
@@ -386,26 +401,12 @@ const Calories = ({ navigation, route }) => {
         keyboardDismissMode="interactive"
       >
         <View style={styles.content}>
-          <View style={styles.viewToggle}>
-            <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'DASHBOARD' && { borderBottomColor: accentColor }]}
-              onPress={() => setViewMode('DASHBOARD')}
-            >
-              <Text style={[styles.toggleBtnText, { color: viewMode === 'DASHBOARD' ? colors.text : colors.secondaryText }]}>DASHBOARD</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'ANALYTICS' && { borderBottomColor: accentColor }]}
-              onPress={() => setViewMode('ANALYTICS')}
-            >
-              <Text style={[styles.toggleBtnText, { color: viewMode === 'ANALYTICS' ? colors.text : colors.secondaryText }]}>ANALYTICS</Text>
-            </TouchableOpacity>
-          </View>
 
-          <Text style={[styles.subLabel, { color: colors.secondaryText, marginTop: 20 }]}>
+          <Text style={[styles.subLabel, { color: colors.secondaryText, marginTop: 20, marginBottom: 5 }]}>
             {viewMode === 'DASHBOARD' ? 'HEALTH DIAGNOSTICS' : 'WEIGHT TRACKING'}
           </Text>
           <Text style={[styles.mainTitle, { color: colors.text }]}>
-            {viewMode === 'DASHBOARD' ? 'CALORIE\nCOMMAND' : 'TRENDS\n& DATA'}
+            {viewMode === 'DASHBOARD' ? 'CALORIE\nCOMMAND.' : 'TRENDS\n& DATA.'}
           </Text>
 
           {viewMode === 'DASHBOARD' ? (
@@ -635,7 +636,7 @@ const Calories = ({ navigation, route }) => {
                   <MaterialCommunityIcons name="chevron-down" size={14} color={colors.text} style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
               </View>
-              
+
               <AppTile style={{ paddingVertical: 20, marginBottom: 20 }}>
                 {logLoading && displayedLogs.length === 0 ? (
                   <ActivityIndicator color={colors.text} style={{ marginVertical: 40 }} />
@@ -661,7 +662,7 @@ const styles = StyleSheet.create({
   },
   brandTitle: { fontSize: 22, fontWeight: '900', letterSpacing: 2 },
   container: { flex: 1 },
-  content: { paddingHorizontal: 24, paddingTop: 30 },
+  content: { paddingHorizontal: 24, paddingTop: 0 },
   subLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 5 },
   mainTitle: { fontSize: 42, fontWeight: '900', letterSpacing: -2, lineHeight: 40, marginBottom: 40 },
   sectionTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 2, opacity: 0.8 },

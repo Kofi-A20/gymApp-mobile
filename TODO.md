@@ -60,6 +60,39 @@ fixed while only the tab content scrolls beneath it.
 ### 🏋️ Workout Detail
 - **Remove video from exercise expansion** — Expanding an exercise row shows both a muscle diagram and a video. Remove video entirely from this view. Video playback is only for active workout sessions.
 ---
+Here's the TODO entry:
+
+markdown## 📅 Calendar — Past Date Session Scheduling Bug
+
+**Reported:** 4 May 2026
+
+### Observed behaviour
+- Tapping a past date shows completed workouts only (correct)
+- "Schedule Workout" button appears on some past dates but not others —
+  likely a timezone/boundary issue (Netherlands UTC+2, so dates near
+  midnight are misclassified as today vs past)
+- Tapping "Schedule Workout" on a past date → routine picker opens →
+  time picker opens → shows "Cannot plan a session in the past" error
+  with no way to dismiss the modal — user is stuck
+
+### Root cause (suspected)
+Date comparison in Calendar is likely using UTC rather than local time,
+causing the today/past boundary to be off by 1-2 hours. The "Schedule"
+button renders on dates it shouldn't, and the time picker has no escape
+hatch when it hits the past-date validation.
+
+### Fixes needed
+1. Fix date boundary comparison to use local device time not UTC so
+   "Schedule Workout" never appears on genuinely past dates
+2. Add a dismiss/cancel button to the time picker modal so users can
+   never get stuck
+3. Decide and implement the intended past-session behaviour:
+   - Option A (simple): block scheduling on all past dates entirely,
+     show "View only" state
+   - Option B (future feature): allow logging past sessions for users
+     migrating from other apps or recording missed sessions — this is
+     the desired end state but not yet scoped
+---
 ### 💪 Active Workout
 - **Video trigger button redesign** — Replace the eye icon with a small pill labelled "VIDEO" so its purpose is immediately clear.
 - **Light mode — exercise completion highlight** — Completion tick/highlight is a washed-out pale green in light mode. Should be visible and consistent with the theme accent color.
@@ -69,6 +102,26 @@ fixed while only the tab content scrolls beneath it.
 - **"Next / Configure Workout" button is black** — Should use theme accent color with appropriate contrast text.
 - **"Create Workout Routine" button in Configure Workout is black** — Same fix, use theme accent color.
 - **Exercise selection state doesn't use accent color** — Selected exercises should highlight using theme accent color.
+---
+## 🎯 Challenges.jsx — Parked Feature (Orphaned Screen)
+
+**Status:** Fully built, backend supported, but unreachable — no navigation 
+entry point exists anywhere in the app.
+
+**What it does:** Personal fitness challenges with a title, numeric target, 
+unit (sessions / sets / volume), and 30-day deadline. Progress tracked via 
+user_challenges table, updated automatically at end of each workout via 
+gamificationService.updateChallenges().
+
+**Decision needed:** 
+- Option A: Delete entirely — Challenges.jsx, its imports, and the Stack 
+  registration in TabNavigator.jsx. Clean and simple.
+- Option B: Repurpose as "Goals" — add as a 5th tab on the Profile screen 
+  (Profile / Rank / Social / Leaderboard / Goals), rename challenges to goals, 
+  reframe around monthly muscle targets (e.g. "20 chest sessions this month"). 
+  Needs design discussion before committing.
+
+**To discuss with team before acting.**
 ---
 
 ## 💡 Feature Requests (From User Testing)

@@ -15,6 +15,7 @@ import { useRepsAlert } from '../context/AlertContext';
 import QRCode from 'react-native-qrcode-svg';
 import RepsHeader from '../components/RepsHeader';
 import AppTile from '../components/AppTile';
+import { TYPOGRAPHY } from '../theme/typography';
 
 const WorkoutsLibrary = ({ navigation, route }) => {
   const { colors, isDarkMode, units, accentColor } = useTheme();
@@ -29,17 +30,20 @@ const WorkoutsLibrary = ({ navigation, route }) => {
 
   const { width: windowWidth } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
+  const hasFetchedOnce = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
-      fetchWorkouts();
+      const shouldRefresh = route.params?.refresh;
 
-      // Clear the refresh param and scroll to top if requested
-      if (route.params?.refresh) {
+      if (!hasFetchedOnce.current || shouldRefresh) {
+        hasFetchedOnce.current = true;
+        fetchWorkouts();
+      }
+
+      if (shouldRefresh) {
         navigation.setParams({ refresh: undefined });
-        if (scrollViewRef.current) {
-          scrollViewRef.current.scrollTo({ y: 0, animated: false });
-        }
+        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
       }
     }, [route.params?.refresh])
   );
@@ -123,24 +127,18 @@ const WorkoutsLibrary = ({ navigation, route }) => {
         }}
       >
         <View style={styles.cardHeader}>
-          <Text style={[styles.workoutName, { color: colors.text }]}>{item.name.toUpperCase()}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            {isSelectionMode && (
-              <MaterialCommunityIcons
-                name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"}
-                size={24}
-                color={isSelected ? accentColor : colors.secondaryText} />
-            )}
-          </View>
+          <Text style={[styles.workoutName, { color: colors.text }]} numberOfLines={1}>{item.name.toUpperCase()}</Text>
+          {isSelectionMode && (
+            <MaterialCommunityIcons
+              name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"}
+              size={20}
+              color={isSelected ? accentColor : colors.secondaryText} />
+          )}
         </View>
-
         <View style={styles.cardInfo}>
-          <Text style={[styles.cardMetadata, { color: colors.secondaryText }]}>
-            {item.exercises?.length || 0} EXERCISES
-          </Text>
-          <Text style={[styles.cardMetadata, { color: colors.secondaryText }]}>
-            ~{estimatedMins} MIN
-          </Text>
+          <Text style={[styles.cardMetadata, { color: colors.secondaryText }]}>{item.exercises?.length || 0} EXERCISES</Text>
+          <Text style={[styles.cardMetadataSep, { color: colors.border }]}>·</Text>
+          <Text style={[styles.cardMetadata, { color: colors.secondaryText }]}>~{estimatedMins} MIN</Text>
         </View>
       </AppTile>
     );
@@ -165,6 +163,9 @@ const WorkoutsLibrary = ({ navigation, route }) => {
         keyboardDismissMode="interactive"
       >
         <View style={styles.content}>
+          <Text style={[{ color: colors.secondaryText }, TYPOGRAPHY.eyebrow, { marginBottom: 4 }]}>
+            YOUR ROUTINES
+          </Text>
           <Text style={[styles.mainTitle, { color: colors.text, marginBottom: 20 }]}>WORKOUT{"\n"}LIBRARY.</Text>
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
@@ -179,21 +180,22 @@ const WorkoutsLibrary = ({ navigation, route }) => {
             </AppTile>
           </View>
 
-          <View style={[styles.listContainer, { borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 20 }]}>
+          <AppTile transparent style={[styles.listContainer, { padding: 8 }]}>
             {loading ? (
               <ActivityIndicator color={colors.text} style={{ marginTop: 50 }} />
             ) : workouts.length > 0 ? (
-              <View>
+              <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true} style={{ maxHeight: 400 }}>
                 {workouts.map((workout) => (
                   <WorkoutCard key={workout.id} item={workout} />
                 ))}
-              </View>
+                <View style={{ height: 8 }} />
+              </ScrollView>
             ) : (
               <View style={{ alignItems: 'center', marginTop: 80, marginBottom: 40 }}>
                 <Text style={{ color: colors.secondaryText, fontSize: 14 }}>No workout routines yet.</Text>
               </View>
             )}
-          </View>
+          </AppTile>
 
           <View style={{ height: 120 }} />
         </View>
@@ -233,20 +235,14 @@ const styles = StyleSheet.create({
     paddingTop: 40,
   },
   subLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.5,
+    ...TYPOGRAPHY.eyebrow,
   },
   mainTitle: {
-    fontSize: 48,
-    fontWeight: '900',
+    ...TYPOGRAPHY.heroTitle,
     marginTop: 10,
-    letterSpacing: -1,
-    lineHeight: 44,
   },
   description: {
-    fontSize: 14,
-    fontWeight: '500',
+    ...TYPOGRAPHY.body,
     marginTop: 20,
     lineHeight: 20,
   },
@@ -254,26 +250,33 @@ const styles = StyleSheet.create({
     marginTop: 50,
   },
   card: {
-    padding: 24,
-    marginBottom: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 12,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 4,
   },
   workoutName: {
-    fontSize: 32,
+    fontSize: 20,
     fontWeight: '900',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
     flex: 1,
   },
+  cardInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   cardMetadata: {
+    ...TYPOGRAPHY.micro,
+  },
+  cardMetadataSep: {
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginTop: 4,
+    fontWeight: '800',
   },
   volumeContainer: {
     marginTop: 60,

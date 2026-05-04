@@ -18,6 +18,7 @@ import { useRepsAlert } from '../context/AlertContext';
 import RepsHeader from '../components/RepsHeader';
 import { ColorPickerModal } from '../components/ColorPickerModal';
 import AppTile from '../components/AppTile';
+import { TYPOGRAPHY } from '../theme/typography';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -77,12 +78,12 @@ const ConfigureWorkout = ({ route, navigation }) => {
       if (editWorkoutId) {
         await workoutsService.updateWorkout(editWorkoutId, workoutName, '', exercisesList, selectedColor);
         showAlert('SUCCESS', 'Workout routine updated.');
-        navigation.pop(2);
+        navigation.navigate('WorkoutsLibrary', { refresh: Date.now() });
       } else {
         await workoutsService.createWorkout(workoutName, '', exercisesList, selectedColor);
         showAlert('SUCCESS', 'Workout routine created.');
         // Pop both CreateWorkout screens back to the library
-        navigation.popToTop();
+        navigation.navigate('WorkoutsLibrary', { refresh: Date.now() });
       }
     } catch (error) {
       console.error('ConfigureWorkout save error:', error);
@@ -110,8 +111,11 @@ const ConfigureWorkout = ({ route, navigation }) => {
       >
         <View style={styles.content}>
           {/* Page header */}
+          <Text style={[TYPOGRAPHY.eyebrow, { color: colors.secondaryText, marginBottom: 5 }]}>
+            FORGE YOUR SETS
+          </Text>
           <Text style={[styles.mainTitle, { color: colors.text }]}>
-            CONFIGURE{'\n'}THE SETS
+            CONFIGURE{'\n'}THE SETS.
           </Text>
           <Text style={[styles.workoutNameLarge, { color: colors.text }]}>
             {workoutName}
@@ -295,18 +299,16 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 24, paddingTop: 36 },
 
   mainTitle: {
-    fontSize: 52,
-    fontWeight: '900',
+    ...TYPOGRAPHY.heroTitle,
     marginTop: 10,
-    letterSpacing: -2,
-    lineHeight: 48,
   },
   workoutNameLarge: {
-    marginTop: 10,
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     letterSpacing: 0.5,
-    marginBottom: 40,
+    marginTop: 6,
+    marginBottom: 36,
+    opacity: 0.7,
   },
 
   exerciseList: { gap: 16 },
@@ -364,9 +366,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   inputLabel: {
-    fontSize: 8,
-    fontWeight: '800',
-    letterSpacing: 1,
+    ...TYPOGRAPHY.fieldLabel,
   },
   targetInput: {
     width: 64,
@@ -390,9 +390,7 @@ const styles = StyleSheet.create({
     marginVertical: 40,
   },
   routineColorLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
+    ...TYPOGRAPHY.sectionHeader,
   },
 
   saveBtn: {
@@ -408,7 +406,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   colorPreviewBtn: {
-    padding: 20,
+    padding: 16,
     marginBottom: 20,
   },
   modalOverlay: {
